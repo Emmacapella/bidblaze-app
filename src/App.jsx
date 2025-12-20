@@ -11,11 +11,33 @@ const socket = io("https://bidblaze-server.onrender.com", {
   transports: ['websocket', 'polling']
 });
 
+// --- GLOBAL STYLES TO REMOVE WHITE CORNERS ---
+const GlobalStyle = () => (
+  <style>{`
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #0f172a; /* Dark background everywhere */
+      overflow-x: hidden;
+    }
+    #root {
+      width: 100%;
+      height: 100%;
+    }
+    * {
+      box-sizing: border-box;
+    }
+  `}</style>
+);
+
 // --- SCREEN 1: THE LOGIN PAGE ---
 function LoginScreen({ login }) {
   return (
     <div style={{
-      height: '100vh',
+      minHeight: '100vh',
+      width: '100vw',
       background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
       display: 'flex',
       flexDirection: 'column',
@@ -24,7 +46,10 @@ function LoginScreen({ login }) {
       color: 'white',
       fontFamily: 'sans-serif',
       padding: '20px',
-      textAlign: 'center'
+      textAlign: 'center',
+      position: 'absolute', // Forces it to cover everything
+      top: 0,
+      left: 0
     }}>
       <div style={{ fontSize: '60px', marginBottom: '20px' }}>⚡</div>
       <h1 style={{ fontSize: '40px', fontWeight: 'bold', margin: '0 0 10px 0', color: '#fbbf24' }}>BidBlaze</h1>
@@ -78,7 +103,7 @@ function GameDashboard({ logout, user }) {
   };
 
   if (!gameState) return (
-    <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#0f172a', color: 'white' }}>
+    <div style={{ height: '100vh', width: '100vw', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#0f172a', color: 'white' }}>
       <h2>Loading Game Data...</h2>
     </div>
   );
@@ -86,17 +111,18 @@ function GameDashboard({ logout, user }) {
   return (
     <div style={{
       minHeight: '100vh',
+      width: '100vw',
       background: '#0f172a',
       color: 'white',
       fontFamily: 'sans-serif',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      padding: '20px'
+      padding: '20px 20px 40px 20px'
     }}>
       
       {/* DASHBOARD HEADER */}
-      <nav style={{ width: '100%', maxWidth: '400px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+      <nav style={{ width: '100%', maxWidth: '500px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', paddingTop: '10px' }}>
         <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold', color: '#fbbf24' }}>BidBlaze ⚡</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ textAlign: 'right' }}>
@@ -109,19 +135,20 @@ function GameDashboard({ logout, user }) {
         </div>
       </nav>
 
-      {/* GAME CARD */}
+      {/* GAME CARD - FULL WIDTH ON MOBILE */}
       <div style={{
         background: '#1e293b',
-        padding: '30px',
+        padding: '40px 20px',
         borderRadius: '24px',
         textAlign: 'center',
         width: '100%',
-        maxWidth: '350px',
+        maxWidth: '500px', // Wider on desktop, full on mobile
         border: '1px solid #334155',
-        marginBottom: '30px'
+        marginBottom: '30px',
+        boxShadow: '0 10px 25px rgba(0,0,0,0.3)'
       }}>
         <p style={{ margin: 0, color: '#94a3b8', fontSize: '12px', letterSpacing: '1px', fontWeight: '600' }}>CURRENT JACKPOT</p>
-        <h2 style={{ fontSize: '56px', margin: '10px 0', color: '#fbbf24', fontFamily: 'monospace' }}>
+        <h2 style={{ fontSize: '64px', margin: '10px 0', color: '#fbbf24', fontFamily: 'monospace' }}>
           ${gameState.jackpot.toFixed(2)}
         </h2>
         
@@ -146,15 +173,15 @@ function GameDashboard({ logout, user }) {
           disabled={gameState.status !== 'ACTIVE'}
           style={{
             width: '100%',
-            padding: '18px',
-            fontSize: '18px',
+            padding: '20px',
+            fontSize: '20px',
             fontWeight: 'bold',
             color: 'white',
             background: gameState.status === 'ACTIVE' ? '#ef4444' : '#64748b',
             border: 'none',
             borderRadius: '16px',
             cursor: gameState.status === 'ACTIVE' ? 'pointer' : 'not-allowed',
-            marginTop: '10px',
+            marginTop: '20px',
             boxShadow: '0 4px 0 rgba(0,0,0,0.2)'
           }}
         >
@@ -163,22 +190,22 @@ function GameDashboard({ logout, user }) {
       </div>
 
       {/* RECENT BIDS */}
-      <div style={{ width: '100%', maxWidth: '350px' }}>
+      <div style={{ width: '100%', maxWidth: '500px' }}>
         <h3 style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '15px', textTransform: 'uppercase' }}>Recent Bids</h3>
         {gameState.history.map((bid) => (
           <div key={bid.id} style={{
             display: 'flex',
             justifyContent: 'space-between',
-            padding: '12px',
+            padding: '15px',
             background: '#1e293b',
             marginBottom: '8px',
             borderRadius: '12px',
-            fontSize: '14px',
+            fontSize: '16px',
             alignItems: 'center',
             border: '1px solid #334155'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '30px', height: '30px', background: '#334155', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>👤</div>
+              <div style={{ width: '35px', height: '35px', background: '#334155', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>👤</div>
               <span style={{color: 'white'}}>{bid.user ? bid.user.slice(0, 15) : 'Anon'}...</span>
             </div>
             <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>${bid.amount.toFixed(2)}</span>
@@ -190,17 +217,18 @@ function GameDashboard({ logout, user }) {
   );
 }
 
-// --- MAIN APP: DECIDES WHICH SCREEN TO SHOW ---
+// --- MAIN APP ---
 function Main() {
   const { login, logout, user, authenticated, ready } = usePrivy();
 
-  if (!ready) return <div style={{ background: '#0f172a', height: '100vh' }}></div>;
+  if (!ready) return <div style={{ background: '#0f172a', height: '100vh', width: '100vw' }}></div>;
 
-  if (authenticated) {
-    return <GameDashboard logout={logout} user={user} />;
-  } else {
-    return <LoginScreen login={login} />;
-  }
+  return (
+    <>
+      <GlobalStyle />
+      {authenticated ? <GameDashboard logout={logout} user={user} /> : <LoginScreen login={login} />}
+    </>
+  );
 }
 
 export default function App() {
