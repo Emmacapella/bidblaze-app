@@ -11,8 +11,7 @@ const socket = io("https://bidblaze-server.onrender.com", {
   transports: ['websocket', 'polling']
 });
 
-// --- HELPER: LIVE COUNTDOWN COMPONENT ---
-// This fixes the timer so it ticks every second!
+// --- HELPER: LIVE COUNTDOWN ---
 function CountdownTimer({ targetDate }) {
   const [timeLeft, setTimeLeft] = useState("00:00");
 
@@ -29,7 +28,6 @@ function CountdownTimer({ targetDate }) {
         setTimeLeft(`${minutes}:${seconds < 10 ? '0' : ''}${seconds}`);
       }
     }, 1000);
-
     return () => clearInterval(interval);
   }, [targetDate]);
 
@@ -43,11 +41,11 @@ const GlobalStyle = () => (
     #root { width: 100%; height: 100%; }
     * { box-sizing: border-box; }
     
-    /* Ring Animation for the Timer */
-    @keyframes pulse-ring {
-      0% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.4); }
-      70% { box-shadow: 0 0 0 10px rgba(251, 191, 36, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
+    /* Glowing Ring Animation */
+    @keyframes glow-pulse {
+      0% { box-shadow: 0 0 10px rgba(251, 191, 36, 0.2), inset 0 0 10px rgba(251, 191, 36, 0.2); }
+      50% { box-shadow: 0 0 25px rgba(251, 191, 36, 0.5), inset 0 0 25px rgba(251, 191, 36, 0.5); border-color: #f59e0b; }
+      100% { box-shadow: 0 0 10px rgba(251, 191, 36, 0.2), inset 0 0 10px rgba(251, 191, 36, 0.2); }
     }
   `}</style>
 );
@@ -101,54 +99,72 @@ function GameDashboard({ logout, user }) {
     <div style={{
       minHeight: '100vh', width: '100vw', background: '#0f172a', color: 'white',
       fontFamily: 'sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center',
-      padding: '20px 20px 40px 20px'
+      padding: '20px'
     }}>
       
       {/* HEADER */}
-      <nav style={{ width: '100%', maxWidth: '500px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', paddingTop: '10px' }}>
+      <nav style={{ width: '100%', maxWidth: '500px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', marginTop: '10px' }}>
         <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold', color: '#fbbf24' }}>BidBlaze ⚡</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '12px', color: '#94a3b8' }}>Logged in as</div>
-            <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{user.email ? user.email.address.split('@')[0] : 'User'}</div>
-          </div>
-          <button onClick={logout} style={{ background: '#334155', border: 'none', color: 'white', padding: '8px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer' }}>🚪</button>
-        </div>
+        <button onClick={logout} style={{ background: '#334155', border: 'none', color: 'white', padding: '8px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer' }}>🚪</button>
       </nav>
 
-      {/* GAME CARD */}
+      {/* --- NEW CIRCLE DESIGN SECTION --- */}
       <div style={{
-        background: '#1e293b', padding: '40px 20px', borderRadius: '24px', textAlign: 'center',
-        width: '100%', maxWidth: '500px', border: '1px solid #334155', marginBottom: '30px',
-        boxShadow: '0 10px 25px rgba(0,0,0,0.3)'
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        marginBottom: '30px',
+        marginTop: '20px'
       }}>
-        <p style={{ margin: 0, color: '#94a3b8', fontSize: '12px', letterSpacing: '1px', fontWeight: '600' }}>CURRENT JACKPOT</p>
-        <h2 style={{ fontSize: '64px', margin: '10px 0', color: '#fbbf24', fontFamily: 'monospace' }}>
-          ${gameState.jackpot.toFixed(2)}
-        </h2>
         
-        {/* TIMER WITH RING ANIMATION */}
+        {/* 1. DIGITAL TIMER (ABOVE THE RING) */}
         <div style={{ 
-          background: 'rgba(0,0,0,0.3)', 
-          display: 'inline-flex', alignItems: 'center', gap: '8px',
-          padding: '8px 16px', borderRadius: '20px', margin: '20px 0',
-          border: '1px solid rgba(251, 191, 36, 0.3)',
-          animation: gameState.status === 'ACTIVE' ? 'pulse-ring 2s infinite' : 'none'
+          fontSize: '24px', 
+          fontWeight: 'bold', 
+          fontFamily: 'monospace',
+          marginBottom: '15px',
+          color: gameState.status === 'ENDED' ? '#ef4444' : '#fbbf24',
+          textShadow: '0 0 10px rgba(0,0,0,0.5)'
         }}>
-          <span>⏱️</span>
-          <span style={{ fontSize: '20px', fontWeight: 'bold', fontFamily: 'monospace' }}>
-            {gameState.status === 'ENDED' ? 'SOLD' : <CountdownTimer targetDate={gameState.endTime} />}
-          </span>
+          ⏱️ {gameState.status === 'ENDED' ? 'SOLD' : <CountdownTimer targetDate={gameState.endTime} />}
         </div>
 
+        {/* 2. THE JACKPOT RING */}
+        <div style={{
+          width: '260px',
+          height: '260px',
+          borderRadius: '50%',
+          border: '8px solid #fbbf24', // Gold Border
+          background: 'radial-gradient(circle, #1e293b 0%, #0f172a 70%)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          boxShadow: '0 0 20px rgba(251, 191, 36, 0.3)',
+          animation: gameState.status === 'ACTIVE' ? 'glow-pulse 2s infinite' : 'none',
+          position: 'relative'
+        }}>
+          <p style={{ margin: 0, color: '#94a3b8', fontSize: '12px', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '5px' }}>JACKPOT</p>
+          <h2 style={{ fontSize: '50px', margin: '0', color: 'white', fontWeight: 'bold' }}>
+            ${gameState.jackpot.toFixed(2)}
+          </h2>
+        </div>
+
+      </div>
+      {/* ---------------------------------- */}
+
+      {/* BID BUTTON */}
+      <div style={{ width: '100%', maxWidth: '350px', marginBottom: '30px' }}>
         <button 
           onClick={placeBid}
           disabled={gameState.status !== 'ACTIVE'}
           style={{
             width: '100%', padding: '20px', fontSize: '20px', fontWeight: 'bold', color: 'white',
             background: gameState.status === 'ACTIVE' ? '#ef4444' : '#64748b',
-            border: 'none', borderRadius: '16px', cursor: gameState.status === 'ACTIVE' ? 'pointer' : 'not-allowed',
-            marginTop: '20px', boxShadow: '0 4px 0 rgba(0,0,0,0.2)'
+            border: 'none', borderRadius: '50px', // Pill shape button
+            cursor: gameState.status === 'ACTIVE' ? 'pointer' : 'not-allowed',
+            boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)',
+            transition: 'transform 0.1s'
           }}
         >
           {gameState.status === 'ACTIVE' ? `BID NOW ($${gameState.bidCost})` : 'AUCTION ENDED'}
@@ -156,17 +172,16 @@ function GameDashboard({ logout, user }) {
       </div>
 
       {/* RECENT BIDS */}
-      <div style={{ width: '100%', maxWidth: '500px' }}>
-        <h3 style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '15px', textTransform: 'uppercase' }}>Recent Bids</h3>
+      <div style={{ width: '100%', maxWidth: '350px' }}>
+        <h3 style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '15px', textTransform: 'uppercase', textAlign: 'center' }}>Recent Action</h3>
         {gameState.history.map((bid) => (
           <div key={bid.id} style={{
-            display: 'flex', justifyContent: 'space-between', padding: '15px',
-            background: '#1e293b', marginBottom: '8px', borderRadius: '12px',
-            fontSize: '16px', alignItems: 'center', border: '1px solid #334155'
+            display: 'flex', justifyContent: 'space-between', padding: '12px 20px',
+            background: 'rgba(30, 41, 59, 0.5)', marginBottom: '8px', borderRadius: '12px',
+            fontSize: '14px', alignItems: 'center', border: '1px solid #334155'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '35px', height: '35px', background: '#334155', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>👤</div>
-              <span style={{color: 'white'}}>{bid.user ? bid.user.slice(0, 15) : 'Anon'}...</span>
+              <span style={{color: 'white'}}>{bid.user ? bid.user.slice(0, 8) : 'Anon'}...</span>
             </div>
             <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>${bid.amount.toFixed(2)}</span>
           </div>
