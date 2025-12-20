@@ -1,34 +1,12 @@
-    const s = totalSeconds % 60; return 
-    `${m}:${s < 10 ? '0' : ''}${s}`;
-  };
-
-  // LOADING SCREEN
-  if (!gameState) return ( <div style={{ 
-      display: 'flex', justifyContent: 
-      'center', alignItems: 'center', 
-      background: '#0f172a', color: 
-      'white'
-    }}>
-      <h2>Connecting to Server...</h2> 
-            padding: '15px', fontSize: 
-            '18px', fontWeight: 'bold', 
-            color: 'white', background: 
-            gameState.status === 'ACTIVE' 
-            ? '#ef4444' : '#64748b', 
-            border: 'none', borderRadius: 
-            '10px', cursor: 
-            gameState.status === 'ACTIVE' 
-            ? 'pointer' : 'not-allowed', 
-            transition: 'transform 0.1s'
 import { useState, useEffect } from 'react';
 import io from 'socket.io-client';
 import confetti from 'canvas-confetti';
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { PrivyProvider, usePrivy } from '@privy-io/react-auth';
 
-// --- ⚠️ PUT YOUR PRIVY APP ID HERE ⚠️ ---
+// --- ⚠️ PASTE YOUR APP ID HERE AGAIN ⚠️ ---
 const PRIVY_APP_ID = "Cmjd3lz86008nih0d7zq8qfro";
-// --- CONNECT TO RENDER SERVER ---
+
 const socket = io("https://bidblaze-server.onrender.com", {
   transports: ['websocket', 'polling']
 });
@@ -49,11 +27,11 @@ function Game() {
 
   const placeBid = () => {
     if (!authenticated) return login();
-    // Use email or wallet address as the user ID
     const identifier = user.email ? user.email.address : (user.wallet ? user.wallet.address : "User");
     socket.emit('placeBid', identifier);
   };
 
+  // --- THIS WAS THE BROKEN PART (FIXED NOW) ---
   const formatTime = (ms) => {
     const totalSeconds = Math.floor((ms - Date.now()) / 1000);
     if (totalSeconds <= 0) return "00:00";
@@ -61,8 +39,8 @@ function Game() {
     const s = totalSeconds % 60;
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
+  // ---------------------------------------------
 
-  // LOADING SCREEN
   if (!gameState) return (
     <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#0f172a', color: 'white' }}>
       <h2>Connecting...</h2>
@@ -81,7 +59,6 @@ function Game() {
       padding: '20px'
     }}>
       
-      {/* HEADER: LOGO & LOGIN/LOGOUT */}
       <nav style={{ width: '100%', maxWidth: '400px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
         <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold', color: '#fbbf24' }}>BidBlaze ⚡</h1>
         
@@ -101,7 +78,6 @@ function Game() {
         )}
       </nav>
 
-      {/* JACKPOT CARD */}
       <div style={{
         background: 'rgba(255, 255, 255, 0.05)',
         padding: '30px',
@@ -117,7 +93,6 @@ function Game() {
           ${gameState.jackpot.toFixed(2)}
         </h2>
         
-        {/* TIMER SECTION */}
         <div style={{ 
           background: 'rgba(0,0,0,0.3)', 
           display: 'inline-flex', 
@@ -134,7 +109,6 @@ function Game() {
           </span>
         </div>
 
-        {/* BID BUTTON */}
         <button 
           onClick={placeBid}
           disabled={gameState.status !== 'ACTIVE'}
@@ -156,7 +130,6 @@ function Game() {
         </button>
       </div>
 
-      {/* RECENT BIDS */}
       <div style={{ width: '100%', maxWidth: '350px' }}>
         <h3 style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '15px', textTransform: 'uppercase' }}>Recent Bids</h3>
         {gameState.history.map((bid) => (
@@ -178,23 +151,18 @@ function Game() {
           </div>
         ))}
       </div>
-
       <SpeedInsights />
     </div>
   );
 }
 
-// WRAPPER TO HANDLE LOGIN
 export default function App() {
   return (
     <PrivyProvider
       appId={PRIVY_APP_ID}
       config={{
         loginMethods: ['email', 'wallet'],
-        appearance: {
-          theme: 'dark',
-          accentColor: '#676FFF',
-        },
+        appearance: { theme: 'dark', accentColor: '#676FFF' },
       }}
     >
       <Game />
