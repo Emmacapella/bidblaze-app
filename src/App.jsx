@@ -1,257 +1,117 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import confetti from 'canvas-confetti';
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { PrivyProvider, usePrivy } from '@privy-io/react-auth';
 
-// --- ⚠️ PASTE YOUR APP ID HERE ⚠️ ---
 const PRIVY_APP_ID = "Cmjd3lz86008nih0d7zq8qfro";
 
 const socket = io("https://bidblaze-server.onrender.com", {
   transports: ['websocket', 'polling']
 });
 
-// --- COMPONENT: ANIMATED SVG PROGRESS RING ---
-const ProgressRing = ({ radius, stroke, progress }) => {
-  const normalizedRadius = radius - stroke * 2;
-  const circumference = normalizedRadius * 2 * Math.PI;
-  const strokeDashoffset = circumference - (progress / 100) * circumference;
-
-  return (
-    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
-      <svg
-        height={radius * 2}
-        width={radius * 2}
-        style={{ transform: 'rotate(-90deg)', overflow: 'visible' }}
-      >
-        {/* Background Grey Ring */}
-        <circle
-          stroke="rgba(255,255,255,0.1)"
-          strokeWidth={stroke}
-          fill="transparent"
-          r={normalizedRadius}
-          cx={radius}
-          cy={radius}
-        />
-        {/* Moving Gold Ring */}
-        <circle
-          stroke="#fbbf24"
-          strokeWidth={stroke}
-          strokeDasharray={circumference + ' ' + circumference}
-          style={{ strokeDashoffset, transition: 'stroke-dashoffset 0.5s linear' }}
-          strokeLinecap="round"
-          fill="transparent"
-          r={normalizedRadius}
-          cx={radius}
-          cy={radius}
-        />
-      </svg>
-    </div>
-  );
+// --- AUDIO HELPERS ---
+const playSound = (url) => {
+  const audio = new Audio(url);
+  audio.play().catch(e => console.log("Audio play blocked"));
 };
 
-// --- HELPER: LOGIC TO CALCULATE TIME & PROGRESS ---
-function TimerLogic({ targetDate, onTick }) {
-  const [timeLeft, setTimeLeft] = useState("00:00");
-
+// --- COMPONENT: FLOATING BID NUMBER ---
+function FloatingNumber({ onComplete }) {
   useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const distance = targetDate - now;
+    const timer = setTimeout(onComplete, 1000);
+    return () => clearTimeout(timer);
+  }, []);
 
-      if (distance < 0) {
-        setTimeLeft("00:00");
-        onTick(0); // Progress is 0%
-      } else {
-        // Calculate percentage based on a 60-second visual loop
-        // If time > 60s, ring is full. If < 60s, it drains.
-        const totalSeconds = distance / 1000;
-        const percentage = Math.min((totalSeconds / 60) * 100, 100);
-        onTick(percentage);
-
-        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-        setTimeLeft(`${minutes}:${seconds < 10 ? '0' : ''}${seconds}`);
-      }
-    }, 100); // Update faster for smooth animation
-    return () => clearInterval(interval);
-  }, [targetDate]);
-
-  return <span>{timeLeft}</span>;
+  return (
+    <div style={{
+      position: 'absolute', color: '#ef4444', fontWeight: 'bold',
+      animation: 'float-up 1s forwards', zIndex: 50, fontSize: '20px'
+    }}>-$1.00</div>
+  );
 }
 
 // --- GLOBAL STYLES ---
 const GlobalStyle = () => (
   <style>{`
-    body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #0f172a; overflow-x: hidden; }
-    #root { width: 100%; height: 100%; }
-    * { box-sizing: border-box; }
-    @keyframes pulse-winner {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.05); color: #ef4444; }
-      100% { transform: scale(1); }
-    }
+    body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #0f172a; overflow-x: hidden; color: white; font-family: sans-serif; }
+    @keyframes float-up { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-100px); } }
+    @keyframes pulse-dot { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
   `}</style>
 );
 
 function LoginScreen({ login }) {
   return (
-    <div style={{
-      minHeight: '100vh', width: '100vw',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-      display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
-      color: 'white', fontFamily: 'sans-serif', padding: '20px', textAlign: 'center',
-      position: 'absolute', top: 0, left: 0
-    }}>
-      <div style={{ fontSize: '60px', marginBottom: '20px' }}>⚡</div>
-      <h1 style={{ fontSize: '40px', fontWeight: 'bold', margin: '0 0 10px 0', color: '#fbbf24' }}>BidBlaze</h1>
-      <button onClick={login} style={{
-        background: '#3b82f6', border: 'none', padding: '16px 40px', color: 'white',
-        borderRadius: '30px', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer', marginTop: '20px'
-      }}>Enter the Arena</button>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+      <h1 style={{ color: '#fbbf24', fontSize: '40px' }}>BidBlaze ⚡</h1>
+      <button onClick={login} style={{ background: '#3b82f6', border: 'none', padding: '16px 40px', color: 'white', borderRadius: '30px', fontWeight: 'bold', marginTop: '20px' }}>Enter Arena</button>
     </div>
   );
 }
 
 function GameDashboard({ logout, user }) {
   const [gameState, setGameState] = useState(null);
-  const [progress, setProgress] = useState(100); // 100% full initially
+  const [bids, setBids] = useState([]); // For floating numbers
+  const [userCount, setUserCount] = useState(1);
+  const prevStatus = useRef("ACTIVE");
 
   useEffect(() => {
     socket.on('gameState', (data) => {
       setGameState(data);
-      if (data.status === 'ENDED') {
-        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-        setProgress(0);
+      setUserCount(data.connectedUsers || 1); // Idea 4: Live Counter
+      
+      if (data.status === 'ACTIVE' && data.history.length > 0) {
+        playSound('https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3'); // Idea 1: Bid Sound
       }
+
+      if (data.status === 'ENDED' && prevStatus.current === 'ACTIVE') {
+        confetti({ zIndex: 999 });
+        playSound('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3'); // Idea 1: Win Sound
+      }
+      prevStatus.current = data.status;
     });
     return () => socket.off('gameState');
   }, []);
 
   const placeBid = () => {
-    const identifier = user.email ? user.email.address : (user.wallet ? user.wallet.address : "User");
-    socket.emit('placeBid', identifier);
+    const id = Date.now();
+    setBids([...bids, id]); // Idea 2: Floating Numbers
+    socket.emit('placeBid', user.email?.address || "User");
   };
 
-  const getWinnerName = () => {
-    if (gameState.history && gameState.history.length > 0) {
-      const winner = gameState.history[0].user; // Assuming first in history is latest bidder
-      return winner.length > 15 ? winner.slice(0, 6) + '...' + winner.slice(-4) : winner;
-    }
-    return "No Bids";
-  };
-
-  if (!gameState) return (
-    <div style={{ height: '100vh', width: '100vw', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#0f172a', color: 'white' }}>
-      <h2>Loading...</h2>
-    </div>
-  );
+  if (!gameState) return <div>Loading...</div>;
 
   return (
-    <div style={{
-      minHeight: '100vh', width: '100vw', background: '#0f172a', color: 'white',
-      fontFamily: 'sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center',
-      padding: '20px'
-    }}>
-      
-      {/* HEADER */}
-      <nav style={{ width: '100%', maxWidth: '500px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', marginTop: '10px' }}>
-        <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold', color: '#fbbf24' }}>BidBlaze ⚡</h1>
-        <button onClick={logout} style={{ background: '#334155', border: 'none', color: 'white', padding: '8px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer' }}>🚪</button>
-      </nav>
-
-      {/* --- THE MAIN REACTOR RING --- */}
-      <div style={{ position: 'relative', width: '280px', height: '280px', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '40px' }}>
-        
-        {/* MOVING SVG RING */}
-        <ProgressRing radius={140} stroke={8} progress={progress} />
-
-        {/* INSIDE CONTENT */}
-        <div style={{ textAlign: 'center', zIndex: 10 }}>
-          
-          {/* STATE 1: AUCTION ENDED -> SHOW WINNER */}
-          {gameState.status === 'ENDED' ? (
-             <div style={{ animation: 'pulse-winner 1s infinite' }}>
-               <p style={{ margin: 0, color: '#94a3b8', fontSize: '12px', fontWeight: 'bold' }}>SOLD TO</p>
-               <h2 style={{ fontSize: '24px', margin: '5px 0', color: '#22c55e', fontWeight: 'bold' }}>
-                 {getWinnerName()}
-               </h2>
-               <h3 style={{ fontSize: '40px', margin: '0', color: 'white' }}>${gameState.jackpot.toFixed(2)}</h3>
-             </div>
-          ) : (
-          /* STATE 2: ACTIVE -> SHOW TIMER & JACKPOT */
-             <>
-               <p style={{ margin: 0, color: '#94a3b8', fontSize: '12px', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '5px' }}>JACKPOT</p>
-               <h2 style={{ fontSize: '50px', margin: '0', color: 'white', fontWeight: 'bold', textShadow: '0 0 20px rgba(251, 191, 36, 0.5)' }}>
-                 ${gameState.jackpot.toFixed(2)}
-               </h2>
-               <div style={{ marginTop: '10px', fontSize: '28px', fontWeight: 'bold', fontFamily: 'monospace', color: '#fbbf24' }}>
-                 ⏱️ <TimerLogic targetDate={gameState.endTime} onTick={setProgress} />
-               </div>
-             </>
-          )}
-
-        </div>
-      </div>
-
-      {/* BID BUTTON */}
-      <div style={{ width: '100%', maxWidth: '350px', marginBottom: '30px' }}>
-        <button 
-          onClick={placeBid}
-          disabled={gameState.status !== 'ACTIVE'}
-          style={{
-            width: '100%', padding: '20px', fontSize: '20px', fontWeight: 'bold', color: 'white',
-            background: gameState.status === 'ACTIVE' ? '#ef4444' : '#64748b',
-            border: 'none', borderRadius: '50px',
-            cursor: gameState.status === 'ACTIVE' ? 'pointer' : 'not-allowed',
-            boxShadow: gameState.status === 'ACTIVE' ? '0 4px 15px rgba(239, 68, 68, 0.4)' : 'none',
-            transform: gameState.status === 'ACTIVE' ? 'scale(1)' : 'scale(0.98)',
-            transition: 'all 0.2s'
-          }}
-        >
-          {gameState.status === 'ACTIVE' ? `BID NOW ($${gameState.bidCost})` : 'AUCTION ENDED'}
-        </button>
-      </div>
-
-      {/* RECENT BIDS */}
-      <div style={{ width: '100%', maxWidth: '350px' }}>
-        <h3 style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '15px', textTransform: 'uppercase', textAlign: 'center' }}>Recent Action</h3>
-        {gameState.history.map((bid) => (
-          <div key={bid.id} style={{
-            display: 'flex', justifyContent: 'space-between', padding: '12px 20px',
-            background: 'rgba(30, 41, 59, 0.5)', marginBottom: '8px', borderRadius: '12px',
-            fontSize: '14px', alignItems: 'center', border: '1px solid #334155'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{color: 'white'}}>{bid.user ? bid.user.slice(0, 8) : 'Anon'}...</span>
-            </div>
-            <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>${bid.amount.toFixed(2)}</span>
-          </div>
-        ))}
-      </div>
-      <SpeedInsights />
-    </div>
-  );
-}
-
-function Main() {
-  const { login, logout, user, authenticated, ready } = usePrivy();
-  if (!ready) return <div style={{ background: '#0f172a', height: '100vh', width: '100vw' }}></div>;
-  return (
-    <>
+    <div style={{ minHeight: '100vh', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       <GlobalStyle />
-      {authenticated ? <GameDashboard logout={logout} user={user} /> : <LoginScreen login={login} />}
-    </>
+      
+      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', maxWidth: '400px' }}>
+        <div style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <span style={{ width: '8px', height: '8px', background: '#22c55e', borderRadius: '50%', animation: 'pulse-dot 1s infinite' }}></span>
+          {userCount} Online
+        </div>
+        <button onClick={logout} style={{ background: 'none', border: 'none', color: 'white' }}>Logout</button>
+      </div>
+
+      <div style={{ position: 'relative', marginTop: '50px', border: '5px solid #fbbf24', borderRadius: '50%', width: '250px', height: '250px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+        {bids.map(id => <FloatingNumber key={id} onComplete={() => setBids(bids.filter(b => b !== id))} />)}
+        <div style={{ fontSize: '14px', color: '#94a3b8' }}>JACKPOT</div>
+        <div style={{ fontSize: '48px', fontWeight: 'bold' }}>${gameState.jackpot.toFixed(2)}</div>
+      </div>
+
+      <button onClick={placeBid} disabled={gameState.status !== 'ACTIVE'} style={{ width: '100%', maxWidth: '300px', padding: '20px', borderRadius: '50px', background: '#ef4444', border: 'none', color: 'white', fontWeight: 'bold', fontSize: '20px', marginTop: '30px' }}>
+        {gameState.status === 'ACTIVE' ? `BID $${gameState.bidCost}` : 'ENDED'}
+      </button>
+    </div>
   );
 }
 
 export default function App() {
+  const { login, logout, user, authenticated, ready } = usePrivy();
+  if (!ready) return null;
   return (
-    <PrivyProvider
-      appId={PRIVY_APP_ID}
-      config={{ loginMethods: ['email', 'wallet'], appearance: { theme: 'dark', accentColor: '#676FFF' } }}
-    >
-      <Main />
+    <PrivyProvider appId={PRIVY_APP_ID}>
+      {authenticated ? <GameDashboard logout={logout} user={user} /> : <LoginScreen login={login} />}
     </PrivyProvider>
   );
 }
