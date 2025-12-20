@@ -1,174 +1,165 @@
-import { useState, useEffect, useRef } from 'react';
-import { usePrivy } from '@privy-io/react-auth';
+import { useState, useEffect } from 'react';
 import io from 'socket.io-client';
 import confetti from 'canvas-confetti';
 
-// --- CLOUD CONNECTION ---
-let socket;
-if (!window.gameSocket) {
-  window.gameSocket = io('https://bidblaze-server.onrender.com', {
-    transports: ['websocket'],
-    reconnectionAttempts: 5,
-  });
-}
-socket = window.gameSocket;
+// --- CONNECT TO YOUR RENDER SERVER ---
+const socket = io("https://bidblaze-server.onrender.com", {
+  transports: ['websocket', 'polling'] // Ensures connection works on all networks
+});
 
-export default function App() {
-  const { login, authenticated, user, logout } = usePrivy();
-  
-  // Ref trick: Keeps 'user' fresh inside the socket listener without restarting it
-  const userRef = useRef(user);
-  useEffect(() => { userRef.current = user; }, [user]);
+function App() {
+  const [gameState, setGameState] = useState(null);
+  const [wallet, setWallet] = useState(null); // Simple wallet state
+  const [isConnected, setIsConnected] = useState(false);
 
-  const [gameStatus, setGameStatus] = useState('ACTIVE');
-  const [jackpot, setJackpot] = useState(1250);
-  const [endTime, setEndTime] = useState(Date.now() + 300000); 
-  const [timeLeft, setTimeLeft] = useState(299); 
-  const [bidCost, setBidCost] = useState(1);
-  const [lastBidder, setLastBidder] = useState("No bids yet");
-  const [bidHistory, setBidHistory] = useState([]);
-  const [onlineUsers, setOnlineUsers] = useState(142);
-
-  // 1. LISTEN TO SERVER (Cloud)
   useEffect(() => {
-    const onGameState = (state) => {
-      setGameStatus(state.status);
-      setJackpot(state.jackpot);
-      setBidCost(state.bidCost);
-      setLastBidder(state.lastBidder);
-      setBidHistory(state.history);
-      setEndTime(state.endTime); 
-
-      // --- CONFETTI LOGIC ---
-      // Check if "I" am the new King
-      const currentUserEmail = userRef.current?.email?.address;
-      if (currentUserEmail && state.lastBidder === currentUserEmail && state.status === 'ACTIVE') {
-        triggerConfetti();
+    // 1. Listen for updates from the server
+    socket.on('gameState', (data) => {
+      setGameState(data);
+      
+      // If game just ended, launch confetti!
+      if (data.status === 'ENDED') {
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
       }
-    };
-
-    socket.on('gameState', onGameState);
-    return () => socket.off('gameState', onGameState);
-  }, []);
-
-  // 2. LOCAL COUNTDOWN
-  useEffect(() => {
-    const timer = setInterval(() => {
-      if (gameStatus === 'ACTIVE') {
-        const secondsRemaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
-        setTimeLeft(secondsRemaining);
-      }
-    }, 100); 
-    return () => clearInterval(timer);
-  }, [endTime, gameStatus]); 
-
-  // Fake User Count
-  useEffect(() => {
-    const interval = setInterval(() => setOnlineUsers(prev => 140 + Math.floor(Math.random() * 10)), 5000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleBid = () => {
-    if (!authenticated) return login();
-    if (gameStatus === 'ENDED') return;
-    socket.emit('placeBid', user?.email?.address);
-  };
-
-  const triggerConfetti = () => {
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ['#0061ff', '#00d4ff', '#ffd700']
     });
+
+    return () => socket.off('gameState');
+  }, []);
+
+  const handleConnect = () => {
+    // Simulating a wallet connection for now
+    const mockWallet = "0x" + Math.random().toString(16).slice(2, 8);
+    setWallet(mockWallet);
+    setIsConnected(true);
   };
 
-  // UI Helpers
-  const totalTime = 299;
-  const radius = 80;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (timeLeft / totalTime) * circumference;
-  
-  const getColor = () => {
-    if (timeLeft > 100) return "#00d4ff"; 
-    if (timeLeft > 50) return "#ffd700"; 
-    return "#ff4444"; 
+  const placeBid = () => {
+    if (!isConnected) return alert("Please connect wallet first!");
+    socket.emit('placeBid', wallet);
   };
+
+  // FORMAT TIME: Minutes:Seconds
+  const formatTime = (ms) => {
+    const totalSeconds = Math.floor((ms - Date.now()) / 1000);
+    if (totalSeconds <= 0) return "00:00";
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  // LOADING SCREEN
+  if (!gameState) return (
+    <div style={{
+      height: '100vh', 
+      display: 'flex', 
+      justifyContent: 'center', 
+      alignItems: 'center', 
+      background: '#0f172a', 
+      color: 'white'
+    }}>
+      <h2>Connecting to Server...</h2>
+    </div>
+  );
 
   return (
-    <div style={{ textAlign: "center", background: "linear-gradient(135deg, #020024 0%, #090979 35%, #00d4ff 100%)", minHeight: "100vh", color: "#fff", padding: "20px", fontFamily: "'Segoe UI', sans-serif" }}>
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(to bottom, #0f172a, #1e293b)',
+      color: 'white',
+      fontFamily: 'sans-serif',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      padding: '20px'
+    }}>
       
       {/* HEADER */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-        <div style={{ background: "rgba(0,0,0,0.4)", padding: "5px 15px", borderRadius: "20px", fontSize: "12px", display: "flex", alignItems: "center", gap: "5px" }}>
-          <div style={{ width: "8px", height: "8px", background: gameStatus === 'ACTIVE' ? "#4CAF50" : "red", borderRadius: "50%" }}></div>
-          {onlineUsers} Online
+      <nav style={{ width: '100%', maxWidth: '600px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+        <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#fbbf24' }}>BidBlaze ⚡</h1>
+        <button 
+          onClick={handleConnect}
+          style={{
+            background: isConnected ? '#22c55e' : '#3b82f6',
+            border: 'none',
+            padding: '10px 20px',
+            color: 'white',
+            borderRadius: '20px',
+            fontWeight: 'bold',
+            cursor: 'pointer'
+          }}
+        >
+          {isConnected ? `Connected: ${wallet}` : 'Connect Wallet'}
+        </button>
+      </nav>
+
+      {/* JACKPOT CARD */}
+      <div style={{
+        background: 'rgba(255, 255, 255, 0.1)',
+        padding: '40px',
+        borderRadius: '20px',
+        textAlign: 'center',
+        width: '100%',
+        maxWidth: '400px',
+        boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)',
+        border: '1px solid rgba(255, 255, 255, 0.2)',
+        marginBottom: '30px'
+      }}>
+        <p style={{ margin: 0, color: '#94a3b8', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '1px' }}>Current Jackpot</p>
+        <h2 style={{ fontSize: '60px', margin: '10px 0', color: '#fbbf24' }}>
+          ${gameState.jackpot.toFixed(2)}
+        </h2>
+        
+        <div style={{ margin: '20px 0', fontSize: '24px', fontWeight: 'bold' }}>
+          ⏱️ {gameState.status === 'ENDED' ? 'Sold!' : formatTime(gameState.endTime)}
         </div>
-        {!authenticated && <button onClick={login} style={{ fontSize: "12px", padding: "5px 15px", borderRadius: "15px", border: "none" }}>Login</button>}
+
+        <button 
+          onClick={placeBid}
+          disabled={gameState.status !== 'ACTIVE'}
+          style={{
+            width: '100%',
+            padding: '15px',
+            fontSize: '18px',
+            fontWeight: 'bold',
+            color: 'white',
+            background: gameState.status === 'ACTIVE' ? '#ef4444' : '#64748b',
+            border: 'none',
+            borderRadius: '10px',
+            cursor: gameState.status === 'ACTIVE' ? 'pointer' : 'not-allowed',
+            transition: 'transform 0.1s'
+          }}
+        >
+          {gameState.status === 'ACTIVE' ? `BID NOW ($${gameState.bidCost})` : 'AUCTION ENDED'}
+        </button>
       </div>
 
-      {!authenticated ? (
-         <div style={{ marginTop: "30vh" }}>
-           <h1>BidBlaze ⚡</h1>
-           <button onClick={login} style={{ background: "#fff", color: "#0061ff", padding: "15px 40px", borderRadius: "30px", border: "none", fontWeight: "bold", fontSize: "16px", marginTop: "20px" }}>Connect Wallet</button>
-         </div>
-      ) : (
-        <div style={{ maxWidth: "400px", margin: "auto" }}>
-          
-          {gameStatus === 'ENDED' ? (
-             <div style={{ background: "rgba(0,0,0,0.6)", padding: "40px", borderRadius: "20px", marginTop: "50px", backdropFilter: "blur(10px)" }}>
-                <h1>🏆 WINNER!</h1>
-                <h3 style={{ color: "#ffd700", fontSize: "24px" }}>{lastBidder}</h3>
-                <p>won <strong>${jackpot.toLocaleString()}</strong></p>
-                <div style={{ marginTop: "30px", color: "#8be9fd" }}>Next round starts in 30s...</div>
-             </div>
-          ) : (
-            <>
-              <div style={{ marginBottom: "20px", background: "rgba(255,255,255,0.1)", padding: "10px", borderRadius: "15px" }}>
-                <div style={{ fontSize: "24px" }}>👑</div>
-                <div style={{ fontSize: "12px", color: "#aaa" }}>CURRENT KING</div>
-                <div style={{ fontWeight: "bold", color: "#ffd700", fontSize: "16px" }}>{lastBidder === user?.email?.address ? "YOU!" : lastBidder}</div>
-              </div>
-
-              <div style={{ position: "relative", width: "200px", height: "200px", margin: "0 auto 20px auto" }}>
-                <svg width="200" height="200" style={{ transform: "rotate(-90deg)" }}>
-                  <circle cx="100" cy="100" r={radius} stroke="rgba(255,255,255,0.1)" strokeWidth="10" fill="transparent" />
-                  <circle cx="100" cy="100" r={radius} stroke={getColor()} strokeWidth="10" fill="transparent" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round" style={{ transition: "stroke-dashoffset 1s linear, stroke 1s ease" }} />
-                </svg>
-                <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}>
-                  <div style={{ fontSize: "36px", fontWeight: "bold", fontFamily: "monospace" }}>{timeLeft}s</div>
-                  <div style={{ fontSize: "12px", color: "#aaa" }}>REMAINING</div>
-                </div>
-              </div>
-
-              <div style={{ fontSize: "48px", fontWeight: "800", marginBottom: "20px" }}>${jackpot.toLocaleString()}</div>
-
-              <div style={{ background: "#fff", padding: "5px", borderRadius: "25px", display: "flex", alignItems: "center" }}>
-                <div style={{ padding: "15px", paddingLeft: "25px", flex: 1, textAlign: "left" }}>
-                  <span style={{ display: "block", fontSize: "10px", color: "#888", fontWeight: "bold" }}>PRICE</span>
-                  <span style={{ color: "#000", fontSize: "20px", fontWeight: "900" }}>${bidCost}</span>
-                </div>
-                <button onClick={handleBid} style={{ background: "linear-gradient(90deg, #0061ff, #00d4ff)", color: "#fff", border: "none", padding: "15px 40px", borderRadius: "20px", fontSize: "16px", fontWeight: "bold" }}>
-                  BID NOW
-                </button>
-              </div>
-            </>
-          )}
-
-          <div style={{ marginTop: "30px", textAlign: "left" }}>
-             <p style={{ fontSize: "12px", color: "#8be9fd", fontWeight: "bold", paddingLeft: "10px" }}>LIVE FEED</p>
-             {bidHistory.map((bid) => (
-                <div key={bid.id} style={{ padding: "10px", borderBottom: "1px solid rgba(255,255,255,0.1)", fontSize: "13px", display: "flex", justifyContent: "space-between" }}>
-                  <span><span style={{ color: "#ffd700" }}>⚡</span> <strong>{bid.user === user?.email?.address ? "You" : bid.user}</strong> spent ${bid.amount}</span>
-                  <span style={{ color: "#aaa", fontSize: "11px" }}>{bid.time}</span>
-                </div>
-             ))}
+      {/* RECENT BIDS */}
+      <div style={{ width: '100%', maxWidth: '400px' }}>
+        <h3 style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '10px' }}>RECENT BIDS</h3>
+        {gameState.history.map((bid) => (
+          <div key={bid.id} style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            padding: '10px',
+            background: 'rgba(255,255,255,0.05)',
+            marginBottom: '5px',
+            borderRadius: '5px',
+            fontSize: '14px'
+          }}>
+            <span>👤 {bid.user.slice(0, 6)}...</span>
+            <span style={{ color: '#fbbf24' }}>${bid.amount.toFixed(2)}</span>
+            <span style={{ color: '#94a3b8' }}>{bid.time}</span>
           </div>
+        ))}
+      </div>
 
-          <button onClick={logout} style={{ marginTop: "40px", background: "none", border: "none", color: "#fff", opacity: 0.5, fontSize: "12px" }}>Sign Out</button>
-        </div>
-      )}
     </div>
   );
 }
+
+export default App;
 
