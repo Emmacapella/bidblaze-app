@@ -4,20 +4,18 @@ import confetti from 'canvas-confetti';
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { PrivyProvider, usePrivy } from '@privy-io/react-auth';
 
-// --- ⚠️ PASTE YOUR APP ID HERE ⚠️ ---
+// --- ⚠️ PASTE YOUR APP ID HERE ---
 const PRIVY_APP_ID = "Cmjd3lz86008nih0d7zq8qfro";
 
 const socket = io("https://bidblaze-server.onrender.com", {
   transports: ['websocket', 'polling']
 });
 
-// --- AUDIO HELPERS ---
 const playSound = (url) => {
   const audio = new Audio(url);
-  audio.play().catch(e => console.log("Audio play blocked"));
+  audio.play().catch(e => console.log("Audio blocked"));
 };
 
-// --- COMPONENT: FLOATING BID NUMBER ---
 function FloatingNumber({ onComplete }) {
   useEffect(() => {
     const timer = setTimeout(onComplete, 1000);
@@ -28,7 +26,6 @@ function FloatingNumber({ onComplete }) {
   );
 }
 
-// --- COMPONENT: PROGRESS RING ---
 const ProgressRing = ({ radius, stroke, progress }) => {
   const normalizedRadius = radius - stroke * 2;
   const circumference = normalizedRadius * 2 * Math.PI;
@@ -43,7 +40,6 @@ const ProgressRing = ({ radius, stroke, progress }) => {
   );
 };
 
-// --- COMPONENT: TIMER LOGIC ---
 function TimerLogic({ targetDate, onTick }) {
   const [timeLeft, setTimeLeft] = useState("00:00");
   useEffect(() => {
@@ -54,8 +50,7 @@ function TimerLogic({ targetDate, onTick }) {
         setTimeLeft("00:00");
         onTick(0);
       } else {
-        const totalSeconds = distance / 1000;
-        onTick(Math.min((totalSeconds / 60) * 100, 100));
+        onTick(Math.min(((distance / 1000) / 60) * 100, 100));
         const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
         const s = Math.floor((distance % (1000 * 60)) / 1000);
         setTimeLeft(`${m}:${s < 10 ? '0' : ''}${s}`);
@@ -66,7 +61,6 @@ function TimerLogic({ targetDate, onTick }) {
   return <span>{timeLeft}</span>;
 }
 
-// --- GLOBAL STYLES ---
 const GlobalStyle = () => (
   <style>{`
     body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #0f172a; overflow-x: hidden; color: white; font-family: sans-serif; }
@@ -74,7 +68,6 @@ const GlobalStyle = () => (
     * { box-sizing: border-box; }
     @keyframes float-up { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-100px); } }
     @keyframes pulse-dot { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
-    @keyframes pulse-winner { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
   `}</style>
 );
 
@@ -92,6 +85,7 @@ function GameDashboard({ logout, user }) {
   const [progress, setProgress] = useState(100);
   const [floatingBids, setFloatingBids] = useState([]);
   const [userCount, setUserCount] = useState(1);
+  const [isCooldown, setIsCooldown] = useState(false);
   const prevStatus = useRef("ACTIVE");
 
   useEffect(() => {
@@ -112,18 +106,17 @@ function GameDashboard({ logout, user }) {
   }, []);
 
   const placeBid = () => {
-    const id = Date.now();
-    setFloatingBids(prev => [...prev, id]);
-    const identifier = user.email ? user.email.address : "User";
-    socket.emit('placeBid', identifier);
-  };
+    if (isCooldown) return;
+    
+    // --- SMART TIME LOGIC ---
+    // The server handles the actual time, but we send the bid now
+    socket.emit('placeBid', user.email?.address || "User");
+    
+    // --- 8 SECOND ANTI-SPAM LOCK ---
+    setIsCooldown(true);
+    setTimeout(() => setIsCooldown(false), 8000); 
 
-  const getWinnerName = () => {
-    if (gameState.history && gameState.history.length > 0) {
-      const name = gameState.history[0].user.split('@')[0];
-      return name.length > 12 ? name.slice(0, 12) + '...' : name;
-    }
-    return "No Bids";
+    setFloatingBids(prev => [...prev, Date.now()]);
   };
 
   if (!gameState) return <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><h2>Loading...</h2></div>;
@@ -131,57 +124,45 @@ function GameDashboard({ logout, user }) {
   return (
     <div style={{ minHeight: '100vh', width: '100vw', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       <GlobalStyle />
-      
-      {/* HEADER & LIVE COUNTER */}
       <nav style={{ display: 'flex', justifyContent: 'space-between', width: '100%', maxWidth: '400px', marginBottom: '20px' }}>
         <div style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px' }}>
           <span style={{ width: '8px', height: '8px', background: '#22c55e', borderRadius: '50%', animation: 'pulse-dot 1s infinite' }}></span>
           {userCount} Online
         </div>
-        <button onClick={logout} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}>Logout</button>
+        <button onClick={logout} style={{ background: 'none', border: 'none', color: 'white' }}>Logout</button>
       </nav>
 
-      {/* TIMER (ABOVE RING) */}
       <div style={{ fontSize: '28px', fontWeight: 'bold', fontFamily: 'monospace', color: '#fbbf24', marginBottom: '15px' }}>
         ⏱️ {gameState.status === 'ENDED' ? 'ENDED' : <TimerLogic targetDate={gameState.endTime} onTick={setProgress} />}
       </div>
 
-      {/* REACTOR RING & JACKPOT */}
       <div style={{ position: 'relative', width: '280px', height: '280px', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '30px' }}>
         <ProgressRing radius={140} stroke={8} progress={progress} />
         {floatingBids.map(id => <FloatingNumber key={id} onComplete={() => setFloatingBids(prev => prev.filter(b => b !== id))} />)}
-        
         <div style={{ textAlign: 'center', zIndex: 10 }}>
           {gameState.status === 'ENDED' ? (
-            <div style={{ animation: 'pulse-winner 1s infinite' }}>
-              <h3 style={{ fontSize: '32px', margin: '0' }}>🏆</h3>
-              <h2 style={{ fontSize: '24px', margin: '10px 0' }}>{getWinnerName()} WON!</h2>
-            </div>
+            <div><h2>{gameState.history[0]?.user.split('@')[0]} WON!</h2></div>
           ) : (
             <>
-              <p style={{ margin: 0, color: '#94a3b8', fontSize: '12px', letterSpacing: '2px' }}>JACKPOT</p>
-              <h2 style={{ fontSize: '50px', margin: '0', fontWeight: 'bold' }}>${gameState.jackpot.toFixed(2)}</h2>
+              <p style={{ margin: 0, color: '#94a3b8', fontSize: '12px' }}>JACKPOT</p>
+              <h2 style={{ fontSize: '50px', margin: '0' }}>${gameState.jackpot.toFixed(2)}</h2>
             </>
           )}
         </div>
       </div>
 
-      {/* BID BUTTON */}
-      <button onClick={placeBid} disabled={gameState.status !== 'ACTIVE'} style={{ width: '100%', maxWidth: '300px', padding: '20px', borderRadius: '50px', background: gameState.status === 'ACTIVE' ? '#ef4444' : '#64748b', border: 'none', color: 'white', fontWeight: 'bold', fontSize: '20px', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.3)' }}>
-        {gameState.status === 'ACTIVE' ? `BID NOW ($${gameState.bidCost})` : 'AUCTION ENDED'}
+      <button onClick={placeBid} disabled={gameState.status !== 'ACTIVE' || isCooldown} style={{ width: '100%', maxWidth: '300px', padding: '20px', borderRadius: '50px', background: isCooldown ? '#475569' : '#ef4444', color: 'white', fontWeight: 'bold', border: 'none', fontSize: '20px' }}>
+        {isCooldown ? "WAIT..." : (gameState.status === 'ACTIVE' ? `BID $${gameState.bidCost}` : 'ENDED')}
       </button>
 
-      {/* RECENT BIDS HISTORY */}
       <div style={{ width: '100%', maxWidth: '350px', marginTop: '30px' }}>
-        <h3 style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '15px', textTransform: 'uppercase', textAlign: 'center' }}>Recent Action</h3>
         {gameState.history.map((bid) => (
-          <div key={bid.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 20px', background: 'rgba(30, 41, 59, 0.5)', marginBottom: '8px', borderRadius: '12px', fontSize: '14px', border: '1px solid #334155' }}>
-            <span>{bid.user.split('@')[0].slice(0, 10)}...</span>
-            <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>${bid.amount.toFixed(2)}</span>
+          <div key={bid.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', background: 'rgba(30, 41, 59, 0.5)', marginBottom: '5px', borderRadius: '10px' }}>
+            <span>{bid.user.split('@')[0]}</span>
+            <span style={{ color: '#fbbf24' }}>${bid.amount.toFixed(2)}</span>
           </div>
         ))}
       </div>
-      <SpeedInsights />
     </div>
   );
 }
@@ -190,7 +171,7 @@ export default function App() {
   const { login, logout, user, authenticated, ready } = usePrivy();
   if (!ready) return null;
   return (
-    <PrivyProvider appId={PRIVY_APP_ID} config={{ loginMethods: ['email', 'wallet'], appearance: { theme: 'dark' } }}>
+    <PrivyProvider appId={PRIVY_APP_ID} config={{ appearance: { theme: 'dark' } }}>
       {authenticated ? <GameDashboard logout={logout} user={user} /> : <LoginScreen login={login} />}
     </PrivyProvider>
   );
