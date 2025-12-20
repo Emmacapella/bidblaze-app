@@ -46,8 +46,6 @@ function LoginScreen({ login }) {
       >
         Enter the Arena
       </button>
-      
-      <p style={{ marginTop: '30px', fontSize: '12px', color: '#64748b' }}>Powered by Privy & Render</p>
     </div>
   );
 }
@@ -196,10 +194,8 @@ function GameDashboard({ logout, user }) {
 function Main() {
   const { login, logout, user, authenticated, ready } = usePrivy();
 
-  // If Privy is still loading, show a blank black screen
   if (!ready) return <div style={{ background: '#0f172a', height: '100vh' }}></div>;
 
-  // LOGIC: If authenticated, show Game. If not, show Login.
   if (authenticated) {
     return <GameDashboard logout={logout} user={user} />;
   } else {
