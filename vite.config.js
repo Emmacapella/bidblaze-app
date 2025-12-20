@@ -4,20 +4,20 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   define: {
-    // This fixes the "global is not defined" error common in Web3
-    global: 'window',
+    'process.env': {}, // Fixes some wallet libs expecting Node.js
+    global: 'globalThis',
   },
   build: {
-    target: 'esnext', // Tells Vercel "It's okay to use modern code"
+    target: 'esnext', // Allow modern syntax
     commonjsOptions: {
-      transformMixedEsModules: true,
+      transformMixedEsModules: true, // Allow mixing old and new module types
     },
   },
   optimizeDeps: {
     esbuildOptions: {
-      target: 'esnext', // Ensures the pre-bundler also allows modern code
-      define: {
-        global: 'globalThis',
+      target: 'esnext', // CRITICAL: Tells the optimizer to allow modern syntax in dependencies
+      supported: { 
+        bigint: true 
       },
     },
   },
