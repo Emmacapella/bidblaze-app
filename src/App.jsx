@@ -4,15 +4,56 @@ import confetti from 'canvas-confetti';
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { PrivyProvider, usePrivy } from '@privy-io/react-auth';
 
-// --- ⚠️ PASTE YOUR APP ID HERE AGAIN ⚠️ ---
+// --- ⚠️ PASTE YOUR APP ID HERE ⚠️ ---
 const PRIVY_APP_ID = "Cmjd3lz86008nih0d7zq8qfro";
 
 const socket = io("https://bidblaze-server.onrender.com", {
   transports: ['websocket', 'polling']
 });
 
-function Game() {
-  const { login, logout, user, authenticated } = usePrivy();
+// --- SCREEN 1: THE LOGIN PAGE ---
+function LoginScreen({ login }) {
+  return (
+    <div style={{
+      height: '100vh',
+      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'center',
+      alignItems: 'center',
+      color: 'white',
+      fontFamily: 'sans-serif',
+      padding: '20px',
+      textAlign: 'center'
+    }}>
+      <div style={{ fontSize: '60px', marginBottom: '20px' }}>⚡</div>
+      <h1 style={{ fontSize: '40px', fontWeight: 'bold', margin: '0 0 10px 0', color: '#fbbf24' }}>BidBlaze</h1>
+      <p style={{ color: '#94a3b8', fontSize: '18px', marginBottom: '40px' }}>The Ultimate Real-Time Auction</p>
+      
+      <button 
+        onClick={login}
+        style={{
+          background: '#3b82f6',
+          border: 'none',
+          padding: '16px 40px',
+          color: 'white',
+          borderRadius: '30px',
+          fontSize: '18px',
+          fontWeight: 'bold',
+          cursor: 'pointer',
+          boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)'
+        }}
+      >
+        Enter the Arena
+      </button>
+      
+      <p style={{ marginTop: '30px', fontSize: '12px', color: '#64748b' }}>Powered by Privy & Render</p>
+    </div>
+  );
+}
+
+// --- SCREEN 2: THE DASHBOARD (GAME) ---
+function GameDashboard({ logout, user }) {
   const [gameState, setGameState] = useState(null);
 
   useEffect(() => {
@@ -26,12 +67,10 @@ function Game() {
   }, []);
 
   const placeBid = () => {
-    if (!authenticated) return login();
     const identifier = user.email ? user.email.address : (user.wallet ? user.wallet.address : "User");
     socket.emit('placeBid', identifier);
   };
 
-  // --- THIS WAS THE BROKEN PART (FIXED NOW) ---
   const formatTime = (ms) => {
     const totalSeconds = Math.floor((ms - Date.now()) / 1000);
     if (totalSeconds <= 0) return "00:00";
@@ -39,18 +78,17 @@ function Game() {
     const s = totalSeconds % 60;
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
-  // ---------------------------------------------
 
   if (!gameState) return (
     <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#0f172a', color: 'white' }}>
-      <h2>Connecting...</h2>
+      <h2>Loading Game Data...</h2>
     </div>
   );
 
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(to bottom, #0f172a, #1e293b)',
+      background: '#0f172a',
       color: 'white',
       fontFamily: 'sans-serif',
       display: 'flex',
@@ -59,33 +97,29 @@ function Game() {
       padding: '20px'
     }}>
       
+      {/* DASHBOARD HEADER */}
       <nav style={{ width: '100%', maxWidth: '400px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
         <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold', color: '#fbbf24' }}>BidBlaze ⚡</h1>
-        
-        {authenticated ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '12px', color: '#94a3b8' }}>
-              {user.email ? user.email.address.split('@')[0] : 'User'}
-            </span>
-            <button onClick={logout} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '5px 10px', borderRadius: '5px', fontSize: '12px', cursor: 'pointer' }}>
-              Sign Out
-            </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '12px', color: '#94a3b8' }}>Logged in as</div>
+            <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{user.email ? user.email.address.split('@')[0] : 'User'}</div>
           </div>
-        ) : (
-          <button onClick={login} style={{ background: '#3b82f6', border: 'none', padding: '8px 16px', color: 'white', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>
-            Sign In
+          <button onClick={logout} style={{ background: '#334155', border: 'none', color: 'white', padding: '8px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer' }}>
+            🚪
           </button>
-        )}
+        </div>
       </nav>
 
+      {/* GAME CARD */}
       <div style={{
-        background: 'rgba(255, 255, 255, 0.05)',
+        background: '#1e293b',
         padding: '30px',
         borderRadius: '24px',
         textAlign: 'center',
         width: '100%',
         maxWidth: '350px',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
+        border: '1px solid #334155',
         marginBottom: '30px'
       }}>
         <p style={{ margin: 0, color: '#94a3b8', fontSize: '12px', letterSpacing: '1px', fontWeight: '600' }}>CURRENT JACKPOT</p>
@@ -130,6 +164,7 @@ function Game() {
         </button>
       </div>
 
+      {/* RECENT BIDS */}
       <div style={{ width: '100%', maxWidth: '350px' }}>
         <h3 style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '15px', textTransform: 'uppercase' }}>Recent Bids</h3>
         {gameState.history.map((bid) => (
@@ -137,11 +172,12 @@ function Game() {
             display: 'flex',
             justifyContent: 'space-between',
             padding: '12px',
-            background: 'rgba(255,255,255,0.03)',
+            background: '#1e293b',
             marginBottom: '8px',
             borderRadius: '12px',
             fontSize: '14px',
-            alignItems: 'center'
+            alignItems: 'center',
+            border: '1px solid #334155'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ width: '30px', height: '30px', background: '#334155', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>👤</div>
@@ -156,6 +192,21 @@ function Game() {
   );
 }
 
+// --- MAIN APP: DECIDES WHICH SCREEN TO SHOW ---
+function Main() {
+  const { login, logout, user, authenticated, ready } = usePrivy();
+
+  // If Privy is still loading, show a blank black screen
+  if (!ready) return <div style={{ background: '#0f172a', height: '100vh' }}></div>;
+
+  // LOGIC: If authenticated, show Game. If not, show Login.
+  if (authenticated) {
+    return <GameDashboard logout={logout} user={user} />;
+  } else {
+    return <LoginScreen login={login} />;
+  }
+}
+
 export default function App() {
   return (
     <PrivyProvider
@@ -165,7 +216,7 @@ export default function App() {
         appearance: { theme: 'dark', accentColor: '#676FFF' },
       }}
     >
-      <Game />
+      <Main />
     </PrivyProvider>
   );
 }
