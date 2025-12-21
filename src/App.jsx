@@ -2,9 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import confetti from 'canvas-confetti';
 import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
+import { parseEther } from 'viem';
 
-// --- ⚠️ PASTE YOUR APP ID HERE ⚠️ ---
-const PRIVY_APP_ID = "Cmjd3lz86008nih0d7zq8qfro";
+// --- ⚠️ CONFIGURATION ⚠️ ---
+const PRIVY_APP_ID = "cm4l3033r048epf1ln3q59956"; // Your App ID
+// 👇 PASTE YOUR WALLET ADDRESS BELOW (The one you just copied)
+const TREASURY_ADDRESS = "0x496EBF196a00a331b72219B6bE1473CbD316383f"; 
 
 const socket = io("https://bidblaze-server.onrender.com", {
   transports: ['websocket', 'polling']
@@ -31,74 +34,153 @@ const playSound = (key) => {
   audio.play().catch(() => {});
 };
 
-// --- REACTOR RING (Updated Text & Seconds) ---
-const ReactorRing = ({ targetDate, status, restartTimer }) => {
+// --- 🏦 WALLET VAULT ---
+const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
+  const { wallets } = useWallets();
+  const [activeTab, setActiveTab] = useState('deposit');
+  const [amountUSD, setAmountUSD] = useState("");
+  const [status, setStatus] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  // Exchange Rate: $1.00 = 0.0003 ETH (Approx)
+  const ETH_PRICE_RATE = 0.0003; 
+
+  const handleDeposit = async () => {
+    if (!amountUSD || parseFloat(amountUSD) <= 0) return;
+    setLoading(true);
+    setStatus("Initiating Transaction...");
+
+    try {
+      const w = wallets.find(w => w.address.toLowerCase() === userAddress.toLowerCase());
+      if (!w) throw new Error("Wallet not connected");
+
+      // 1. Calculate ETH Amount
+      const ethAmount = (parseFloat(amountUSD) * ETH_PRICE_RATE).toFixed(6);
+      
+      // 2. Send Transaction (On Base Chain)
+      const hash = await w.sendTransaction({
+        to: TREASURY_ADDRESS,
+        value: parseEther(ethAmount), 
+        chainId: 8453
+      });
+
+      setStatus("Verifying...");
+
+      // 3. Notify Server
+      socket.emit('confirmDeposit', {
+        email: userEmail,
+        amount: amountUSD, 
+        txHash: hash
+      });
+
+      setStatus("✅ Success! Credits Added.");
+      setTimeout(() => { onClose(); setStatus(""); }, 2000);
+
+    } catch (e) {
+      console.error(e);
+      setStatus("❌ Failed: " + (e.message?.slice(0, 20) || "Error"));
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="glass-card modal-content">
+        <button className="close-btn" onClick={onClose}>✕</button>
+        <h2 style={{color: '#fbbf24', margin: '0 0 20px 0'}}>Vault 🏦</h2>
+        
+        <div className="balance-box">
+          <div className="label">YOUR CREDITS</div>
+          <div className="value">${currentCredits.toFixed(2)}</div>
+        </div>
+
+        <div className="tabs">
+          <button className={`tab ${activeTab === 'deposit' ? 'active' : ''}`} onClick={() => setActiveTab('deposit')}>Deposit</button>
+          <button className={`tab ${activeTab === 'withdraw' ? 'active' : ''}`} onClick={() => alert("Withdrawals are manual. Contact Admin.")}>Withdraw</button>
+        </div>
+
+        {activeTab === 'deposit' && (
+          <div className="tab-content fade-in">
+            <p className="hint" style={{fontSize: '12px', color:'#94a3b8', marginBottom:'10px'}}>
+               Pay with ETH (Base Network)<br/>
+               Rate: $1.00 ≈ {ETH_PRICE_RATE} ETH
+            </p>
+            <input 
+              className="input-field" 
+              type="number" 
+              placeholder="Amount in USD (e.g. 10)" 
+              value={amountUSD} 
+              onChange={e => setAmountUSD(e.target.value)} 
+            />
+            <button className="action-btn" onClick={handleDeposit} disabled={loading}>
+              {loading ? status : `Deposit $${amountUSD || '0'}`}
+            </button>
+            <p className="status-text">{status}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// --- REACTOR RING ---
+const ReactorRing = ({ targetDate, status }) => {
   const [progress, setProgress] = useState(100);
-  const [displayTime, setDisplayTime] = useState("60");
-  const [restartCount, setRestartCount] = useState(15);
+  const [displayTime, setDisplayTime] = useState("299");
 
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
+      const distance = targetDate - now;
 
       if (status === 'ACTIVE') {
-        const distance = targetDate - now;
         if (distance <= 0) {
           setDisplayTime("0");
           setProgress(0);
         } else {
-          // Progress bar based on 60 seconds
-          const percentage = Math.min((distance / 60000) * 100, 100);
+          const percentage = Math.min((distance / 299000) * 100, 100);
           setProgress(percentage);
-          // Show ONLY Seconds
           const s = Math.ceil(distance / 1000);
           setDisplayTime(s.toString());
         }
       } else {
-        // Countdown Logic
-        const restartDist = restartTimer - now;
-        if (restartDist > 0) {
-           const s = Math.ceil(restartDist / 1000);
-           setRestartCount(s);
-           setProgress(0);
-        } else {
-           setRestartCount(0);
-        }
+        setProgress(0);
       }
     }, 50);
     return () => clearInterval(interval);
-  }, [targetDate, status, restartTimer]);
+  }, [targetDate, status]);
 
   return (
     <div className="reactor-container">
-      <div className={`timer-float ${status === 'ENDED' ? 'ended' : ''}`}>
-        {status === 'ENDED' ? (
-          <div style={{lineHeight: '1.2', fontSize: '24px'}}>
-            <div style={{color: '#94a3b8', fontSize: '14px', letterSpacing: '2px'}}>NEW GAME IN</div>
-            <div style={{fontSize: '48px', color: '#fff'}}>{restartCount}</div>
-          </div>
-        ) : (
-          displayTime
-        )}
-      </div>
+      {status === 'ACTIVE' && <div className="timer-float">{displayTime}</div>}
       <svg className="progress-ring" width="280" height="280">
         <circle className="ring-bg" stroke="rgba(255,255,255,0.05)" strokeWidth="8" fill="transparent" r="130" cx="140" cy="140" />
-        <circle className="ring-progress" stroke={status === 'ENDED' ? '#334155' : "#fbbf24"} strokeWidth="8" strokeDasharray={`${2 * Math.PI * 130}`} strokeDashoffset={2 * Math.PI * 130 * (1 - progress / 100)} strokeLinecap="round" fill="transparent" r="130" cx="140" cy="140" />
+        <circle className="ring-progress" stroke={status === 'ENDED' ? '#ef4444' : "#fbbf24"} strokeWidth="8" strokeDasharray={`${2 * Math.PI * 130}`} strokeDashoffset={2 * Math.PI * 130 * (1 - progress / 100)} strokeLinecap="round" fill="transparent" r="130" cx="140" cy="140" />
       </svg>
     </div>
   );
 };
 
+// --- DASHBOARD ---
 function GameDashboard({ logout, user }) {
   const [gameState, setGameState] = useState(null);
+  const [credits, setCredits] = useState(0.00);
   const [isCooldown, setIsCooldown] = useState(false);
   const [cd, setCd] = useState(0);
   const [showVault, setShowVault] = useState(false);
   const [floatingBids, setFloatingBids] = useState([]);
+  const [restartCount, setRestartCount] = useState(15);
   const prevStatus = useRef("ACTIVE");
+  const { wallets } = useWallets();
+  const userAddress = wallets.find(w => w.walletClientType === 'privy')?.address || user.wallet?.address;
   const MY_EMAIL = "tinyearner8@gmail.com"; 
 
+  // Load Balance & Game State
   useEffect(() => {
+    if(user?.email?.address) {
+       socket.emit('getUserBalance', user.email.address);
+    }
+
     socket.on('gameState', (data) => {
       setGameState(data);
       if (data.status === 'ACTIVE' && data.history.length > 0) playSound('soundBid');
@@ -108,14 +190,33 @@ function GameDashboard({ logout, user }) {
       }
       prevStatus.current = data.status;
     });
-    let interval;
-    if (isCooldown && cd > 0) interval = setInterval(() => setCd(prev => prev - 1), 1000);
+
+    socket.on('balanceUpdate', (bal) => setCredits(bal));
+    socket.on('bidError', (msg) => alert(msg));
+
+    return () => { socket.off('gameState'); socket.off('balanceUpdate'); socket.off('bidError'); };
+  }, [user]);
+
+  // Countdowns
+  useEffect(() => {
+    const timerInterval = setInterval(() => {
+        if (gameState?.status === 'ENDED' && gameState?.restartTimer) {
+            const dist = gameState.restartTimer - Date.now();
+            setRestartCount(dist > 0 ? Math.ceil(dist/1000) : 0);
+        }
+    }, 100);
+
+    let cdInterval;
+    if (isCooldown && cd > 0) cdInterval = setInterval(() => setCd(prev => prev - 1), 1000);
     else if (cd <= 0) setIsCooldown(false);
-    return () => { socket.off('gameState'); clearInterval(interval); };
-  }, [isCooldown, cd]);
+
+    return () => { clearInterval(timerInterval); clearInterval(cdInterval); };
+  }, [gameState?.status, gameState?.restartTimer, isCooldown, cd]);
 
   const placeBid = () => {
     if (isCooldown) return;
+    if (credits < 1.00) { alert("Insufficient Credits! Please use the Vault."); setShowVault(true); return; }
+    
     setFloatingBids(prev => [...prev, Date.now()]);
     playSound('soundPop');
     socket.emit('placeBid', user.email ? user.email.address : "User");
@@ -126,10 +227,11 @@ function GameDashboard({ logout, user }) {
   const runAdmin = () => {
     const pwd = prompt("🔐 ADMIN PANEL\nEnter Password:");
     if (!pwd) return;
-    const action = prompt("1. Reset Game\n2. Set Jackpot\n3. Add Time");
+    const action = prompt("1. Reset Game\n2. Set Jackpot\n3. Add Time\n4. Check Profit");
     if (action === '1') socket.emit('adminAction', { password: pwd, action: 'RESET' });
     else if (action === '2') socket.emit('adminAction', { password: pwd, action: 'SET_JACKPOT', value: prompt("Amount:") });
-    else if (action === '3') socket.emit('adminAction', { password: pwd, action: 'ADD_TIME', value: 60 });
+    else if (action === '3') socket.emit('adminAction', { password: pwd, action: 'ADD_TIME', value: 299 });
+    else if (action === '4') socket.emit('adminAction', { password: pwd, action: 'CHECK_PROFIT' });
   };
 
   if (!gameState) return <div className="loading-screen">Connecting...</div>;
@@ -137,21 +239,32 @@ function GameDashboard({ logout, user }) {
   return (
     <div className="app-container">
       <GlobalStyle />
-      {showVault && <div className="modal-overlay"><button className="close-btn" onClick={()=>setShowVault(false)}>✕</button><div className="glass-card"><h2 style={{color:'#fbbf24'}}>Coming Soon</h2><p>Vault is under maintenance.</p></div></div>}
+      {showVault && <WalletVault onClose={() => setShowVault(false)} userAddress={userAddress} userEmail={user.email?.address} currentCredits={credits} />}
 
       <nav className="glass-nav">
-        <button className="nav-btn vault-btn" onClick={() => setShowVault(true)}>🏦 Vault</button>
+        <button className="nav-btn vault-btn" onClick={() => setShowVault(true)}>🏦 ${credits.toFixed(2)}</button>
         <div className="live-pill">● {gameState.connectedUsers || 1} LIVE</div>
         <button className="nav-btn logout-btn" onClick={logout}>✕</button>
       </nav>
 
       <div className="game-stage">
-        <ReactorRing targetDate={gameState.endTime} status={gameState.status} restartTimer={gameState.restartTimer} />
+        <ReactorRing targetDate={gameState.endTime} status={gameState.status} />
+        
         <div className="jackpot-core">
-          <div className="label">JACKPOT</div>
-          <div className="amount">${gameState.jackpot.toFixed(2)}</div>
-          {gameState.status === 'ENDED' && <div className="winner-badge">🏆 {gameState.history[0]?.user.slice(0,10)}...</div>}
+          {gameState.status === 'ACTIVE' ? (
+            <>
+              <div className="label">JACKPOT</div>
+              <div className="amount">${gameState.jackpot.toFixed(2)}</div>
+            </>
+          ) : (
+            <div className="restart-box">
+               <div className="restart-label">NEW GAME IN</div>
+               <div className="restart-timer">{restartCount}</div>
+               <div className="winner-badge">🏆 WINNER: {gameState.history[0]?.user.slice(0,10)}...</div>
+            </div>
+          )}
         </div>
+
         {floatingBids.map(id => (
           <div key={id} className="float-anim" onAnimationEnd={() => setFloatingBids(prev => prev.filter(bid => bid !== id))}>-$1.00</div>
         ))}
@@ -216,10 +329,16 @@ const GlobalStyle = () => (
     .progress-ring { transform: rotate(-90deg); width: 100%; height: 100%; overflow: visible; }
     .ring-progress { transition: stroke-dashoffset 0.1s linear; filter: drop-shadow(0 0 8px var(--gold)); }
     .timer-float { position: absolute; top: -40px; left: 50%; transform: translateX(-50%); font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: bold; color: var(--gold); text-shadow: 0 0 15px rgba(251, 191, 36, 0.5); }
+    
     .jackpot-core { z-index: 10; text-align: center; }
     .jackpot-core .label { font-size: 12px; color: #64748b; letter-spacing: 2px; margin-bottom: 5px; }
     .jackpot-core .amount { font-size: 56px; font-weight: 900; color: white; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-    .winner-badge { background: #22c55e; color: black; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 14px; margin-top: 10px; display: inline-block; animation: popIn 0.5s; }
+    
+    .restart-box { animation: popIn 0.3s; }
+    .restart-label { color: #ef4444; font-size: 14px; font-weight: bold; letter-spacing: 2px; margin-bottom: 5px; }
+    .restart-timer { font-size: 60px; font-weight: 900; color: white; text-shadow: 0 0 20px rgba(239, 68, 68, 0.5); line-height: 1; }
+    .winner-badge { background: #fbbf24; color: black; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 14px; margin-top: 15px; display: inline-block; }
+
     .panel-header { font-size: 11px; color: #64748b; letter-spacing: 1px; margin-bottom: 10px; font-weight: bold; text-align: left; }
     .history-list { max-height: 300px; overflow-y: auto; padding-right: 5px; }
     .history-list::-webkit-scrollbar { width: 4px; }
@@ -231,9 +350,16 @@ const GlobalStyle = () => (
     .tabs { display: flex; background: #1e293b; padding: 4px; border-radius: 12px; margin-bottom: 20px; }
     .tab { flex: 1; background: transparent; border: none; color: #94a3b8; padding: 10px; border-radius: 10px; font-weight: bold; cursor: pointer; }
     .tab.active { background: #334155; color: white; }
+    .balance-box { background: linear-gradient(135deg, #1e3a8a, #172554); padding: 20px; border-radius: 16px; margin-bottom: 20px; text-align: left; }
+    .balance-box .label { font-size: 10px; color: #93c5fd; letter-spacing: 1px; }
+    .balance-box .value { font-size: 28px; font-weight: bold; margin-top: 5px; }
+    .input-field { width: 100%; background: #1e293b; border: 1px solid #334155; padding: 14px; border-radius: 12px; color: white; margin-bottom: 10px; box-sizing: border-box; }
+    .action-btn { width: 100%; padding: 14px; background: var(--blue); border: none; border-radius: 12px; color: white; font-weight: bold; cursor: pointer; }
+    .status-text { font-size: 12px; margin-top: 10px; color: #94a3b8; min-height: 20px; }
     @keyframes popIn { 0% { transform: scale(0); } 100% { transform: scale(1); } }
     @keyframes floatUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-80px); } }
     .float-anim { position: absolute; color: var(--red); font-weight: 900; font-size: 24px; animation: floatUp 0.8s forwards; z-index: 50; pointer-events: none; }
+    .fade-in { animation: popIn 0.3s ease-out; }
   `}</style>
 );
 
