@@ -129,7 +129,6 @@ const ReactorRing = ({ targetDate, status }) => {
         setDisplayTime("00:00");
         setProgress(0);
       } else {
-        // Visual: 60s loop
         const percentage = Math.min((distance / 60000) * 100, 100);
         setProgress(percentage);
         const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
