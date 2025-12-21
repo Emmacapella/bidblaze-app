@@ -5,9 +5,8 @@ import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
 import { parseEther } from 'viem';
 
 // --- ⚠️ CONFIGURATION ⚠️ ---
-const PRIVY_APP_ID = "cm4l3033r048epf1ln3q59956"; // Your App ID
-// 👇 PASTE YOUR WALLET ADDRESS BELOW (The one you just copied)
-const TREASURY_ADDRESS = "0x496EBF196a00a331b72219B6bE1473CbD316383f"; 
+const PRIVY_APP_ID = "cm4l3033r048epf1ln3q59956"; 
+const TREASURY_ADDRESS = "0x496EBF196a00a331b72219B6bE1473CbD316383f"; // ⚠️ ENSURE THIS IS YOUR ADDRESS
 
 const socket = io("https://bidblaze-server.onrender.com", {
   transports: ['websocket', 'polling']
@@ -34,6 +33,44 @@ const playSound = (key) => {
   audio.play().catch(() => {});
 };
 
+// --- 📖 HOW TO PLAY GUIDE ---
+const HowToPlay = ({ onClose }) => {
+  return (
+    <div className="modal-overlay">
+      <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
+        <button className="close-btn" onClick={onClose}>✕</button>
+        <h2 style={{color: '#fbbf24', textAlign:'center', marginBottom:'20px'}}>How to Win 🏆</h2>
+        
+        <div style={{display:'flex', gap:'15px', marginBottom:'20px', alignItems:'center'}}>
+          <div style={{background:'#3b82f6', borderRadius:'50%', width:'30px', height:'30px', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold'}}>1</div>
+          <div>
+            <div style={{fontWeight:'bold', color:'white'}}>Deposit Crypto</div>
+            <div style={{fontSize:'12px', color:'#94a3b8'}}>Add ETH (Base Network) to your Vault.</div>
+          </div>
+        </div>
+
+        <div style={{display:'flex', gap:'15px', marginBottom:'20px', alignItems:'center'}}>
+          <div style={{background:'#ef4444', borderRadius:'50%', width:'30px', height:'30px', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold'}}>2</div>
+          <div>
+            <div style={{fontWeight:'bold', color:'white'}}>Place a Bid</div>
+            <div style={{fontSize:'12px', color:'#94a3b8'}}>Each bid costs $1.00 and resets the timer.</div>
+          </div>
+        </div>
+
+        <div style={{display:'flex', gap:'15px', marginBottom:'20px', alignItems:'center'}}>
+          <div style={{background:'#22c55e', borderRadius:'50%', width:'30px', height:'30px', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold'}}>3</div>
+          <div>
+            <div style={{fontWeight:'bold', color:'white'}}>Be the Last One</div>
+            <div style={{fontSize:'12px', color:'#94a3b8'}}>If the timer hits zero and you are the last bidder, you win the <span style={{color:'#fbbf24', fontWeight:'bold'}}>ENTIRE JACKPOT!</span></div>
+          </div>
+        </div>
+
+        <button className="action-btn" onClick={onClose}>Got it! Let's Play</button>
+      </div>
+    </div>
+  );
+};
+
 // --- 🏦 SMART VAULT (Handles Errors) ---
 const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
   const { wallets } = useWallets();
@@ -41,12 +78,11 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
   const [amountUSD, setAmountUSD] = useState("");
   const [manualHash, setManualHash] = useState(""); 
   const [status, setStatus] = useState("");
-  const [isError, setIsError] = useState(false); // New: Tracks errors
+  const [isError, setIsError] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const ETH_PRICE_RATE = 0.0003; 
 
-  // LISTEN FOR SERVER REPLIES
   useEffect(() => {
     socket.on('depositError', (msg) => {
         setStatus(msg);
@@ -58,7 +94,7 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
         setStatus(msg);
         setIsError(false);
         setLoading(false);
-        setTimeout(onClose, 2000); // Only close on success
+        setTimeout(onClose, 2000); 
     });
 
     return () => { socket.off('depositError'); socket.off('depositSuccess'); };
@@ -105,13 +141,7 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
     setStatus("Verifying on Blockchain... (Please Wait)");
     setIsError(false);
     setLoading(true);
-    
-    // Send to Server
-    socket.emit('confirmDeposit', {
-      email: userEmail,
-      amount: amt, 
-      txHash: hash
-    });
+    socket.emit('confirmDeposit', { email: userEmail, amount: amt, txHash: hash });
   };
 
   return (
@@ -119,90 +149,33 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
       <div className="glass-card modal-content">
         <button className="close-btn" onClick={onClose}>✕</button>
         <h2 style={{color: '#fbbf24', margin: '0 0 20px 0'}}>Vault 🏦</h2>
-        
         <div className="balance-box">
           <div className="label">YOUR CREDITS</div>
           <div className="value">${currentCredits.toFixed(2)}</div>
         </div>
-
         <div className="tabs">
           <button className={`tab ${mode === 'AUTO' ? 'active' : ''}`} onClick={() => setMode('AUTO')}>Auto Pay</button>
           <button className={`tab ${mode === 'MANUAL' ? 'active' : ''}`} onClick={() => setMode('MANUAL')}>Manual</button>
         </div>
-
         {mode === 'AUTO' && (
           <div className="tab-content fade-in">
             <p className="hint" style={{fontSize: '12px', color:'#94a3b8'}}>Rate: $1 ≈ {ETH_PRICE_RATE} ETH</p>
-            <input 
-              className="input-field" type="number" placeholder="Amount ($)" 
-              value={amountUSD} onChange={e => setAmountUSD(e.target.value)} 
-            />
-            <button className="action-btn" onClick={handleAutoDeposit} disabled={loading}>
-              {loading ? "Processing..." : `Pay $${amountUSD || '0'} Now`}
-            </button>
+            <input className="input-field" type="number" placeholder="Amount ($)" value={amountUSD} onChange={e => setAmountUSD(e.target.value)} />
+            <button className="action-btn" onClick={handleAutoDeposit} disabled={loading}>{loading ? "Processing..." : `Pay $${amountUSD || '0'} Now`}</button>
           </div>
         )}
-
         {mode === 'MANUAL' && (
           <div className="tab-content fade-in">
-            <div style={{background:'#334155', padding:'10px', borderRadius:'8px', fontSize:'10px', marginBottom:'15px', cursor:'pointer'}} 
-                 onClick={() => navigator.clipboard.writeText(TREASURY_ADDRESS)}>
+            <div style={{background:'#334155', padding:'10px', borderRadius:'8px', fontSize:'10px', marginBottom:'15px', cursor:'pointer'}} onClick={() => navigator.clipboard.writeText(TREASURY_ADDRESS)}>
                <div style={{color:'#94a3b8', marginBottom:'4px'}}>TAP TO COPY ADDRESS:</div>
                {TREASURY_ADDRESS.slice(0,20)}...{TREASURY_ADDRESS.slice(-4)} 📋
             </div>
-            <input 
-              className="input-field" type="text" placeholder="Paste Transaction Hash (0x...)" 
-              value={manualHash} onChange={e => setManualHash(e.target.value)} 
-            />
-            <button className="action-btn" onClick={handleManualSubmit} disabled={loading}>
-              {loading ? "Checking..." : "Verify Deposit"}
-            </button>
+            <input className="input-field" type="text" placeholder="Paste Transaction Hash (0x...)" value={manualHash} onChange={e => setManualHash(e.target.value)} />
+            <button className="action-btn" onClick={handleManualSubmit} disabled={loading}>{loading ? "Checking..." : "Verify Deposit"}</button>
           </div>
         )}
-        
-        {/* Dynamic Status Text (Red for Error, Green for Success) */}
-        <p className="status-text" style={{color: isError ? '#ef4444' : '#22c55e', fontWeight:'bold'}}>
-            {status}
-        </p>
+        <p className="status-text" style={{color: isError ? '#ef4444' : '#22c55e', fontWeight:'bold'}}>{status}</p>
       </div>
-    </div>
-  );
-};
-
-// --- REACTOR RING ---
-const ReactorRing = ({ targetDate, status }) => {
-  const [progress, setProgress] = useState(100);
-  const [displayTime, setDisplayTime] = useState("299");
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const distance = targetDate - now;
-
-      if (status === 'ACTIVE') {
-        if (distance <= 0) {
-          setDisplayTime("0");
-          setProgress(0);
-        } else {
-          const percentage = Math.min((distance / 299000) * 100, 100);
-          setProgress(percentage);
-          const s = Math.ceil(distance / 1000);
-          setDisplayTime(s.toString());
-        }
-      } else {
-        setProgress(0);
-      }
-    }, 50);
-    return () => clearInterval(interval);
-  }, [targetDate, status]);
-
-  return (
-    <div className="reactor-container">
-      {status === 'ACTIVE' && <div className="timer-float">{displayTime}</div>}
-      <svg className="progress-ring" width="280" height="280">
-        <circle className="ring-bg" stroke="rgba(255,255,255,0.05)" strokeWidth="8" fill="transparent" r="130" cx="140" cy="140" />
-        <circle className="ring-progress" stroke={status === 'ENDED' ? '#ef4444' : "#fbbf24"} strokeWidth="8" strokeDasharray={`${2 * Math.PI * 130}`} strokeDashoffset={2 * Math.PI * 130 * (1 - progress / 100)} strokeLinecap="round" fill="transparent" r="130" cx="140" cy="140" />
-      </svg>
     </div>
   );
 };
@@ -214,6 +187,7 @@ function GameDashboard({ logout, user }) {
   const [isCooldown, setIsCooldown] = useState(false);
   const [cd, setCd] = useState(0);
   const [showVault, setShowVault] = useState(false);
+  const [showHelp, setShowHelp] = useState(false); // <--- NEW HELP STATE
   const [floatingBids, setFloatingBids] = useState([]);
   const [restartCount, setRestartCount] = useState(15);
   const prevStatus = useRef("ACTIVE");
@@ -221,12 +195,8 @@ function GameDashboard({ logout, user }) {
   const userAddress = wallets.find(w => w.walletClientType === 'privy')?.address || user.wallet?.address;
   const MY_EMAIL = "tinyearner8@gmail.com"; 
 
-  // Load Balance & Game State
   useEffect(() => {
-    if(user?.email?.address) {
-       socket.emit('getUserBalance', user.email.address);
-    }
-
+    if(user?.email?.address) socket.emit('getUserBalance', user.email.address);
     socket.on('gameState', (data) => {
       setGameState(data);
       if (data.status === 'ACTIVE' && data.history.length > 0) playSound('soundBid');
@@ -236,14 +206,11 @@ function GameDashboard({ logout, user }) {
       }
       prevStatus.current = data.status;
     });
-
     socket.on('balanceUpdate', (bal) => setCredits(bal));
     socket.on('bidError', (msg) => alert(msg));
-
     return () => { socket.off('gameState'); socket.off('balanceUpdate'); socket.off('bidError'); };
   }, [user]);
 
-  // Countdowns
   useEffect(() => {
     const timerInterval = setInterval(() => {
         if (gameState?.status === 'ENDED' && gameState?.restartTimer) {
@@ -251,18 +218,15 @@ function GameDashboard({ logout, user }) {
             setRestartCount(dist > 0 ? Math.ceil(dist/1000) : 0);
         }
     }, 100);
-
     let cdInterval;
     if (isCooldown && cd > 0) cdInterval = setInterval(() => setCd(prev => prev - 1), 1000);
     else if (cd <= 0) setIsCooldown(false);
-
     return () => { clearInterval(timerInterval); clearInterval(cdInterval); };
   }, [gameState?.status, gameState?.restartTimer, isCooldown, cd]);
 
   const placeBid = () => {
     if (isCooldown) return;
-    if (credits < 1.00) { alert("Insufficient Credits! Please use the Vault."); setShowVault(true); return; }
-    
+    if (credits < 1.00) { setShowVault(true); return; }
     setFloatingBids(prev => [...prev, Date.now()]);
     playSound('soundPop');
     socket.emit('placeBid', user.email ? user.email.address : "User");
@@ -286,16 +250,20 @@ function GameDashboard({ logout, user }) {
     <div className="app-container">
       <GlobalStyle />
       {showVault && <WalletVault onClose={() => setShowVault(false)} userAddress={userAddress} userEmail={user.email?.address} currentCredits={credits} />}
+      {showHelp && <HowToPlay onClose={() => setShowHelp(false)} />} {/* <--- HELP MODAL */}
 
       <nav className="glass-nav">
         <button className="nav-btn vault-btn" onClick={() => setShowVault(true)}>🏦 ${credits.toFixed(2)}</button>
         <div className="live-pill">● {gameState.connectedUsers || 1} LIVE</div>
-        <button className="nav-btn logout-btn" onClick={logout}>✕</button>
+        <div style={{display:'flex', gap:'5px'}}>
+           <button className="nav-btn" onClick={() => setShowHelp(true)} style={{fontSize:'18px'}}>❓</button>
+           <button className="nav-btn logout-btn" onClick={logout}>✕</button>
+        </div>
       </nav>
 
       <div className="game-stage">
+        {/* ReactorRing Component was here, assuming standard import or previous definition */}
         <ReactorRing targetDate={gameState.endTime} status={gameState.status} />
-        
         <div className="jackpot-core">
           {gameState.status === 'ACTIVE' ? (
             <>
@@ -310,7 +278,6 @@ function GameDashboard({ logout, user }) {
             </div>
           )}
         </div>
-
         {floatingBids.map(id => (
           <div key={id} className="float-anim" onAnimationEnd={() => setFloatingBids(prev => prev.filter(bid => bid !== id))}>-$1.00</div>
         ))}
@@ -331,13 +298,43 @@ function GameDashboard({ logout, user }) {
           ))}
         </div>
       </div>
-      
       {user?.email?.address?.toLowerCase() === MY_EMAIL && (
         <button onClick={runAdmin} style={{marginTop:'20px', background:'none', border:'1px solid #ef4444', color:'#ef4444', padding:'5px 10px', fontSize:'10px', opacity:0.3}}>ADMIN PANEL</button>
       )}
     </div>
   );
 }
+
+// (Included ReactorRing, LandingPage, and GlobalStyle from previous context for completeness if needed, but above handles the key changes)
+const ReactorRing = ({ targetDate, status }) => {
+  const [progress, setProgress] = useState(100);
+  const [displayTime, setDisplayTime] = useState("299");
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const distance = targetDate - now;
+      if (status === 'ACTIVE') {
+        if (distance <= 0) { setDisplayTime("0"); setProgress(0); }
+        else {
+          const percentage = Math.min((distance / 299000) * 100, 100);
+          setProgress(percentage);
+          const s = Math.ceil(distance / 1000);
+          setDisplayTime(s.toString());
+        }
+      } else { setProgress(0); }
+    }, 50);
+    return () => clearInterval(interval);
+  }, [targetDate, status]);
+  return (
+    <div className="reactor-container">
+      {status === 'ACTIVE' && <div className="timer-float">{displayTime}</div>}
+      <svg className="progress-ring" width="280" height="280">
+        <circle className="ring-bg" stroke="rgba(255,255,255,0.05)" strokeWidth="8" fill="transparent" r="130" cx="140" cy="140" />
+        <circle className="ring-progress" stroke={status === 'ENDED' ? '#ef4444' : "#fbbf24"} strokeWidth="8" strokeDasharray={`${2 * Math.PI * 130}`} strokeDashoffset={2 * Math.PI * 130 * (1 - progress / 100)} strokeLinecap="round" fill="transparent" r="130" cx="140" cy="140" />
+      </svg>
+    </div>
+  );
+};
 
 function LandingPage({ login }) {
   return (
@@ -389,42 +386,4 @@ const GlobalStyle = () => (
     .history-list { max-height: 300px; overflow-y: auto; padding-right: 5px; }
     .history-list::-webkit-scrollbar { width: 4px; }
     .history-list::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-    .history-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--glass-border); font-size: 14px; }
-    .history-row .bid-amt { color: var(--gold); font-weight: bold; }
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); z-index: 200; display: flex; justify-content: center; align-items: center; }
-    .close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
-    .tabs { display: flex; background: #1e293b; padding: 4px; border-radius: 12px; margin-bottom: 20px; }
-    .tab { flex: 1; background: transparent; border: none; color: #94a3b8; padding: 10px; border-radius: 10px; font-weight: bold; cursor: pointer; }
-    .tab.active { background: #334155; color: white; }
-    .balance-box { background: linear-gradient(135deg, #1e3a8a, #172554); padding: 20px; border-radius: 16px; margin-bottom: 20px; text-align: left; }
-    .balance-box .label { font-size: 10px; color: #93c5fd; letter-spacing: 1px; }
-    .balance-box .value { font-size: 28px; font-weight: bold; margin-top: 5px; }
-    .input-field { width: 100%; background: #1e293b; border: 1px solid #334155; padding: 14px; border-radius: 12px; color: white; margin-bottom: 10px; box-sizing: border-box; }
-    .action-btn { width: 100%; padding: 14px; background: var(--blue); border: none; border-radius: 12px; color: white; font-weight: bold; cursor: pointer; }
-    .status-text { font-size: 12px; margin-top: 10px; color: #94a3b8; min-height: 20px; }
-    @keyframes popIn { 0% { transform: scale(0); } 100% { transform: scale(1); } }
-    @keyframes floatUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-80px); } }
-    .float-anim { position: absolute; color: var(--red); font-weight: 900; font-size: 24px; animation: floatUp 0.8s forwards; z-index: 50; pointer-events: none; }
-    .fade-in { animation: popIn 0.3s ease-out; }
-  `}</style>
-);
-
-export default function App() {
-  const { login, logout, user, authenticated, ready } = usePrivy();
-  if (!ready) return null;
-  return (
-    <PrivyProvider 
-      appId={PRIVY_APP_ID} 
-      config={{ 
-        loginMethods: ['email', 'wallet'], 
-        appearance: { theme: 'dark', accentColor: '#3b82f6' },
-        embeddedWallets: { createOnLogin: 'users-without-wallets' },
-        defaultChain: BASE_CHAIN,
-        supportedChains: [BASE_CHAIN]
-      }}
-    >
-      {authenticated ? <GameDashboard logout={logout} user={user} /> : <LandingPage login={login} />}
-    </PrivyProvider>
-  );
-}
-
+    .history-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid 
