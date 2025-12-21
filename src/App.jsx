@@ -34,22 +34,40 @@ const playSound = (key) => {
   audio.play().catch(() => {});
 };
 
-// --- 🏦 HYBRID VAULT (Auto + Manual) ---
+// --- 🏦 SMART VAULT (Handles Errors) ---
 const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
   const { wallets } = useWallets();
-  const [mode, setMode] = useState('AUTO'); // 'AUTO' or 'MANUAL'
+  const [mode, setMode] = useState('AUTO'); 
   const [amountUSD, setAmountUSD] = useState("");
-  const [manualHash, setManualHash] = useState(""); // For manual entry
+  const [manualHash, setManualHash] = useState(""); 
   const [status, setStatus] = useState("");
+  const [isError, setIsError] = useState(false); // New: Tracks errors
   const [loading, setLoading] = useState(false);
 
-  // Exchange Rate: $1.00 = 0.0003 ETH
   const ETH_PRICE_RATE = 0.0003; 
 
-  // OPTION A: Automatic (Web3 Browser)
+  // LISTEN FOR SERVER REPLIES
+  useEffect(() => {
+    socket.on('depositError', (msg) => {
+        setStatus(msg);
+        setIsError(true);
+        setLoading(false);
+    });
+
+    socket.on('depositSuccess', (msg) => {
+        setStatus(msg);
+        setIsError(false);
+        setLoading(false);
+        setTimeout(onClose, 2000); // Only close on success
+    });
+
+    return () => { socket.off('depositError'); socket.off('depositSuccess'); };
+  }, []);
+
   const handleAutoDeposit = async () => {
     if (!amountUSD || parseFloat(amountUSD) <= 0) return;
     setLoading(true);
+    setIsError(false);
     setStatus("Initiating Transaction...");
 
     try {
@@ -63,30 +81,30 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
         value: parseEther(ethAmount), 
         chainId: 8453
       });
-
+      
       submitDeposit(hash, amountUSD);
 
     } catch (e) {
       console.error(e);
-      setStatus("❌ Error. Try Manual Mode below.");
+      setStatus("❌ Wallet Error. Try Manual Mode.");
+      setIsError(true);
       setLoading(false);
     }
   };
 
-  // OPTION B: Manual (Copy & Paste)
   const handleManualSubmit = () => {
     if (!manualHash || manualHash.length < 10) {
-      setStatus("❌ Invalid Transaction Hash");
+      setStatus("❌ Invalid Transaction Hash format");
+      setIsError(true);
       return;
     }
-    // For manual, we don't know the exact amount yet, the server verifies it!
-    // We send '0' as placeholder, server will update with real amount.
     submitDeposit(manualHash, "0"); 
   };
 
-  // Common Submit Function
   const submitDeposit = (hash, amt) => {
-    setStatus("Verifying on Blockchain...");
+    setStatus("Verifying on Blockchain... (Please Wait)");
+    setIsError(false);
+    setLoading(true);
     
     // Send to Server
     socket.emit('confirmDeposit', {
@@ -94,12 +112,6 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
       amount: amt, 
       txHash: hash
     });
-
-    // Wait for server response (Balance Update will close modal)
-    setTimeout(() => {
-       setStatus("✅ Sent! Waiting for confirmation...");
-       setTimeout(onClose, 2000); 
-    }, 1000);
   };
 
   return (
@@ -113,61 +125,45 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
           <div className="value">${currentCredits.toFixed(2)}</div>
         </div>
 
-        {/* TOGGLE BUTTONS */}
         <div className="tabs">
           <button className={`tab ${mode === 'AUTO' ? 'active' : ''}`} onClick={() => setMode('AUTO')}>Auto Pay</button>
-          <button className={`tab ${mode === 'MANUAL' ? 'active' : ''}`} onClick={() => setMode('MANUAL')}>Manual Transfer</button>
+          <button className={`tab ${mode === 'MANUAL' ? 'active' : ''}`} onClick={() => setMode('MANUAL')}>Manual</button>
         </div>
 
-        {/* --- AUTO MODE --- */}
         {mode === 'AUTO' && (
           <div className="tab-content fade-in">
-            <p className="hint" style={{fontSize: '12px', color:'#94a3b8'}}>
-               Best for MetaMask / Coinbase Wallet App
-            </p>
+            <p className="hint" style={{fontSize: '12px', color:'#94a3b8'}}>Rate: $1 ≈ {ETH_PRICE_RATE} ETH</p>
             <input 
-              className="input-field" 
-              type="number" 
-              placeholder="Amount in USD (e.g. 10)" 
-              value={amountUSD} 
-              onChange={e => setAmountUSD(e.target.value)} 
+              className="input-field" type="number" placeholder="Amount ($)" 
+              value={amountUSD} onChange={e => setAmountUSD(e.target.value)} 
             />
             <button className="action-btn" onClick={handleAutoDeposit} disabled={loading}>
-              {loading ? status : `Pay $${amountUSD || '0'} Now`}
+              {loading ? "Processing..." : `Pay $${amountUSD || '0'} Now`}
             </button>
           </div>
         )}
 
-        {/* --- MANUAL MODE --- */}
         {mode === 'MANUAL' && (
           <div className="tab-content fade-in">
-            <p className="hint" style={{fontSize: '12px', color:'#94a3b8', marginBottom:'5px'}}>
-               1. Copy Address & Send ETH (Base)
-            </p>
-            
-            {/* COPY ADDRESS BOX */}
-            <div style={{background:'#334155', padding:'10px', borderRadius:'8px', fontSize:'10px', wordBreak:'break-all', marginBottom:'15px', cursor:'pointer'}} 
+            <div style={{background:'#334155', padding:'10px', borderRadius:'8px', fontSize:'10px', marginBottom:'15px', cursor:'pointer'}} 
                  onClick={() => navigator.clipboard.writeText(TREASURY_ADDRESS)}>
-               {TREASURY_ADDRESS} 📋
+               <div style={{color:'#94a3b8', marginBottom:'4px'}}>TAP TO COPY ADDRESS:</div>
+               {TREASURY_ADDRESS.slice(0,20)}...{TREASURY_ADDRESS.slice(-4)} 📋
             </div>
-
-            <p className="hint" style={{fontSize: '12px', color:'#94a3b8', marginBottom:'5px'}}>
-               2. Paste Transaction Hash (Receipt)
-            </p>
             <input 
-              className="input-field" 
-              type="text" 
-              placeholder="0x..." 
-              value={manualHash} 
-              onChange={e => setManualHash(e.target.value)} 
+              className="input-field" type="text" placeholder="Paste Transaction Hash (0x...)" 
+              value={manualHash} onChange={e => setManualHash(e.target.value)} 
             />
             <button className="action-btn" onClick={handleManualSubmit} disabled={loading}>
-              Verify Deposit
+              {loading ? "Checking..." : "Verify Deposit"}
             </button>
           </div>
         )}
         
-        <p className="status-text">{status}</p>
+        {/* Dynamic Status Text (Red for Error, Green for Success) */}
+        <p className="status-text" style={{color: isError ? '#ef4444' : '#22c55e', fontWeight:'bold'}}>
+            {status}
+        </p>
       </div>
     </div>
   );
