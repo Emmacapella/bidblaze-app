@@ -31,94 +31,10 @@ const playSound = (key) => {
   audio.play().catch(() => {});
 };
 
-// --- WALLET VAULT ---
-const WalletVault = ({ onClose, userAddress }) => {
-  const { wallets } = useWallets();
-  const [activeTab, setActiveTab] = useState('deposit');
-  const [balance, setBalance] = useState("0.0000");
-  const [withdrawAddr, setWithdrawAddr] = useState("");
-  const [amount, setAmount] = useState("");
-  const [status, setStatus] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!userAddress) return;
-    const fetchBal = async () => {
-      try {
-        const res = await fetch('https://mainnet.base.org', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jsonrpc: "2.0", method: "eth_getBalance", params: [userAddress, "latest"], id: 1 })
-        });
-        const data = await res.json();
-        setBalance((parseInt(data.result, 16) / 1e18).toFixed(4));
-      } catch (e) {}
-    };
-    fetchBal();
-  }, [userAddress]);
-
-  const handleWithdraw = async () => {
-    if (!withdrawAddr || !amount) return;
-    setLoading(true);
-    setStatus("Processing...");
-    try {
-      const w = wallets.find(w => w.address.toLowerCase() === userAddress.toLowerCase());
-      if (!w) throw new Error("Wallet connection lost");
-      const wei = `0x${(parseFloat(amount) * 1e18).toString(16)}`;
-      await w.sendTransaction({ to: withdrawAddr, value: wei, chainId: 8453 });
-      setStatus("✅ Sent!");
-      playSound('soundPop');
-      setAmount("");
-    } catch (e) {
-      setStatus("❌ Failed");
-    }
-    setLoading(false);
-  };
-
-  const copyAddress = () => {
-    navigator.clipboard.writeText(userAddress);
-    setStatus("Copied! 📋");
-    setTimeout(() => setStatus(""), 2000);
-  };
-
-  return (
-    <div className="modal-overlay">
-      <div className="glass-card modal-content">
-        <button className="close-btn" onClick={onClose}>✕</button>
-        <h2 style={{color: '#fbbf24', margin: '0 0 20px 0'}}>Base Vault 🏦</h2>
-        <div className="tabs">
-          <button className={`tab ${activeTab === 'deposit' ? 'active' : ''}`} onClick={() => setActiveTab('deposit')}>Deposit</button>
-          <button className={`tab ${activeTab === 'withdraw' ? 'active' : ''}`} onClick={() => setActiveTab('withdraw')}>Withdraw</button>
-        </div>
-        <div className="balance-box">
-          <div className="label">AVAILABLE BALANCE</div>
-          <div className="value">{balance} ETH</div>
-        </div>
-        {activeTab === 'deposit' ? (
-          <div className="tab-content fade-in">
-            <p className="hint">Send ETH (Base) to:</p>
-            <div className="address-box" onClick={copyAddress}>
-              {userAddress?.slice(0, 20)}...{userAddress?.slice(-4)}
-              <span className="copy-icon">❐</span>
-            </div>
-            <p className="status-text">{status || "Tap to copy"}</p>
-          </div>
-        ) : (
-          <div className="tab-content fade-in">
-            <input className="input-field" placeholder="0x Address" value={withdrawAddr} onChange={e => setWithdrawAddr(e.target.value)} />
-            <input className="input-field" type="number" placeholder="Amount ETH" value={amount} onChange={e => setAmount(e.target.value)} />
-            <button className="action-btn" onClick={handleWithdraw} disabled={loading}>{loading ? "..." : "Withdraw"}</button>
-            <p className="status-text">{status}</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-// --- REACTOR RING (With Restart Countdown) ---
+// --- REACTOR RING (Updated Text & Seconds) ---
 const ReactorRing = ({ targetDate, status, restartTimer }) => {
   const [progress, setProgress] = useState(100);
-  const [displayTime, setDisplayTime] = useState("00:00");
+  const [displayTime, setDisplayTime] = useState("60");
   const [restartCount, setRestartCount] = useState(15);
 
   useEffect(() => {
@@ -126,25 +42,25 @@ const ReactorRing = ({ targetDate, status, restartTimer }) => {
       const now = Date.now();
 
       if (status === 'ACTIVE') {
-        // GAME RUNNING LOGIC
         const distance = targetDate - now;
         if (distance <= 0) {
-          setDisplayTime("00:00");
+          setDisplayTime("0");
           setProgress(0);
         } else {
+          // Progress bar based on 60 seconds
           const percentage = Math.min((distance / 60000) * 100, 100);
           setProgress(percentage);
-          const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-          const s = Math.floor((distance % (1000 * 60)) / 1000);
-          setDisplayTime(`${m}:${s < 10 ? '0' : ''}${s}`);
+          // Show ONLY Seconds
+          const s = Math.ceil(distance / 1000);
+          setDisplayTime(s.toString());
         }
       } else {
-        // GAME ENDED LOGIC (15s Countdown)
+        // Countdown Logic
         const restartDist = restartTimer - now;
         if (restartDist > 0) {
            const s = Math.ceil(restartDist / 1000);
            setRestartCount(s);
-           setProgress(0); // Empty ring
+           setProgress(0);
         } else {
            setRestartCount(0);
         }
@@ -156,18 +72,23 @@ const ReactorRing = ({ targetDate, status, restartTimer }) => {
   return (
     <div className="reactor-container">
       <div className={`timer-float ${status === 'ENDED' ? 'ended' : ''}`}>
-        {status === 'ENDED' ? `NEW GAME IN ${restartCount}` : displayTime}
+        {status === 'ENDED' ? (
+          <div style={{lineHeight: '1.2', fontSize: '24px'}}>
+            <div style={{color: '#94a3b8', fontSize: '14px', letterSpacing: '2px'}}>NEW GAME IN</div>
+            <div style={{fontSize: '48px', color: '#fff'}}>{restartCount}</div>
+          </div>
+        ) : (
+          displayTime
+        )}
       </div>
       <svg className="progress-ring" width="280" height="280">
         <circle className="ring-bg" stroke="rgba(255,255,255,0.05)" strokeWidth="8" fill="transparent" r="130" cx="140" cy="140" />
-        <circle className="ring-progress" stroke={status === 'ENDED' ? '#ef4444' : "#fbbf24"} strokeWidth="8" strokeDasharray={`${2 * Math.PI * 130}`} strokeDashoffset={2 * Math.PI * 130 * (1 - progress / 100)} strokeLinecap="round" fill="transparent" r="130" cx="140" cy="140" />
+        <circle className="ring-progress" stroke={status === 'ENDED' ? '#334155' : "#fbbf24"} strokeWidth="8" strokeDasharray={`${2 * Math.PI * 130}`} strokeDashoffset={2 * Math.PI * 130 * (1 - progress / 100)} strokeLinecap="round" fill="transparent" r="130" cx="140" cy="140" />
       </svg>
     </div>
   );
 };
 
-
-// --- MAIN DASHBOARD ---
 function GameDashboard({ logout, user }) {
   const [gameState, setGameState] = useState(null);
   const [isCooldown, setIsCooldown] = useState(false);
@@ -175,9 +96,7 @@ function GameDashboard({ logout, user }) {
   const [showVault, setShowVault] = useState(false);
   const [floatingBids, setFloatingBids] = useState([]);
   const prevStatus = useRef("ACTIVE");
-  const { wallets } = useWallets();
-  const userAddress = wallets.find(w => w.walletClientType === 'privy')?.address || user.wallet?.address;
-  const MY_EMAIL = "tinyearner8@gmail.com"; // 🔐 YOUR SECRET EMAIL
+  const MY_EMAIL = "tinyearner8@gmail.com"; 
 
   useEffect(() => {
     socket.on('gameState', (data) => {
@@ -207,16 +126,10 @@ function GameDashboard({ logout, user }) {
   const runAdmin = () => {
     const pwd = prompt("🔐 ADMIN PANEL\nEnter Password:");
     if (!pwd) return;
-    const action = prompt("CHOOSE ACTION:\n1. Reset Game\n2. Set Jackpot\n3. Add 60s Time");
-    if (action === '1') {
-        socket.emit('adminAction', { password: pwd, action: 'RESET' });
-        alert("Reset Command Sent!");
-    } else if (action === '2') {
-        const val = prompt("Enter new Jackpot amount:");
-        socket.emit('adminAction', { password: pwd, action: 'SET_JACKPOT', value: val });
-    } else if (action === '3') {
-        socket.emit('adminAction', { password: pwd, action: 'ADD_TIME', value: 60 });
-    }
+    const action = prompt("1. Reset Game\n2. Set Jackpot\n3. Add Time");
+    if (action === '1') socket.emit('adminAction', { password: pwd, action: 'RESET' });
+    else if (action === '2') socket.emit('adminAction', { password: pwd, action: 'SET_JACKPOT', value: prompt("Amount:") });
+    else if (action === '3') socket.emit('adminAction', { password: pwd, action: 'ADD_TIME', value: 60 });
   };
 
   if (!gameState) return <div className="loading-screen">Connecting...</div>;
@@ -224,7 +137,7 @@ function GameDashboard({ logout, user }) {
   return (
     <div className="app-container">
       <GlobalStyle />
-      {showVault && <WalletVault onClose={() => setShowVault(false)} userAddress={userAddress} />}
+      {showVault && <div className="modal-overlay"><button className="close-btn" onClick={()=>setShowVault(false)}>✕</button><div className="glass-card"><h2 style={{color:'#fbbf24'}}>Coming Soon</h2><p>Vault is under maintenance.</p></div></div>}
 
       <nav className="glass-nav">
         <button className="nav-btn vault-btn" onClick={() => setShowVault(true)}>🏦 Vault</button>
@@ -245,7 +158,7 @@ function GameDashboard({ logout, user }) {
       </div>
 
       <button className={`main-btn ${isCooldown ? 'cooldown' : ''}`} onClick={placeBid} disabled={gameState.status !== 'ACTIVE' || isCooldown}>
-        {gameState.status === 'ENDED' ? 'AUCTION CLOSED' : (isCooldown ? `WAIT (${cd}s)` : `BID NOW ($${gameState.bidCost})`)}
+        {gameState.status === 'ENDED' ? 'GAME CLOSED' : (isCooldown ? `WAIT (${cd}s)` : `BID NOW ($${gameState.bidCost})`)}
       </button>
 
       <div className="glass-panel history-panel">
@@ -260,11 +173,8 @@ function GameDashboard({ logout, user }) {
         </div>
       </div>
       
-      {/* 🔴 ADMIN BUTTON: Only visible if email is yours! */}
       {user?.email?.address?.toLowerCase() === MY_EMAIL && (
-        <button onClick={runAdmin} style={{marginTop:'20px', background:'none', border:'1px solid #ef4444', color:'#ef4444', padding:'5px 10px', fontSize:'10px', opacity:0.3, cursor:'pointer'}}>
-          ADMIN PANEL
-        </button>
+        <button onClick={runAdmin} style={{marginTop:'20px', background:'none', border:'1px solid #ef4444', color:'#ef4444', padding:'5px 10px', fontSize:'10px', opacity:0.3}}>ADMIN PANEL</button>
       )}
     </div>
   );
@@ -321,17 +231,9 @@ const GlobalStyle = () => (
     .tabs { display: flex; background: #1e293b; padding: 4px; border-radius: 12px; margin-bottom: 20px; }
     .tab { flex: 1; background: transparent; border: none; color: #94a3b8; padding: 10px; border-radius: 10px; font-weight: bold; cursor: pointer; }
     .tab.active { background: #334155; color: white; }
-    .balance-box { background: linear-gradient(135deg, #1e3a8a, #172554); padding: 20px; border-radius: 16px; margin-bottom: 20px; text-align: left; }
-    .balance-box .label { font-size: 10px; color: #93c5fd; letter-spacing: 1px; }
-    .balance-box .value { font-size: 28px; font-weight: bold; margin-top: 5px; }
-    .address-box { background: #1e293b; padding: 15px; border-radius: 12px; font-family: monospace; font-size: 12px; display: flex; justify-content: space-between; cursor: pointer; border: 1px dashed #475569; }
-    .input-field { width: 100%; background: #1e293b; border: 1px solid #334155; padding: 14px; border-radius: 12px; color: white; margin-bottom: 10px; box-sizing: border-box; }
-    .action-btn { width: 100%; padding: 14px; background: var(--blue); border: none; border-radius: 12px; color: white; font-weight: bold; cursor: pointer; }
-    .status-text { font-size: 12px; margin-top: 10px; color: #94a3b8; min-height: 20px; }
     @keyframes popIn { 0% { transform: scale(0); } 100% { transform: scale(1); } }
     @keyframes floatUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-80px); } }
     .float-anim { position: absolute; color: var(--red); font-weight: 900; font-size: 24px; animation: floatUp 0.8s forwards; z-index: 50; pointer-events: none; }
-    .fade-in { animation: popIn 0.3s ease-out; }
   `}</style>
 );
 
