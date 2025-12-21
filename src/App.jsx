@@ -34,53 +34,72 @@ const playSound = (key) => {
   audio.play().catch(() => {});
 };
 
-// --- 🏦 WALLET VAULT ---
+// --- 🏦 HYBRID VAULT (Auto + Manual) ---
 const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
   const { wallets } = useWallets();
-  const [activeTab, setActiveTab] = useState('deposit');
+  const [mode, setMode] = useState('AUTO'); // 'AUTO' or 'MANUAL'
   const [amountUSD, setAmountUSD] = useState("");
+  const [manualHash, setManualHash] = useState(""); // For manual entry
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Exchange Rate: $1.00 = 0.0003 ETH (Approx)
+  // Exchange Rate: $1.00 = 0.0003 ETH
   const ETH_PRICE_RATE = 0.0003; 
 
-  const handleDeposit = async () => {
+  // OPTION A: Automatic (Web3 Browser)
+  const handleAutoDeposit = async () => {
     if (!amountUSD || parseFloat(amountUSD) <= 0) return;
     setLoading(true);
     setStatus("Initiating Transaction...");
 
     try {
       const w = wallets.find(w => w.address.toLowerCase() === userAddress.toLowerCase());
-      if (!w) throw new Error("Wallet not connected");
+      if (!w) throw new Error("Wallet not connected. Try Manual Mode.");
 
-      // 1. Calculate ETH Amount
       const ethAmount = (parseFloat(amountUSD) * ETH_PRICE_RATE).toFixed(6);
       
-      // 2. Send Transaction (On Base Chain)
       const hash = await w.sendTransaction({
         to: TREASURY_ADDRESS,
         value: parseEther(ethAmount), 
         chainId: 8453
       });
 
-      setStatus("Verifying...");
-
-      // 3. Notify Server
-      socket.emit('confirmDeposit', {
-        email: userEmail,
-        amount: amountUSD, 
-        txHash: hash
-      });
-
-      setStatus("✅ Success! Credits Added.");
-      setTimeout(() => { onClose(); setStatus(""); }, 2000);
+      submitDeposit(hash, amountUSD);
 
     } catch (e) {
       console.error(e);
-      setStatus("❌ Failed: " + (e.message?.slice(0, 20) || "Error"));
+      setStatus("❌ Error. Try Manual Mode below.");
+      setLoading(false);
     }
-    setLoading(false);
+  };
+
+  // OPTION B: Manual (Copy & Paste)
+  const handleManualSubmit = () => {
+    if (!manualHash || manualHash.length < 10) {
+      setStatus("❌ Invalid Transaction Hash");
+      return;
+    }
+    // For manual, we don't know the exact amount yet, the server verifies it!
+    // We send '0' as placeholder, server will update with real amount.
+    submitDeposit(manualHash, "0"); 
+  };
+
+  // Common Submit Function
+  const submitDeposit = (hash, amt) => {
+    setStatus("Verifying on Blockchain...");
+    
+    // Send to Server
+    socket.emit('confirmDeposit', {
+      email: userEmail,
+      amount: amt, 
+      txHash: hash
+    });
+
+    // Wait for server response (Balance Update will close modal)
+    setTimeout(() => {
+       setStatus("✅ Sent! Waiting for confirmation...");
+       setTimeout(onClose, 2000); 
+    }, 1000);
   };
 
   return (
@@ -94,16 +113,17 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
           <div className="value">${currentCredits.toFixed(2)}</div>
         </div>
 
+        {/* TOGGLE BUTTONS */}
         <div className="tabs">
-          <button className={`tab ${activeTab === 'deposit' ? 'active' : ''}`} onClick={() => setActiveTab('deposit')}>Deposit</button>
-          <button className={`tab ${activeTab === 'withdraw' ? 'active' : ''}`} onClick={() => alert("Withdrawals are manual. Contact Admin.")}>Withdraw</button>
+          <button className={`tab ${mode === 'AUTO' ? 'active' : ''}`} onClick={() => setMode('AUTO')}>Auto Pay</button>
+          <button className={`tab ${mode === 'MANUAL' ? 'active' : ''}`} onClick={() => setMode('MANUAL')}>Manual Transfer</button>
         </div>
 
-        {activeTab === 'deposit' && (
+        {/* --- AUTO MODE --- */}
+        {mode === 'AUTO' && (
           <div className="tab-content fade-in">
-            <p className="hint" style={{fontSize: '12px', color:'#94a3b8', marginBottom:'10px'}}>
-               Pay with ETH (Base Network)<br/>
-               Rate: $1.00 ≈ {ETH_PRICE_RATE} ETH
+            <p className="hint" style={{fontSize: '12px', color:'#94a3b8'}}>
+               Best for MetaMask / Coinbase Wallet App
             </p>
             <input 
               className="input-field" 
@@ -112,12 +132,42 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
               value={amountUSD} 
               onChange={e => setAmountUSD(e.target.value)} 
             />
-            <button className="action-btn" onClick={handleDeposit} disabled={loading}>
-              {loading ? status : `Deposit $${amountUSD || '0'}`}
+            <button className="action-btn" onClick={handleAutoDeposit} disabled={loading}>
+              {loading ? status : `Pay $${amountUSD || '0'} Now`}
             </button>
-            <p className="status-text">{status}</p>
           </div>
         )}
+
+        {/* --- MANUAL MODE --- */}
+        {mode === 'MANUAL' && (
+          <div className="tab-content fade-in">
+            <p className="hint" style={{fontSize: '12px', color:'#94a3b8', marginBottom:'5px'}}>
+               1. Copy Address & Send ETH (Base)
+            </p>
+            
+            {/* COPY ADDRESS BOX */}
+            <div style={{background:'#334155', padding:'10px', borderRadius:'8px', fontSize:'10px', wordBreak:'break-all', marginBottom:'15px', cursor:'pointer'}} 
+                 onClick={() => navigator.clipboard.writeText(TREASURY_ADDRESS)}>
+               {TREASURY_ADDRESS} 📋
+            </div>
+
+            <p className="hint" style={{fontSize: '12px', color:'#94a3b8', marginBottom:'5px'}}>
+               2. Paste Transaction Hash (Receipt)
+            </p>
+            <input 
+              className="input-field" 
+              type="text" 
+              placeholder="0x..." 
+              value={manualHash} 
+              onChange={e => setManualHash(e.target.value)} 
+            />
+            <button className="action-btn" onClick={handleManualSubmit} disabled={loading}>
+              Verify Deposit
+            </button>
+          </div>
+        )}
+        
+        <p className="status-text">{status}</p>
       </div>
     </div>
   );
