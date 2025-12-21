@@ -186,6 +186,24 @@ function GameDashboard({ logout, user }) {
     setCd(8);
   };
 
+  // --- 🔴 ADMIN BUTTON LOGIC ---
+  const runAdmin = () => {
+    const pwd = prompt("🔐 ADMIN PANEL\nEnter Password:");
+    if (!pwd) return;
+    
+    const action = prompt("CHOOSE ACTION:\n1. Reset Game\n2. Set Jackpot\n3. Add 60s Time");
+    
+    if (action === '1') {
+        socket.emit('adminAction', { password: pwd, action: 'RESET' });
+        alert("Command Sent! If password is correct, game will reset.");
+    } else if (action === '2') {
+        const val = prompt("Enter new Jackpot amount:");
+        socket.emit('adminAction', { password: pwd, action: 'SET_JACKPOT', value: val });
+    } else if (action === '3') {
+        socket.emit('adminAction', { password: pwd, action: 'ADD_TIME', value: 60 });
+    }
+  };
+
   if (!gameState) return <div className="loading-screen">Connecting...</div>;
 
   return (
@@ -226,6 +244,9 @@ function GameDashboard({ logout, user }) {
           ))}
         </div>
       </div>
+      
+      {/* HIDDEN ADMIN BUTTON */}
+      <button onClick={runAdmin} style={{marginTop:'20px', background:'none', border:'1px solid #ef4444', color:'#ef4444', padding:'5px 10px', fontSize:'10px', opacity:0.3, cursor:'pointer'}}>ADMIN PANEL</button>
     </div>
   );
 }
@@ -249,42 +270,33 @@ const GlobalStyle = () => (
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&family=JetBrains+Mono:wght@500&display=swap');
     :root { --bg-dark: #020617; --glass: rgba(255, 255, 255, 0.05); --glass-border: rgba(255, 255, 255, 0.1); --gold: #fbbf24; --blue: #3b82f6; --red: #ef4444; }
     body { margin: 0; background: var(--bg-dark); color: white; font-family: 'Outfit', sans-serif; overflow-y: auto; }
-    
     .app-container { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; background: radial-gradient(circle at top, #1e293b 0%, #020617 100%); }
     .landing-container { height: 100vh; display: flex; justify-content: center; align-items: center; background: linear-gradient(135deg, #1e3a8a, #000000); text-align: center; }
-    
     .glass-nav { width: 100%; max-width: 450px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px; background: var(--glass); border-radius: 20px; border: 1px solid var(--glass-border); }
     .glass-panel { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 20px; backdrop-filter: blur(10px); width: 100%; max-width: 400px; padding: 15px; margin-bottom: 20px; display: flex; flex-direction: column; }
     .glass-card { background: #0f172a; border: 1px solid #334155; border-radius: 24px; padding: 30px; width: 90%; max-width: 380px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
-
     .nav-btn { background: transparent; border: none; color: #94a3b8; font-weight: bold; cursor: pointer; padding: 8px 12px; }
     .vault-btn { color: var(--blue); background: rgba(59, 130, 246, 0.1); border-radius: 12px; }
     .live-pill { color: #22c55e; font-size: 12px; font-weight: bold; text-shadow: 0 0 10px rgba(34, 197, 94, 0.4); }
-    
     .main-btn { width: 100%; max-width: 350px; padding: 22px; border-radius: 50px; border: none; font-size: 20px; font-weight: 900; color: white; background: linear-gradient(to bottom, #ef4444, #b91c1c); box-shadow: 0 10px 0 #7f1d1d, 0 10px 20px rgba(0,0,0,0.4); cursor: pointer; transition: transform 0.1s; margin-top: auto; margin-bottom: 20px; letter-spacing: 1px; position: relative; overflow: hidden; }
     .main-btn:active { transform: translateY(6px); box-shadow: 0 4px 0 #7f1d1d; }
     .main-btn.cooldown { background: #334155; box-shadow: none; transform: translateY(6px); color: #64748b; cursor: not-allowed; }
-
     .start-btn { padding: 20px 60px; font-size: 20px; font-weight: bold; border-radius: 50px; border: none; background: white; color: #000; cursor: pointer; margin-top: 30px; }
-
     .game-stage { position: relative; width: 300px; height: 300px; display: flex; justify-content: center; align-items: center; margin: 20px 0; }
     .reactor-container { position: absolute; width: 100%; height: 100%; }
     .progress-ring { transform: rotate(-90deg); width: 100%; height: 100%; overflow: visible; }
     .ring-progress { transition: stroke-dashoffset 0.1s linear; filter: drop-shadow(0 0 8px var(--gold)); }
     .timer-float { position: absolute; top: -40px; left: 50%; transform: translateX(-50%); font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: bold; color: var(--gold); text-shadow: 0 0 15px rgba(251, 191, 36, 0.5); }
-    
     .jackpot-core { z-index: 10; text-align: center; }
     .jackpot-core .label { font-size: 12px; color: #64748b; letter-spacing: 2px; margin-bottom: 5px; }
     .jackpot-core .amount { font-size: 56px; font-weight: 900; color: white; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
     .winner-badge { background: #22c55e; color: black; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 14px; margin-top: 10px; display: inline-block; animation: popIn 0.5s; }
-
     .panel-header { font-size: 11px; color: #64748b; letter-spacing: 1px; margin-bottom: 10px; font-weight: bold; text-align: left; }
     .history-list { max-height: 300px; overflow-y: auto; padding-right: 5px; }
     .history-list::-webkit-scrollbar { width: 4px; }
     .history-list::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
     .history-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--glass-border); font-size: 14px; }
     .history-row .bid-amt { color: var(--gold); font-weight: bold; }
-
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); z-index: 200; display: flex; justify-content: center; align-items: center; }
     .close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
     .tabs { display: flex; background: #1e293b; padding: 4px; border-radius: 12px; margin-bottom: 20px; }
@@ -297,7 +309,6 @@ const GlobalStyle = () => (
     .input-field { width: 100%; background: #1e293b; border: 1px solid #334155; padding: 14px; border-radius: 12px; color: white; margin-bottom: 10px; box-sizing: border-box; }
     .action-btn { width: 100%; padding: 14px; background: var(--blue); border: none; border-radius: 12px; color: white; font-weight: bold; cursor: pointer; }
     .status-text { font-size: 12px; margin-top: 10px; color: #94a3b8; min-height: 20px; }
-
     @keyframes popIn { 0% { transform: scale(0); } 100% { transform: scale(1); } }
     @keyframes floatUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-80px); } }
     .float-anim { position: absolute; color: var(--red); font-weight: 900; font-size: 24px; animation: floatUp 0.8s forwards; z-index: 50; pointer-events: none; }
