@@ -34,7 +34,7 @@ const playSound = (key) => {
   audio.play().catch(() => {});
 };
 
-// --- COMPONENT: WALLET VAULT (DEPOSIT/WITHDRAW) ---
+// --- COMPONENT: WALLET VAULT ---
 const WalletVault = ({ onClose, userAddress }) => {
   const { wallets } = useWallets();
   const [activeTab, setActiveTab] = useState('deposit');
@@ -89,19 +89,14 @@ const WalletVault = ({ onClose, userAddress }) => {
       <div className="glass-card modal-content">
         <button className="close-btn" onClick={onClose}>✕</button>
         <h2 style={{color: '#fbbf24', margin: '0 0 20px 0'}}>Base Vault 🏦</h2>
-        
-        {/* TABS */}
         <div className="tabs">
           <button className={`tab ${activeTab === 'deposit' ? 'active' : ''}`} onClick={() => setActiveTab('deposit')}>Deposit</button>
           <button className={`tab ${activeTab === 'withdraw' ? 'active' : ''}`} onClick={() => setActiveTab('withdraw')}>Withdraw</button>
         </div>
-
-        {/* BALANCE DISPLAY */}
         <div className="balance-box">
           <div className="label">AVAILABLE BALANCE</div>
           <div className="value">{balance} ETH</div>
         </div>
-
         {activeTab === 'deposit' ? (
           <div className="tab-content fade-in">
             <p className="hint">Send ETH (Base Network) to this address:</p>
@@ -126,7 +121,7 @@ const WalletVault = ({ onClose, userAddress }) => {
   );
 };
 
-// --- COMPONENT: VISUAL TIMER & RING ---
+// --- COMPONENT: REACTOR RING ---
 const ReactorRing = ({ targetDate, totalDuration = 60000, status }) => {
   const [progress, setProgress] = useState(100);
   const [displayTime, setDisplayTime] = useState("00:00");
@@ -140,27 +135,21 @@ const ReactorRing = ({ targetDate, totalDuration = 60000, status }) => {
         setDisplayTime("00:00");
         setProgress(0);
       } else {
-        // Calculate percent for ring (resets visually when time adds up)
-        // We clamp it to make the ring look full if time > 60s
         const percentage = Math.min((distance / totalDuration) * 100, 100);
         setProgress(percentage);
-
         const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
         const s = Math.floor((distance % (1000 * 60)) / 1000);
         setDisplayTime(`${m}:${s < 10 ? '0' : ''}${s}`);
       }
-    }, 50); // High refresh rate for smoothness
+    }, 50);
     return () => clearInterval(interval);
   }, [targetDate]);
 
   return (
     <div className="reactor-container">
-      {/* Timer Float */}
       <div className={`timer-float ${status === 'ENDED' ? 'ended' : ''}`}>
         {status === 'ENDED' ? 'SOLD' : displayTime}
       </div>
-      
-      {/* SVG Ring */}
       <svg className="progress-ring" width="280" height="280">
         <circle className="ring-bg" stroke="rgba(255,255,255,0.05)" strokeWidth="8" fill="transparent" r="130" cx="140" cy="140" />
         <circle 
@@ -193,14 +182,7 @@ function GameDashboard({ logout, user }) {
   useEffect(() => {
     socket.on('gameState', (data) => {
       setGameState(data);
-
-      // Sound & Effect Triggers
-      if (data.status === 'ACTIVE' && data.history.length > 0) {
-        // If the new bid is different from the last rendered one, play sound
-        // (Simple check: we just play sound on every update if active)
-        playSound('soundBid');
-      }
-
+      if (data.status === 'ACTIVE' && data.history.length > 0) playSound('soundBid');
       if (data.status === 'ENDED' && prevStatus.current === 'ACTIVE') {
         confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 }, colors: ['#fbbf24', '#ffffff'] });
         playSound('soundWin');
@@ -208,28 +190,17 @@ function GameDashboard({ logout, user }) {
       prevStatus.current = data.status;
     });
 
-    // Cooldown Timer Logic
     let interval;
-    if (isCooldown && cd > 0) {
-      interval = setInterval(() => setCd(prev => prev - 1), 1000);
-    } else if (cd <= 0) {
-      setIsCooldown(false);
-    }
-
+    if (isCooldown && cd > 0) interval = setInterval(() => setCd(prev => prev - 1), 1000);
+    else if (cd <= 0) setIsCooldown(false);
     return () => { socket.off('gameState'); clearInterval(interval); };
   }, [isCooldown, cd]);
 
   const placeBid = () => {
     if (isCooldown) return;
-    
-    // Optimistic UI updates
     setFloatingBids(prev => [...prev, Date.now()]);
     playSound('soundPop');
-    
-    // Server Event
     socket.emit('placeBid', user.email ? user.email.address : "User");
-    
-    // Cooldown
     setIsCooldown(true);
     setCd(8);
   };
@@ -241,20 +212,14 @@ function GameDashboard({ logout, user }) {
       <GlobalStyle />
       {showVault && <WalletVault onClose={() => setShowVault(false)} userAddress={userAddress} />}
 
-      {/* HEADER */}
       <nav className="glass-nav">
-        <button className="nav-btn vault-btn" onClick={() => setShowVault(true)}>
-          🏦 My Vault
-        </button>
+        <button className="nav-btn vault-btn" onClick={() => setShowVault(true)}>🏦 My Vault</button>
         <div className="live-pill">● {gameState.connectedUsers || 1} LIVE</div>
         <button className="nav-btn logout-btn" onClick={logout}>✕</button>
       </nav>
 
-      {/* GAME CENTER */}
       <div className="game-stage">
         <ReactorRing targetDate={gameState.endTime} status={gameState.status} />
-        
-        {/* JACKPOT DISPLAY INSIDE RING */}
         <div className="jackpot-core">
           <div className="label">CURRENT JACKPOT</div>
           <div className="amount">${gameState.jackpot.toFixed(2)}</div>
@@ -262,8 +227,6 @@ function GameDashboard({ logout, user }) {
              <div className="winner-badge">🏆 {gameState.history[0]?.user.slice(0,10)}...</div>
           )}
         </div>
-
-        {/* FLOATING BIDS ANIMATION */}
         {floatingBids.map(id => (
           <div key={id} className="float-anim" onAnimationEnd={() => setFloatingBids(prev => prev.filter(bid => bid !== id))}>
             -$1.00
@@ -271,7 +234,6 @@ function GameDashboard({ logout, user }) {
         ))}
       </div>
 
-      {/* ACTION BUTTON */}
       <button 
         className={`main-btn ${isCooldown ? 'cooldown' : ''} ${gameState.status === 'ENDED' ? 'ended' : ''}`}
         onClick={placeBid}
@@ -280,7 +242,6 @@ function GameDashboard({ logout, user }) {
         {gameState.status === 'ENDED' ? 'AUCTION CLOSED' : (isCooldown ? `WAIT (${cd}s)` : `BID NOW ($${gameState.bidCost})`)}
       </button>
 
-      {/* HISTORY FEED */}
       <div className="glass-panel history-panel">
         <div className="panel-header">LIVE FEED</div>
         <div className="history-list">
@@ -311,32 +272,22 @@ function LandingPage({ login }) {
   );
 }
 
-// --- CSS-IN-JS STYLES ---
+// --- CSS ---
 const GlobalStyle = () => (
   <style>{`
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&family=JetBrains+Mono:wght@500&display=swap');
+    :root { --bg-dark: #020617; --glass: rgba(255, 255, 255, 0.05); --glass-border: rgba(255, 255, 255, 0.1); --gold: #fbbf24; --blue: #3b82f6; --red: #ef4444; }
     
-    :root {
-      --bg-dark: #020617;
-      --glass: rgba(255, 255, 255, 0.05);
-      --glass-border: rgba(255, 255, 255, 0.1);
-      --gold: #fbbf24;
-      --blue: #3b82f6;
-      --red: #ef4444;
-    }
-
-    body { margin: 0; background: var(--bg-dark); color: white; font-family: 'Outfit', sans-serif; overflow: hidden; }
-
-    /* LAYOUTS */
-    .app-container { height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; background: radial-gradient(circle at top, #1e293b 0%, #020617 100%); }
+    /* SCROLL FIX: Removed overflow:hidden from body, changed app-container to min-height */
+    body { margin: 0; background: var(--bg-dark); color: white; font-family: 'Outfit', sans-serif; overflow-y: auto; }
+    
+    .app-container { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; background: radial-gradient(circle at top, #1e293b 0%, #020617 100%); }
     .landing-container { height: 100vh; display: flex; justify-content: center; align-items: center; background: linear-gradient(135deg, #1e3a8a, #000000); text-align: center; }
     
-    /* GLASS COMPONENTS */
     .glass-nav { width: 100%; max-width: 450px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px; background: var(--glass); border-radius: 20px; border: 1px solid var(--glass-border); }
     .glass-panel { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 20px; backdrop-filter: blur(10px); }
     .glass-card { background: #0f172a; border: 1px solid #334155; border-radius: 24px; padding: 30px; width: 90%; max-width: 380px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
 
-    /* TEXT & BUTTONS */
     .nav-btn { background: transparent; border: none; color: #94a3b8; font-weight: bold; cursor: pointer; padding: 8px 12px; }
     .vault-btn { color: var(--blue); background: rgba(59, 130, 246, 0.1); border-radius: 12px; }
     .live-pill { color: #22c55e; font-size: 12px; font-weight: bold; text-shadow: 0 0 10px rgba(34, 197, 94, 0.4); }
@@ -349,7 +300,6 @@ const GlobalStyle = () => (
     .start-btn { padding: 20px 60px; font-size: 20px; font-weight: bold; border-radius: 50px; border: none; background: white; color: #000; box-shadow: 0 0 30px rgba(255,255,255,0.2); cursor: pointer; margin-top: 30px; transition: transform 0.2s; }
     .start-btn:hover { transform: scale(1.05); }
 
-    /* DASHBOARD CENTER */
     .game-stage { position: relative; width: 300px; height: 300px; display: flex; justify-content: center; align-items: center; margin: 20px 0; }
     .reactor-container { position: absolute; width: 100%; height: 100%; }
     .progress-ring { transform: rotate(-90deg); width: 100%; height: 100%; overflow: visible; }
@@ -363,13 +313,11 @@ const GlobalStyle = () => (
     .jackpot-core .amount { font-size: 56px; font-weight: 900; color: white; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
     .winner-badge { background: #22c55e; color: black; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 14px; margin-top: 10px; display: inline-block; animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 
-    /* HISTORY */
     .history-panel { width: 100%; max-width: 400px; padding: 15px; margin-bottom: 20px; }
     .panel-header { font-size: 11px; color: #64748b; letter-spacing: 1px; margin-bottom: 10px; font-weight: bold; }
     .history-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--glass-border); font-size: 14px; }
     .history-row .bid-amt { color: var(--gold); font-weight: bold; }
 
-    /* VAULT MODAL */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); z-index: 200; display: flex; justify-content: center; align-items: center; }
     .close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
     .tabs { display: flex; background: #1e293b; padding: 4px; border-radius: 12px; margin-bottom: 20px; }
@@ -387,7 +335,6 @@ const GlobalStyle = () => (
     .action-btn { width: 100%; padding: 14px; background: var(--blue); border: none; border-radius: 12px; color: white; font-weight: bold; cursor: pointer; }
     .status-text { font-size: 12px; margin-top: 10px; color: #94a3b8; min-height: 20px; }
 
-    /* ANIMATIONS */
     @keyframes popIn { 0% { transform: scale(0); } 100% { transform: scale(1); } }
     @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-80px) scale(1.5); } }
     .float-anim { position: absolute; color: var(--red); font-weight: 900; font-size: 24px; animation: floatUp 0.8s forwards; z-index: 50; text-shadow: 0 0 10px rgba(239, 68, 68, 0.5); pointer-events: none; }
