@@ -160,6 +160,7 @@ function GameDashboard({ logout, user }) {
   const prevStatus = useRef("ACTIVE");
   const { wallets } = useWallets();
   const userAddress = wallets.find(w => w.walletClientType === 'privy')?.address || user.wallet?.address;
+  const MY_EMAIL = "tinyearner8@gmail.com"; // 🔐 YOUR SECRET EMAIL
 
   useEffect(() => {
     socket.on('gameState', (data) => {
@@ -186,16 +187,13 @@ function GameDashboard({ logout, user }) {
     setCd(8);
   };
 
-  // --- 🔴 ADMIN BUTTON LOGIC ---
   const runAdmin = () => {
     const pwd = prompt("🔐 ADMIN PANEL\nEnter Password:");
     if (!pwd) return;
-    
     const action = prompt("CHOOSE ACTION:\n1. Reset Game\n2. Set Jackpot\n3. Add 60s Time");
-    
     if (action === '1') {
         socket.emit('adminAction', { password: pwd, action: 'RESET' });
-        alert("Command Sent! If password is correct, game will reset.");
+        alert("Reset Command Sent!");
     } else if (action === '2') {
         const val = prompt("Enter new Jackpot amount:");
         socket.emit('adminAction', { password: pwd, action: 'SET_JACKPOT', value: val });
@@ -245,8 +243,12 @@ function GameDashboard({ logout, user }) {
         </div>
       </div>
       
-      {/* HIDDEN ADMIN BUTTON */}
-      <button onClick={runAdmin} style={{marginTop:'20px', background:'none', border:'1px solid #ef4444', color:'#ef4444', padding:'5px 10px', fontSize:'10px', opacity:0.3, cursor:'pointer'}}>ADMIN PANEL</button>
+      {/* 🔴 ADMIN BUTTON: Only visible if email is yours! */}
+      {user?.email?.address?.toLowerCase() === MY_EMAIL && (
+        <button onClick={runAdmin} style={{marginTop:'20px', background:'none', border:'1px solid #ef4444', color:'#ef4444', padding:'5px 10px', fontSize:'10px', opacity:0.3, cursor:'pointer'}}>
+          ADMIN PANEL
+        </button>
+      )}
     </div>
   );
 }
