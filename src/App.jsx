@@ -115,40 +115,57 @@ const WalletVault = ({ onClose, userAddress }) => {
     </div>
   );
 };
-
-// --- REACTOR RING ---
-const ReactorRing = ({ targetDate, status }) => {
+// --- REACTOR RING (With Restart Countdown) ---
+const ReactorRing = ({ targetDate, status, restartTimer }) => {
   const [progress, setProgress] = useState(100);
   const [displayTime, setDisplayTime] = useState("00:00");
+  const [restartCount, setRestartCount] = useState(15);
 
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
-      const distance = targetDate - now;
-      if (distance <= 0) {
-        setDisplayTime("00:00");
-        setProgress(0);
+
+      if (status === 'ACTIVE') {
+        // GAME RUNNING LOGIC
+        const distance = targetDate - now;
+        if (distance <= 0) {
+          setDisplayTime("00:00");
+          setProgress(0);
+        } else {
+          const percentage = Math.min((distance / 60000) * 100, 100);
+          setProgress(percentage);
+          const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+          const s = Math.floor((distance % (1000 * 60)) / 1000);
+          setDisplayTime(`${m}:${s < 10 ? '0' : ''}${s}`);
+        }
       } else {
-        const percentage = Math.min((distance / 60000) * 100, 100);
-        setProgress(percentage);
-        const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-        const s = Math.floor((distance % (1000 * 60)) / 1000);
-        setDisplayTime(`${m}:${s < 10 ? '0' : ''}${s}`);
+        // GAME ENDED LOGIC (15s Countdown)
+        const restartDist = restartTimer - now;
+        if (restartDist > 0) {
+           const s = Math.ceil(restartDist / 1000);
+           setRestartCount(s);
+           setProgress(0); // Empty ring
+        } else {
+           setRestartCount(0);
+        }
       }
     }, 50);
     return () => clearInterval(interval);
-  }, [targetDate]);
+  }, [targetDate, status, restartTimer]);
 
   return (
     <div className="reactor-container">
-      <div className={`timer-float ${status === 'ENDED' ? 'ended' : ''}`}>{status === 'ENDED' ? 'SOLD' : displayTime}</div>
+      <div className={`timer-float ${status === 'ENDED' ? 'ended' : ''}`}>
+        {status === 'ENDED' ? `NEW GAME IN ${restartCount}` : displayTime}
+      </div>
       <svg className="progress-ring" width="280" height="280">
         <circle className="ring-bg" stroke="rgba(255,255,255,0.05)" strokeWidth="8" fill="transparent" r="130" cx="140" cy="140" />
-        <circle className="ring-progress" stroke="#fbbf24" strokeWidth="8" strokeDasharray={`${2 * Math.PI * 130}`} strokeDashoffset={2 * Math.PI * 130 * (1 - progress / 100)} strokeLinecap="round" fill="transparent" r="130" cx="140" cy="140" />
+        <circle className="ring-progress" stroke={status === 'ENDED' ? '#ef4444' : "#fbbf24"} strokeWidth="8" strokeDasharray={`${2 * Math.PI * 130}`} strokeDashoffset={2 * Math.PI * 130 * (1 - progress / 100)} strokeLinecap="round" fill="transparent" r="130" cx="140" cy="140" />
       </svg>
     </div>
   );
 };
+
 
 // --- MAIN DASHBOARD ---
 function GameDashboard({ logout, user }) {
@@ -216,7 +233,7 @@ function GameDashboard({ logout, user }) {
       </nav>
 
       <div className="game-stage">
-        <ReactorRing targetDate={gameState.endTime} status={gameState.status} />
+        <ReactorRing targetDate={gameState.endTime} status={gameState.status} restartTimer={gameState.restartTimer} />
         <div className="jackpot-core">
           <div className="label">JACKPOT</div>
           <div className="amount">${gameState.jackpot.toFixed(2)}</div>
