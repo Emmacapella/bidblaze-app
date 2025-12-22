@@ -33,7 +33,7 @@ const playSound = (key) => {
   audio.play().catch(() => {});
 };
 
-// --- 📖 HOW TO PLAY GUIDE (Fixed Layout) ---
+// --- 📖 HOW TO PLAY GUIDE (With Refund Rule) ---
 const HowToPlay = ({ onClose }) => {
   return (
     <div className="modal-overlay">
@@ -43,40 +43,37 @@ const HowToPlay = ({ onClose }) => {
         
         {/* STEP 1 */}
         <div style={{display:'flex', gap:'15px', marginBottom:'20px', alignItems:'flex-start'}}>
-          <div style={{
-            background:'#3b82f6', borderRadius:'50%', width:'30px', height:'30px', flexShrink: 0,
-            display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold', marginTop:'2px'
-          }}>1</div>
+          <div style={{background:'#3b82f6', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold', marginTop:'2px'}}>1</div>
           <div>
             <div style={{fontWeight:'bold', color:'white'}}>Deposit Crypto</div>
             <div style={{fontSize:'12px', color:'#94a3b8'}}>Add ETH (Base Network) to your Vault.</div>
           </div>
         </div>
 
-        {/* STEP 2 - Added Timer Rule Here */}
+        {/* STEP 2 */}
         <div style={{display:'flex', gap:'15px', marginBottom:'20px', alignItems:'flex-start'}}>
-          <div style={{
-            background:'#ef4444', borderRadius:'50%', width:'30px', height:'30px', flexShrink: 0,
-            display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold', marginTop:'2px'
-          }}>2</div>
+          <div style={{background:'#ef4444', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold', marginTop:'2px'}}>2</div>
           <div>
             <div style={{fontWeight:'bold', color:'white'}}>Place a Bid</div>
-            <div style={{fontSize:'12px', color:'#94a3b8'}}>
-              Each bid costs $1.00. <br/>
-              <span style={{color:'#fbbf24'}}>*Timer bumps up to 10s if low!</span>
-            </div>
+            <div style={{fontSize:'12px', color:'#94a3b8'}}>Each bid costs $1.00. <br/><span style={{color:'#fbbf24'}}>*Timer bumps to 10s if low!</span></div>
           </div>
         </div>
 
-        {/* STEP 3 - Fixed Alignment */}
+        {/* STEP 3 */}
         <div style={{display:'flex', gap:'15px', marginBottom:'20px', alignItems:'flex-start'}}>
-          <div style={{
-            background:'#22c55e', borderRadius:'50%', width:'30px', height:'30px', flexShrink: 0,
-            display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold', marginTop:'2px'
-          }}>3</div>
+          <div style={{background:'#22c55e', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold', marginTop:'2px'}}>3</div>
           <div>
             <div style={{fontWeight:'bold', color:'white'}}>Be the Last One</div>
-            <div style={{fontSize:'12px', color:'#94a3b8'}}>If the timer hits zero and you are the last bidder, you win the <span style={{color:'#fbbf24', fontWeight:'bold'}}>ENTIRE JACKPOT!</span></div>
+            <div style={{fontSize:'12px', color:'#94a3b8'}}>If timer hits zero & you are the last bidder, you win the <span style={{color:'#fbbf24', fontWeight:'bold'}}>ENTIRE JACKPOT!</span></div>
+          </div>
+        </div>
+
+        {/* STEP 4 - NEW REFUND RULE */}
+        <div style={{display:'flex', gap:'15px', marginBottom:'20px', alignItems:'flex-start', background:'rgba(255,255,255,0.05)', padding:'10px', borderRadius:'10px'}}>
+          <div style={{fontSize:'20px'}}>🛡️</div>
+          <div>
+            <div style={{fontWeight:'bold', color:'white'}}>Fair Play Guarantee</div>
+            <div style={{fontSize:'12px', color:'#94a3b8'}}>If you are the <b>ONLY</b> bidder when the game ends, your fees are 100% refunded.</div>
           </div>
         </div>
 
