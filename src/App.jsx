@@ -11,7 +11,7 @@ const PRIVY_APP_ID = "cm4l3033r048epf1ln3q59956";
 const TREASURY_ADDRESS = "0x496EBF196a00a331b72219B6bE1473CbD316383f"; // ⚠️ YOUR ADDRESS
 const SERVER_URL = "https://bidblaze-server.onrender.com"; // Your Server URL
 
-const socket = io(SERVER_URL, {
+export const socket = io(SERVER_URL, {
   transports: ['websocket', 'polling']
 });
 
