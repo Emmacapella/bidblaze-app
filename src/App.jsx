@@ -386,4 +386,42 @@ const GlobalStyle = () => (
     .history-list { max-height: 300px; overflow-y: auto; padding-right: 5px; }
     .history-list::-webkit-scrollbar { width: 4px; }
     .history-list::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-    .history-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid 
+    .history-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--glass-border); font-size: 14px; }
+    .history-row .bid-amt { color: var(--gold); font-weight: bold; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); z-index: 200; display: flex; justify-content: center; align-items: center; }
+    .close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
+    .tabs { display: flex; background: #1e293b; padding: 4px; border-radius: 12px; margin-bottom: 20px; }
+    .tab { flex: 1; background: transparent; border: none; color: #94a3b8; padding: 10px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+    .tab.active { background: #334155; color: white; }
+    .balance-box { background: linear-gradient(135deg, #1e3a8a, #172554); padding: 20px; border-radius: 16px; margin-bottom: 20px; text-align: left; }
+    .balance-box .label { font-size: 10px; color: #93c5fd; letter-spacing: 1px; }
+    .balance-box .value { font-size: 28px; font-weight: bold; margin-top: 5px; }
+    .input-field { width: 100%; background: #1e293b; border: 1px solid #334155; padding: 14px; border-radius: 12px; color: white; margin-bottom: 10px; box-sizing: border-box; }
+    .action-btn { width: 100%; padding: 14px; background: var(--blue); border: none; border-radius: 12px; color: white; font-weight: bold; cursor: pointer; }
+    .status-text { font-size: 12px; margin-top: 10px; color: #94a3b8; min-height: 20px; }
+    @keyframes popIn { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+    @keyframes floatUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-80px); } }
+    .float-anim { position: absolute; color: var(--red); font-weight: 900; font-size: 24px; animation: floatUp 0.8s forwards; z-index: 50; pointer-events: none; }
+    .fade-in { animation: popIn 0.3s ease-out; }
+  `}</style>
+);
+
+export default function App() {
+  const { login, logout, user, authenticated, ready } = usePrivy();
+  if (!ready) return null;
+  return (
+    <PrivyProvider 
+      appId={PRIVY_APP_ID} 
+      config={{ 
+        loginMethods: ['email', 'wallet'], 
+        appearance: { theme: 'dark', accentColor: '#3b82f6' },
+        embeddedWallets: { createOnLogin: 'users-without-wallets' },
+        defaultChain: BASE_CHAIN,
+        supportedChains: [BASE_CHAIN]
+      }}
+    >
+      {authenticated ? <GameDashboard logout={logout} user={user} /> : <LandingPage login={login} />}
+    </PrivyProvider>
+  );
+}
+
