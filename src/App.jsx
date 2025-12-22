@@ -222,7 +222,7 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
   );
 };
 
-// --- 🎮 GAME DASHBOARD (Logo at Bottom) ---
+// --- 🎮 GAME DASHBOARD (Pro Footer Layout) ---
 function GameDashboard({ logout, user }) {
   const [gameState, setGameState] = useState(null);
   const [credits, setCredits] = useState(0.00);
@@ -309,7 +309,6 @@ function GameDashboard({ logout, user }) {
       {showVault && <WalletVault onClose={() => setShowVault(false)} userAddress={userAddress} userEmail={user.email?.address} currentCredits={credits} />}
       {showHelp && <HowToPlay onClose={() => setShowHelp(false)} />}
 
-      {/* TOP NAVBAR (Controls Only) */}
       <nav className="glass-nav" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 15px'}}>
         <button className="nav-btn vault-btn" onClick={() => setShowVault(true)}>🏦 ${credits.toFixed(2)}</button>
         <div className="live-pill">● {gameState.connectedUsers || 1} LIVE</div>
@@ -356,20 +355,43 @@ function GameDashboard({ logout, user }) {
         </div>
       </div>
       
-      {/* ⬇️ LOGO MOVED TO BOTTOM FOOTER ⬇️ */}
+      {/* ⬇️ PROFESSIONAL FOOTER ⬇️ */}
       <div style={{
-          display:'flex', 
-          justifyContent:'center', 
-          alignItems:'center', 
-          gap:'10px', 
-          marginTop:'30px', 
-          marginBottom:'20px', 
-          opacity: 0.5
+          marginTop: '40px',
+          marginBottom: '20px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '5px',
+          opacity: 0.8
       }}>
-          <img src="/logo.png" alt="Logo" style={{width:'24px', height:'24px', objectFit:'contain', filter:'grayscale(100%)'}} />
-          <span style={{fontWeight:'600', fontSize:'14px', letterSpacing:'1px', color:'#94a3b8'}}>
-            BID<span style={{color:'#cbd5e1'}}>BLAZE</span>
-          </span>
+          {/* Logo & Name Row */}
+          <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+             <img src="https://i.imgur.com/vQ9SXkN.jpg" alt="Logo" style={{
+                 width:'35px', 
+                 height:'35px', 
+                 borderRadius:'8px',
+                 boxShadow: '0 0 10px rgba(0,0,0,0.5)'
+             }} />
+             <span style={{
+                 fontSize:'24px', 
+                 fontWeight:'900', 
+                 color:'white', 
+                 letterSpacing:'1px',
+                 textShadow: '0 2px 5px rgba(0,0,0,0.5)'
+             }}>BID<span style={{color:'#fbbf24'}}>BLAZE</span></span>
+          </div>
+          
+          {/* Tagline Row */}
+          <div style={{
+              fontSize:'10px', 
+              color:'#64748b', 
+              fontWeight:'600', 
+              letterSpacing:'2px',
+              marginTop:'5px'
+          }}>
+              PROVABLY FAIR • INSTANT PAYOUTS
+          </div>
       </div>
 
       {user?.email?.address?.toLowerCase() === MY_EMAIL && (
