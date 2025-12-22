@@ -222,7 +222,7 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
   );
 };
 
-// --- 🎮 GAME DASHBOARD (Layout Fixed) ---
+// --- 🎮 GAME DASHBOARD (Clean Layout) ---
 function GameDashboard({ logout, user }) {
   const [gameState, setGameState] = useState(null);
   const [credits, setCredits] = useState(0.00);
@@ -249,13 +249,8 @@ function GameDashboard({ logout, user }) {
       // --- 🏆 WINNER LOGIC ---
       if (data.status === 'ENDED' && prevStatus.current === 'ACTIVE') {
         playSound('soundWin');
-
-        // ⚡ INSTANT BALANCE UPDATE FOR WINNER
         if (data.lastBidder === user?.email?.address) {
-            console.log("🏆 I WON! Refreshing balance...");
-            setTimeout(() => {
-                socket.emit('getUserBalance', user.email.address);
-            }, 1000); 
+            setTimeout(() => { socket.emit('getUserBalance', user.email.address); }, 1000); 
         }
       }
       prevStatus.current = data.status;
@@ -301,55 +296,48 @@ function GameDashboard({ logout, user }) {
     else if (action === '4') socket.emit('adminAction', { password: pwd, action: 'CHECK_PROFIT' });
   };
 
-  // --- ⏳ NEW LOADING SCREEN ---
+  // --- ⏳ LOADING SCREEN ---
   if (!gameState) return (
     <div className="loading-screen" style={{display:'flex', flexDirection:'column', alignItems:'center', gap:'20px'}}>
       <div className="spinner"></div>
-      <div style={{color:'#64748b', fontSize:'12px', letterSpacing:'2px', animation:'pulse 1.5s infinite'}}>
-        CONNECTING TO BASE...
-      </div>
-      <style>{`
-        .spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-radius: 50%; border-top-color: #fbbf24; animation: spin 1s ease-in-out infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
-      `}</style>
+      <div style={{color:'#64748b', fontSize:'12px', letterSpacing:'2px', animation:'pulse 1.5s infinite'}}>CONNECTING...</div>
+      <style>{`.spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-radius: 50%; border-top-color: #fbbf24; animation: spin 1s ease-in-out infinite; } @keyframes spin { to { transform: rotate(360deg); } } @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }`}</style>
     </div>
   );
 
   return (
     <div className="app-container">
       <GlobalStyle />
-      
-      {/* 🎉 CONFETTI EXPLOSION */}
-      {gameState?.status === 'ENDED' && (
-        <Confetti width={window.innerWidth} height={window.innerHeight} recycle={false} numberOfPieces={500} gravity={0.2} />
-      )}
-
+      {gameState?.status === 'ENDED' && <Confetti width={window.innerWidth} height={window.innerHeight} recycle={false} numberOfPieces={500} gravity={0.2} />}
       {showVault && <WalletVault onClose={() => setShowVault(false)} userAddress={userAddress} userEmail={user.email?.address} currentCredits={credits} />}
       {showHelp && <HowToPlay onClose={() => setShowHelp(false)} />}
 
-      {/* 🔧 FIXED NAV LAYOUT */}
-      <nav className="glass-nav" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 20px'}}>
+      {/* 🔧 CLEAN NAV BAR (Controls Only) */}
+      <nav className="glass-nav" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 15px'}}>
+        <button className="nav-btn vault-btn" onClick={() => setShowVault(true)}>🏦 ${credits.toFixed(2)}</button>
         
-        {/* 🖼️ LOGO & TITLE */}
-        <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
-            <img src="/logo.png" alt="Logo" style={{width:'32px', height:'32px'}} />
-            <span style={{fontWeight:'bold', fontSize:'18px'}}>BidBlaze</span>
-        </div>
-
-        {/* ➡️ RIGHT SIDE ITEMS */}
-        <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
-          <button className="nav-btn vault-btn" onClick={() => setShowVault(true)}>🏦 ${credits.toFixed(2)}</button>
-          <div className="live-pill">● {gameState.connectedUsers || 1} LIVE</div>
-          <div style={{display:'flex', gap:'5px'}}>
-             <button className="nav-btn" onClick={() => setShowHelp(true)} style={{fontSize:'18px'}}>❓</button>
-             <button className="nav-btn logout-btn" onClick={logout}>✕</button>
-          </div>
+        <div className="live-pill">● {gameState.connectedUsers || 1} LIVE</div>
+        
+        <div style={{display:'flex', gap:'8px'}}>
+           <button className="nav-btn" onClick={() => setShowHelp(true)} style={{fontSize:'18px'}}>❓</button>
+           <button className="nav-btn logout-btn" onClick={logout}>✕</button>
         </div>
       </nav>
 
       <div className="game-stage">
+        
+        {/* 🖼️ BRANDING (Moved Here - Above the Ring) */}
+        <div style={{display:'flex', flexDirection:'column', alignItems:'center', marginBottom:'15px', marginTop:'10px'}}>
+            <div style={{display:'flex', alignItems:'center', gap:'8px', opacity:0.9}}>
+                <img src="/logo.png" alt="Logo" style={{width:'28px', height:'28px'}} />
+                <span style={{fontWeight:'800', fontSize:'20px', letterSpacing:'1px', color:'white'}}>
+                    BID<span style={{color:'#fbbf24'}}>BLAZE</span>
+                </span>
+            </div>
+        </div>
+
         <ReactorRing targetDate={gameState.endTime} status={gameState.status} />
+        
         <div className="jackpot-core">
           {gameState.status === 'ACTIVE' ? (
             <>
@@ -385,11 +373,8 @@ function GameDashboard({ logout, user }) {
         </div>
       </div>
       
-      {/* ADMIN BUTTON */}
       {user?.email?.address?.toLowerCase() === MY_EMAIL && (
-        <button onClick={runAdmin} style={{marginTop:'20px', background:'none', border:'1px solid #ef4444', color:'#ef4444', padding:'5px 10px', borderRadius:'5px', cursor:'pointer'}}>
-          ADMIN PANEL
-        </button>
+        <button onClick={runAdmin} style={{marginTop:'20px', background:'none', border:'1px solid #ef4444', color:'#ef4444', padding:'5px 10px'}}>ADMIN</button>
       )}
     </div>
   );
