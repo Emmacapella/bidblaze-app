@@ -6,9 +6,10 @@ import { parseEther } from 'viem';
 
 // --- ⚠️ CONFIGURATION ⚠️ ---
 const PRIVY_APP_ID = "cm4l3033r048epf1ln3q59956"; 
-const TREASURY_ADDRESS = "0x496EBF196a00a331b72219B6bE1473CbD316383f"; // ⚠️ ENSURE THIS IS YOUR ADDRESS
+const TREASURY_ADDRESS = "0x496EBF196a00a331b72219B6bE1473CbD316383f"; // ⚠️ YOUR ADDRESS
+const SERVER_URL = "https://bidblaze-server.onrender.com"; // Your Server URL
 
-const socket = io("https://bidblaze-server.onrender.com", {
+const socket = io(SERVER_URL, {
   transports: ['websocket', 'polling']
 });
 
@@ -33,7 +34,7 @@ const playSound = (key) => {
   audio.play().catch(() => {});
 };
 
-// --- 📖 HOW TO PLAY GUIDE (With Refund Rule) ---
+// --- 📖 HOW TO PLAY GUIDE ---
 const HowToPlay = ({ onClose }) => {
   return (
     <div className="modal-overlay">
@@ -41,7 +42,6 @@ const HowToPlay = ({ onClose }) => {
         <button className="close-btn" onClick={onClose}>✕</button>
         <h2 style={{color: '#fbbf24', textAlign:'center', marginBottom:'20px'}}>How to Win 🏆</h2>
         
-        {/* STEP 1 */}
         <div style={{display:'flex', gap:'15px', marginBottom:'20px', alignItems:'flex-start'}}>
           <div style={{background:'#3b82f6', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold', marginTop:'2px'}}>1</div>
           <div>
@@ -49,8 +49,6 @@ const HowToPlay = ({ onClose }) => {
             <div style={{fontSize:'12px', color:'#94a3b8'}}>Add ETH (Base Network) to your Vault.</div>
           </div>
         </div>
-
-        {/* STEP 2 */}
         <div style={{display:'flex', gap:'15px', marginBottom:'20px', alignItems:'flex-start'}}>
           <div style={{background:'#ef4444', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold', marginTop:'2px'}}>2</div>
           <div>
@@ -58,8 +56,6 @@ const HowToPlay = ({ onClose }) => {
             <div style={{fontSize:'12px', color:'#94a3b8'}}>Each bid costs $1.00. <br/><span style={{color:'#fbbf24'}}>*Timer bumps to 10s if low!</span></div>
           </div>
         </div>
-
-        {/* STEP 3 */}
         <div style={{display:'flex', gap:'15px', marginBottom:'20px', alignItems:'flex-start'}}>
           <div style={{background:'#22c55e', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold', marginTop:'2px'}}>3</div>
           <div>
@@ -67,8 +63,6 @@ const HowToPlay = ({ onClose }) => {
             <div style={{fontSize:'12px', color:'#94a3b8'}}>If timer hits zero & you are the last bidder, you win the <span style={{color:'#fbbf24', fontWeight:'bold'}}>ENTIRE JACKPOT!</span></div>
           </div>
         </div>
-
-        {/* STEP 4 - NEW REFUND RULE */}
         <div style={{display:'flex', gap:'15px', marginBottom:'20px', alignItems:'flex-start', background:'rgba(255,255,255,0.05)', padding:'10px', borderRadius:'10px'}}>
           <div style={{fontSize:'20px'}}>🛡️</div>
           <div>
@@ -76,19 +70,19 @@ const HowToPlay = ({ onClose }) => {
             <div style={{fontSize:'12px', color:'#94a3b8'}}>If you are the <b>ONLY</b> bidder when the game ends, your fees are 100% refunded.</div>
           </div>
         </div>
-
         <button className="action-btn" onClick={onClose}>Got it! Let's Play</button>
       </div>
     </div>
   );
 };
 
-// --- 🏦 SMART VAULT (Handles Errors) ---
+// --- 🏦 SMART VAULT (With Withdrawal) ---
 const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
   const { wallets } = useWallets();
-  const [mode, setMode] = useState('AUTO'); 
+  const [mode, setMode] = useState('AUTO'); // 'AUTO', 'MANUAL', 'WITHDRAW'
   const [amountUSD, setAmountUSD] = useState("");
   const [manualHash, setManualHash] = useState(""); 
+  const [withdrawAddress, setWithdrawAddress] = useState(userAddress || ""); // Auto-fill if connected
   const [status, setStatus] = useState("");
   const [isError, setIsError] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -96,64 +90,52 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
   const ETH_PRICE_RATE = 0.0003; 
 
   useEffect(() => {
-    socket.on('depositError', (msg) => {
-        setStatus(msg);
-        setIsError(true);
-        setLoading(false);
-    });
+    socket.on('depositError', (msg) => { setStatus(msg); setIsError(true); setLoading(false); });
+    socket.on('depositSuccess', (msg) => { setStatus(msg); setIsError(false); setLoading(false); setTimeout(onClose, 2000); });
+    
+    // Listen for Withdrawal Replies
+    socket.on('withdrawError', (msg) => { setStatus(msg); setIsError(true); setLoading(false); });
+    socket.on('withdrawSuccess', (msg) => { setStatus(msg); setIsError(false); setLoading(false); setTimeout(onClose, 2000); });
 
-    socket.on('depositSuccess', (msg) => {
-        setStatus(msg);
-        setIsError(false);
-        setLoading(false);
-        setTimeout(onClose, 2000); 
-    });
-
-    return () => { socket.off('depositError'); socket.off('depositSuccess'); };
+    return () => { socket.off('depositError'); socket.off('depositSuccess'); socket.off('withdrawError'); socket.off('withdrawSuccess'); };
   }, []);
 
   const handleAutoDeposit = async () => {
     if (!amountUSD || parseFloat(amountUSD) <= 0) return;
-    setLoading(true);
-    setIsError(false);
-    setStatus("Initiating Transaction...");
-
+    setLoading(true); setIsError(false); setStatus("Initiating Transaction...");
     try {
       const w = wallets.find(w => w.address.toLowerCase() === userAddress.toLowerCase());
       if (!w) throw new Error("Wallet not connected. Try Manual Mode.");
-
       const ethAmount = (parseFloat(amountUSD) * ETH_PRICE_RATE).toFixed(6);
-      
-      const hash = await w.sendTransaction({
-        to: TREASURY_ADDRESS,
-        value: parseEther(ethAmount), 
-        chainId: 8453
-      });
-      
+      const hash = await w.sendTransaction({ to: TREASURY_ADDRESS, value: parseEther(ethAmount), chainId: 8453 });
       submitDeposit(hash, amountUSD);
-
     } catch (e) {
-      console.error(e);
-      setStatus("❌ Wallet Error. Try Manual Mode.");
-      setIsError(true);
-      setLoading(false);
+      console.error(e); setStatus("❌ Wallet Error. Try Manual Mode."); setIsError(true); setLoading(false);
     }
   };
 
   const handleManualSubmit = () => {
-    if (!manualHash || manualHash.length < 10) {
-      setStatus("❌ Invalid Transaction Hash format");
-      setIsError(true);
-      return;
-    }
+    if (!manualHash || manualHash.length < 10) { setStatus("❌ Invalid Transaction Hash"); setIsError(true); return; }
     submitDeposit(manualHash, "0"); 
   };
 
   const submitDeposit = (hash, amt) => {
-    setStatus("Verifying on Blockchain... (Please Wait)");
-    setIsError(false);
-    setLoading(true);
+    setStatus("Verifying on Blockchain... (Please Wait)"); setIsError(false); setLoading(true);
     socket.emit('confirmDeposit', { email: userEmail, amount: amt, txHash: hash });
+  };
+
+  // --- NEW: HANDLE WITHDRAWAL ---
+  const handleWithdrawal = () => {
+      if (!amountUSD || parseFloat(amountUSD) <= 0) { setStatus("❌ Enter valid amount"); setIsError(true); return; }
+      if (!withdrawAddress || withdrawAddress.length < 10) { setStatus("❌ Enter valid wallet address"); setIsError(true); return; }
+      
+      setLoading(true); setIsError(false); setStatus("Processing Request...");
+      
+      socket.emit('requestWithdrawal', {
+          email: userEmail,
+          amount: parseFloat(amountUSD),
+          address: withdrawAddress
+      });
   };
 
   return (
@@ -165,17 +147,21 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
           <div className="label">YOUR CREDITS</div>
           <div className="value">${currentCredits.toFixed(2)}</div>
         </div>
+        
         <div className="tabs">
-          <button className={`tab ${mode === 'AUTO' ? 'active' : ''}`} onClick={() => setMode('AUTO')}>Auto Pay</button>
+          <button className={`tab ${mode === 'AUTO' ? 'active' : ''}`} onClick={() => setMode('AUTO')}>Auto</button>
           <button className={`tab ${mode === 'MANUAL' ? 'active' : ''}`} onClick={() => setMode('MANUAL')}>Manual</button>
+          <button className={`tab ${mode === 'WITHDRAW' ? 'active' : ''}`} onClick={() => setMode('WITHDRAW')}>Withdraw</button>
         </div>
+
         {mode === 'AUTO' && (
           <div className="tab-content fade-in">
             <p className="hint" style={{fontSize: '12px', color:'#94a3b8'}}>Rate: $1 ≈ {ETH_PRICE_RATE} ETH</p>
             <input className="input-field" type="number" placeholder="Amount ($)" value={amountUSD} onChange={e => setAmountUSD(e.target.value)} />
-            <button className="action-btn" onClick={handleAutoDeposit} disabled={loading}>{loading ? "Processing..." : `Pay $${amountUSD || '0'} Now`}</button>
+            <button className="action-btn" onClick={handleAutoDeposit} disabled={loading}>{loading ? "Processing..." : `Deposit $${amountUSD || '0'}`}</button>
           </div>
         )}
+
         {mode === 'MANUAL' && (
           <div className="tab-content fade-in">
             <div style={{background:'#334155', padding:'10px', borderRadius:'8px', fontSize:'10px', marginBottom:'15px', cursor:'pointer'}} onClick={() => navigator.clipboard.writeText(TREASURY_ADDRESS)}>
@@ -186,6 +172,17 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
             <button className="action-btn" onClick={handleManualSubmit} disabled={loading}>{loading ? "Checking..." : "Verify Deposit"}</button>
           </div>
         )}
+
+        {/* --- WITHDRAW TAB --- */}
+        {mode === 'WITHDRAW' && (
+          <div className="tab-content fade-in">
+            <p className="hint" style={{fontSize: '12px', color:'#fbbf24'}}>Min Withdraw: $10.00</p>
+            <input className="input-field" type="number" placeholder="Amount ($)" value={amountUSD} onChange={e => setAmountUSD(e.target.value)} />
+            <input className="input-field" type="text" placeholder="Wallet Address (0x...)" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
+            <button className="action-btn" style={{background: '#ef4444'}} onClick={handleWithdrawal} disabled={loading}>{loading ? "Sending..." : "Request Withdrawal"}</button>
+          </div>
+        )}
+        
         <p className="status-text" style={{color: isError ? '#ef4444' : '#22c55e', fontWeight:'bold'}}>{status}</p>
       </div>
     </div>
@@ -199,7 +196,7 @@ function GameDashboard({ logout, user }) {
   const [isCooldown, setIsCooldown] = useState(false);
   const [cd, setCd] = useState(0);
   const [showVault, setShowVault] = useState(false);
-  const [showHelp, setShowHelp] = useState(false); // <--- NEW HELP STATE
+  const [showHelp, setShowHelp] = useState(false); 
   const [floatingBids, setFloatingBids] = useState([]);
   const [restartCount, setRestartCount] = useState(15);
   const prevStatus = useRef("ACTIVE");
@@ -209,15 +206,27 @@ function GameDashboard({ logout, user }) {
 
   useEffect(() => {
     if(user?.email?.address) socket.emit('getUserBalance', user.email.address);
+    
     socket.on('gameState', (data) => {
       setGameState(data);
       if (data.status === 'ACTIVE' && data.history.length > 0) playSound('soundBid');
+      
+      // --- 🏆 WINNER LOGIC ---
       if (data.status === 'ENDED' && prevStatus.current === 'ACTIVE') {
         confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 }, colors: ['#fbbf24', '#ffffff'] });
         playSound('soundWin');
+        
+        // ⚡ INSTANT BALANCE UPDATE FOR WINNER
+        if (data.lastBidder === user?.email?.address) {
+            console.log("🏆 I WON! Refreshing balance...");
+            setTimeout(() => {
+                socket.emit('getUserBalance', user.email.address);
+            }, 1000); // Wait 1s for server to process win
+        }
       }
       prevStatus.current = data.status;
     });
+
     socket.on('balanceUpdate', (bal) => setCredits(bal));
     socket.on('bidError', (msg) => alert(msg));
     return () => { socket.off('gameState'); socket.off('balanceUpdate'); socket.off('bidError'); };
@@ -262,7 +271,7 @@ function GameDashboard({ logout, user }) {
     <div className="app-container">
       <GlobalStyle />
       {showVault && <WalletVault onClose={() => setShowVault(false)} userAddress={userAddress} userEmail={user.email?.address} currentCredits={credits} />}
-      {showHelp && <HowToPlay onClose={() => setShowHelp(false)} />} {/* <--- HELP MODAL */}
+      {showHelp && <HowToPlay onClose={() => setShowHelp(false)} />} 
 
       <nav className="glass-nav">
         <button className="nav-btn vault-btn" onClick={() => setShowVault(true)}>🏦 ${credits.toFixed(2)}</button>
@@ -274,7 +283,6 @@ function GameDashboard({ logout, user }) {
       </nav>
 
       <div className="game-stage">
-        {/* ReactorRing Component was here, assuming standard import or previous definition */}
         <ReactorRing targetDate={gameState.endTime} status={gameState.status} />
         <div className="jackpot-core">
           {gameState.status === 'ACTIVE' ? (
@@ -317,7 +325,6 @@ function GameDashboard({ logout, user }) {
   );
 }
 
-// (Included ReactorRing, LandingPage, and GlobalStyle from previous context for completeness if needed, but above handles the key changes)
 const ReactorRing = ({ targetDate, status }) => {
   const [progress, setProgress] = useState(100);
   const [displayTime, setDisplayTime] = useState("299");
@@ -436,4 +443,3 @@ export default function App() {
     </PrivyProvider>
   );
 }
-
