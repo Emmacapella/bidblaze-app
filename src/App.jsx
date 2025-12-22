@@ -76,16 +76,17 @@ const HowToPlay = ({ onClose }) => {
   );
 };
 
-// --- 🏦 SMART VAULT (With Withdrawal) ---
+// --- 🏦 SMART VAULT (With History) ---
 const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
   const { wallets } = useWallets();
-  const [mode, setMode] = useState('AUTO'); // 'AUTO', 'MANUAL', 'WITHDRAW'
+  const [mode, setMode] = useState('AUTO'); 
   const [amountUSD, setAmountUSD] = useState("");
   const [manualHash, setManualHash] = useState(""); 
-  const [withdrawAddress, setWithdrawAddress] = useState(userAddress || ""); // Auto-fill if connected
+  const [withdrawAddress, setWithdrawAddress] = useState(userAddress || ""); 
   const [status, setStatus] = useState("");
   const [isError, setIsError] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [history, setHistory] = useState([]); // <--- NEW STATE
 
   const ETH_PRICE_RATE = 0.0003; 
 
@@ -93,12 +94,29 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
     socket.on('depositError', (msg) => { setStatus(msg); setIsError(true); setLoading(false); });
     socket.on('depositSuccess', (msg) => { setStatus(msg); setIsError(false); setLoading(false); setTimeout(onClose, 2000); });
     
-    // Listen for Withdrawal Replies
     socket.on('withdrawError', (msg) => { setStatus(msg); setIsError(true); setLoading(false); });
-    socket.on('withdrawSuccess', (msg) => { setStatus(msg); setIsError(false); setLoading(false); setTimeout(onClose, 2000); });
+    socket.on('withdrawSuccess', (msg) => { 
+        setStatus(msg); setIsError(false); setLoading(false); 
+        // Refresh history immediately after success
+        if(userEmail) socket.emit('getWithdrawals', userEmail);
+    });
 
-    return () => { socket.off('depositError'); socket.off('depositSuccess'); socket.off('withdrawError'); socket.off('withdrawSuccess'); };
-  }, []);
+    // Receive History Data
+    socket.on('withdrawalHistory', (data) => setHistory(data));
+
+    return () => { 
+        socket.off('depositError'); socket.off('depositSuccess'); 
+        socket.off('withdrawError'); socket.off('withdrawSuccess');
+        socket.off('withdrawalHistory');
+    };
+  }, [userEmail]);
+
+  // Load history when entering Withdraw Tab
+  useEffect(() => {
+      if (mode === 'WITHDRAW' && userEmail) {
+          socket.emit('getWithdrawals', userEmail);
+      }
+  }, [mode, userEmail]);
 
   const handleAutoDeposit = async () => {
     if (!amountUSD || parseFloat(amountUSD) <= 0) return;
@@ -124,18 +142,11 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
     socket.emit('confirmDeposit', { email: userEmail, amount: amt, txHash: hash });
   };
 
-  // --- NEW: HANDLE WITHDRAWAL ---
   const handleWithdrawal = () => {
       if (!amountUSD || parseFloat(amountUSD) <= 0) { setStatus("❌ Enter valid amount"); setIsError(true); return; }
       if (!withdrawAddress || withdrawAddress.length < 10) { setStatus("❌ Enter valid wallet address"); setIsError(true); return; }
-      
       setLoading(true); setIsError(false); setStatus("Processing Request...");
-      
-      socket.emit('requestWithdrawal', {
-          email: userEmail,
-          amount: parseFloat(amountUSD),
-          address: withdrawAddress
-      });
+      socket.emit('requestWithdrawal', { email: userEmail, amount: parseFloat(amountUSD), address: withdrawAddress });
   };
 
   return (
@@ -173,13 +184,27 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
           </div>
         )}
 
-        {/* --- WITHDRAW TAB --- */}
+        {/* --- WITHDRAW TAB WITH HISTORY --- */}
         {mode === 'WITHDRAW' && (
           <div className="tab-content fade-in">
             <p className="hint" style={{fontSize: '12px', color:'#fbbf24'}}>Min Withdraw: $10.00</p>
             <input className="input-field" type="number" placeholder="Amount ($)" value={amountUSD} onChange={e => setAmountUSD(e.target.value)} />
             <input className="input-field" type="text" placeholder="Wallet Address (0x...)" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
-            <button className="action-btn" style={{background: '#ef4444'}} onClick={handleWithdrawal} disabled={loading}>{loading ? "Sending..." : "Request Withdrawal"}</button>
+            <button className="action-btn" style={{background: '#ef4444', marginBottom:'20px'}} onClick={handleWithdrawal} disabled={loading}>{loading ? "Sending..." : "Request Withdrawal"}</button>
+            
+            {/* HISTORY LIST */}
+            <div style={{borderTop:'1px solid #334155', paddingTop:'15px'}}>
+                <div style={{fontSize:'12px', color:'#94a3b8', marginBottom:'10px', textAlign:'left', fontWeight:'bold'}}>RECENT REQUESTS</div>
+                {history.length === 0 && <div style={{fontSize:'12px', color:'#64748b'}}>No recent withdrawals.</div>}
+                {history.map(req => (
+                    <div key={req.id} style={{display:'flex', justifyContent:'space-between', fontSize:'13px', marginBottom:'8px', background:'rgba(255,255,255,0.05)', padding:'8px', borderRadius:'8px'}}>
+                        <span style={{fontWeight:'bold'}}>${req.amount}</span>
+                        <span style={{color: req.status === 'PAID' ? '#22c55e' : '#fbbf24', fontWeight:'bold'}}>
+                            {req.status === 'PAID' ? 'PAID ✅' : 'PENDING ⏳'}
+                        </span>
+                    </div>
+                ))}
+            </div>
           </div>
         )}
         
