@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ethers } from 'ethers'; // ✅ FIXED IMPORT for V5
+import { ethers } from 'ethers';
 import { useWallets } from '@privy-io/react-auth';
 import { socket } from './App';
 
@@ -18,6 +18,15 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
 
   const ETH_PRICE_RATE = 0.0003; 
 
+  // Function to refresh history
+  const refreshHistory = () => {
+    if(userEmail) {
+        setStatus("Refreshing history...");
+        socket.emit('getWithdrawals', userEmail);
+        setTimeout(() => setStatus(""), 1000);
+    }
+  };
+
   useEffect(() => {
     socket.on('depositError', (msg) => { setStatus(msg); setIsError(true); setLoading(false); });
     socket.on('depositSuccess', (msg) => { setStatus(msg); setIsError(false); setLoading(false); setTimeout(onClose, 2000); });
@@ -26,10 +35,12 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
     socket.on('withdrawSuccess', (msg) => { 
         setStatus(msg); setIsError(false); setLoading(false); 
         setAmountUSD(""); 
-        if(userEmail) socket.emit('getWithdrawals', userEmail);
+        refreshHistory();
     });
 
-    socket.on('withdrawalHistory', (data) => { setHistory(data || []); });
+    socket.on('withdrawalHistory', (data) => { 
+        setHistory(data || []); 
+    });
 
     return () => { 
         socket.off('depositError'); socket.off('depositSuccess'); 
@@ -39,12 +50,8 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
   }, [userEmail, onClose]);
 
   useEffect(() => {
-      if (mode === 'WITHDRAW' && userEmail) {
-          setStatus("Loading history...");
-          socket.emit('getWithdrawals', userEmail);
-      } else {
-          setStatus("");
-      }
+      if (mode === 'WITHDRAW') refreshHistory();
+      else setStatus("");
   }, [mode, userEmail]);
 
   const handleAutoDeposit = async () => {
@@ -55,23 +62,15 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
       if (!w) throw new Error("Wallet not connected. Try Manual Mode.");
       
       const ethAmount = (parseFloat(amountUSD) * ETH_PRICE_RATE).toFixed(6);
-      
       await w.switchChain(8453);
-      
-      // ✅ FIXED: Using ethers.utils.parseEther for V5 compatibility
       const valWei = ethers.utils.parseEther(ethAmount);
 
       const hash = await w.sendTransaction({ 
-          to: TREASURY_ADDRESS, 
-          value: valWei, 
-          chainId: 8453 
+          to: TREASURY_ADDRESS, value: valWei, chainId: 8453 
       });
-      
       submitDeposit(hash, amountUSD);
     } catch (e) {
-      console.error(e); 
-      setStatus("❌ Wallet Error. Try Manual Mode."); 
-      setIsError(true); setLoading(false);
+      console.error(e); setStatus("❌ Wallet Error. Try Manual Mode."); setIsError(true); setLoading(false);
     }
   };
 
@@ -81,7 +80,7 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
   };
 
   const submitDeposit = (hash, amt) => {
-    setStatus("Verifying on Blockchain... (Please Wait)"); setIsError(false); setLoading(true);
+    setStatus("Verifying... (Wait)"); setIsError(false); setLoading(true);
     socket.emit('confirmDeposit', { email: userEmail, amount: amt, txHash: hash });
   };
 
@@ -92,6 +91,14 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
       
       setLoading(true); setIsError(false); setStatus("Processing Request...");
       socket.emit('requestWithdrawal', { email: userEmail, amount: parseFloat(amountUSD), address: withdrawAddress });
+  };
+
+  // Helper to determine badge color
+  const getStatusColor = (st) => {
+      const s = st.toLowerCase();
+      if (s === 'paid' || s === 'success' || s === 'completed') return 'paid'; // Green
+      if (s === 'rejected' || s === 'failed') return 'failed'; // Red
+      return 'pending'; // Yellow
   };
 
   return (
@@ -136,14 +143,22 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
             <input className="input-field" type="number" placeholder="Amount ($)" value={amountUSD} onChange={e => setAmountUSD(e.target.value)} />
             <input className="input-field" type="text" placeholder="Wallet Address (0x...)" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
             <button className="action-btn withdraw-btn" onClick={handleWithdrawal} disabled={loading}>{loading ? "Sending..." : "REQUEST WITHDRAWAL"}</button>
+            
             <div className="history-section">
-                <div className="history-title">RECENT REQUESTS</div>
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'10px'}}>
+                    <div className="history-title">RECENT REQUESTS</div>
+                    <button onClick={refreshHistory} style={{background:'none', border:'none', color:'#94a3b8', cursor:'pointer', fontSize:'16px'}}>🔄</button>
+                </div>
+                
                 <div className="history-list">
                     {history.length === 0 ? <div style={{fontSize:'12px', color:'#64748b', textAlign:'center'}}>No withdrawals yet</div> : 
                         history.map(req => (
                             <div key={req.id} className="history-item">
                                 <span className="amt">${parseFloat(req.amount).toFixed(2)}</span>
-                                <span className={`badge ${req.status}`}>{req.status === 'paid' ? 'PAID ✅' : 'PENDING ⏳'}</span>
+                                {/* ✅ SHOWS EXACT DB STATUS */}
+                                <span className={`badge ${getStatusColor(req.status)}`}>
+                                    {req.status.toUpperCase()}
+                                </span>
                             </div>
                         ))
                     }
@@ -168,12 +183,13 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
         .copy-box { background: #1e293b; padding: 10px; border-radius: 8px; font-size: 11px; margin-bottom: 15px; cursor: pointer; border: 1px dashed #475569; text-align: center; }
         .status-text { text-align: center; font-size: 13px; margin-top: 15px; font-weight: bold; }
         .history-section { margin-top: 20px; border-top: 1px solid #334155; padding-top: 15px; }
-        .history-title { font-size: 11px; color: #94a3b8; margin-bottom: 10px; font-weight: bold; }
+        .history-title { font-size: 11px; color: #94a3b8; font-weight: bold; }
         .history-list { max-height: 120px; overflow-y: auto; }
         .history-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; background: rgba(255,255,255,0.03); border-radius: 6px; margin-bottom: 6px; font-size: 13px; }
         .badge { padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; }
         .badge.paid { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
         .badge.pending { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+        .badge.failed { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
       `}</style>
     </div>
   );
