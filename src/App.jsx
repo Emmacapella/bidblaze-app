@@ -222,7 +222,7 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
   );
 };
 
-// --- 🎮 GAME DASHBOARD (Upgraded) ---
+// --- 🎮 GAME DASHBOARD (Layout Fixed) ---
 function GameDashboard({ logout, user }) {
   const [gameState, setGameState] = useState(null);
   const [credits, setCredits] = useState(0.00);
@@ -328,17 +328,23 @@ function GameDashboard({ logout, user }) {
       {showVault && <WalletVault onClose={() => setShowVault(false)} userAddress={userAddress} userEmail={user.email?.address} currentCredits={credits} />}
       {showHelp && <HowToPlay onClose={() => setShowHelp(false)} />}
 
-      <nav className="glass-nav">
-        {/* 🖼️ MINI LOGO IN HEADER */}
-        <div style={{display:'flex', alignItems:'center', gap:'8px', marginRight:'auto'}}>
+      {/* 🔧 FIXED NAV LAYOUT */}
+      <nav className="glass-nav" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 20px'}}>
+        
+        {/* 🖼️ LOGO & TITLE */}
+        <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
             <img src="/logo.png" alt="Logo" style={{width:'32px', height:'32px'}} />
+            <span style={{fontWeight:'bold', fontSize:'18px'}}>BidBlaze</span>
         </div>
 
-        <button className="nav-btn vault-btn" onClick={() => setShowVault(true)}>🏦 ${credits.toFixed(2)}</button>
-        <div className="live-pill">● {gameState.connectedUsers || 1} LIVE</div>
-        <div style={{display:'flex', gap:'5px'}}>
-           <button className="nav-btn" onClick={() => setShowHelp(true)} style={{fontSize:'18px'}}>❓</button>
-           <button className="nav-btn logout-btn" onClick={logout}>✕</button>
+        {/* ➡️ RIGHT SIDE ITEMS */}
+        <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+          <button className="nav-btn vault-btn" onClick={() => setShowVault(true)}>🏦 ${credits.toFixed(2)}</button>
+          <div className="live-pill">● {gameState.connectedUsers || 1} LIVE</div>
+          <div style={{display:'flex', gap:'5px'}}>
+             <button className="nav-btn" onClick={() => setShowHelp(true)} style={{fontSize:'18px'}}>❓</button>
+             <button className="nav-btn logout-btn" onClick={logout}>✕</button>
+          </div>
         </div>
       </nav>
 
