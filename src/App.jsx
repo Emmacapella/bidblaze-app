@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
+import Confetti from 'react-confetti';
 import confetti from 'canvas-confetti';
 import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
 import { parseEther } from 'viem';
@@ -221,39 +222,40 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
   );
 };
 
-// --- DASHBOARD ---
+// --- 🎮 GAME DASHBOARD (Upgraded) ---
 function GameDashboard({ logout, user }) {
   const [gameState, setGameState] = useState(null);
   const [credits, setCredits] = useState(0.00);
   const [isCooldown, setIsCooldown] = useState(false);
   const [cd, setCd] = useState(0);
   const [showVault, setShowVault] = useState(false);
-  const [showHelp, setShowHelp] = useState(false); 
+  const [showHelp, setShowHelp] = useState(false);
   const [floatingBids, setFloatingBids] = useState([]);
   const [restartCount, setRestartCount] = useState(15);
+  
+  // 🔊 Sound Effects & State Ref
   const prevStatus = useRef("ACTIVE");
   const { wallets } = useWallets();
   const userAddress = wallets.find(w => w.walletClientType === 'privy')?.address || user.wallet?.address;
-  const MY_EMAIL = "tinyearner8@gmail.com"; 
+  const MY_EMAIL = "tinyearner8@gmail.com";
 
   useEffect(() => {
     if(user?.email?.address) socket.emit('getUserBalance', user.email.address);
-    
+
     socket.on('gameState', (data) => {
       setGameState(data);
       if (data.status === 'ACTIVE' && data.history.length > 0) playSound('soundBid');
-      
+
       // --- 🏆 WINNER LOGIC ---
       if (data.status === 'ENDED' && prevStatus.current === 'ACTIVE') {
-        confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 }, colors: ['#fbbf24', '#ffffff'] });
         playSound('soundWin');
-        
+
         // ⚡ INSTANT BALANCE UPDATE FOR WINNER
         if (data.lastBidder === user?.email?.address) {
             console.log("🏆 I WON! Refreshing balance...");
             setTimeout(() => {
                 socket.emit('getUserBalance', user.email.address);
-            }, 1000); // Wait 1s for server to process win
+            }, 1000); 
         }
       }
       prevStatus.current = data.status;
@@ -271,9 +273,11 @@ function GameDashboard({ logout, user }) {
             setRestartCount(dist > 0 ? Math.ceil(dist/1000) : 0);
         }
     }, 100);
+    
     let cdInterval;
     if (isCooldown && cd > 0) cdInterval = setInterval(() => setCd(prev => prev - 1), 1000);
     else if (cd <= 0) setIsCooldown(false);
+    
     return () => { clearInterval(timerInterval); clearInterval(cdInterval); };
   }, [gameState?.status, gameState?.restartTimer, isCooldown, cd]);
 
@@ -297,15 +301,39 @@ function GameDashboard({ logout, user }) {
     else if (action === '4') socket.emit('adminAction', { password: pwd, action: 'CHECK_PROFIT' });
   };
 
-  if (!gameState) return <div className="loading-screen">Connecting...</div>;
+  // --- ⏳ NEW LOADING SCREEN ---
+  if (!gameState) return (
+    <div className="loading-screen" style={{display:'flex', flexDirection:'column', alignItems:'center', gap:'20px'}}>
+      <div className="spinner"></div>
+      <div style={{color:'#64748b', fontSize:'12px', letterSpacing:'2px', animation:'pulse 1.5s infinite'}}>
+        CONNECTING TO BASE...
+      </div>
+      <style>{`
+        .spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-radius: 50%; border-top-color: #fbbf24; animation: spin 1s ease-in-out infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+      `}</style>
+    </div>
+  );
 
   return (
     <div className="app-container">
       <GlobalStyle />
+      
+      {/* 🎉 CONFETTI EXPLOSION */}
+      {gameState?.status === 'ENDED' && (
+        <Confetti width={window.innerWidth} height={window.innerHeight} recycle={false} numberOfPieces={500} gravity={0.2} />
+      )}
+
       {showVault && <WalletVault onClose={() => setShowVault(false)} userAddress={userAddress} userEmail={user.email?.address} currentCredits={credits} />}
-      {showHelp && <HowToPlay onClose={() => setShowHelp(false)} />} 
+      {showHelp && <HowToPlay onClose={() => setShowHelp(false)} />}
 
       <nav className="glass-nav">
+        {/* 🖼️ MINI LOGO IN HEADER */}
+        <div style={{display:'flex', alignItems:'center', gap:'8px', marginRight:'auto'}}>
+            <img src="/logo.png" alt="Logo" style={{width:'32px', height:'32px'}} />
+        </div>
+
         <button className="nav-btn vault-btn" onClick={() => setShowVault(true)}>🏦 ${credits.toFixed(2)}</button>
         <div className="live-pill">● {gameState.connectedUsers || 1} LIVE</div>
         <div style={{display:'flex', gap:'5px'}}>
@@ -350,8 +378,12 @@ function GameDashboard({ logout, user }) {
           ))}
         </div>
       </div>
+      
+      {/* ADMIN BUTTON */}
       {user?.email?.address?.toLowerCase() === MY_EMAIL && (
-        <button onClick={runAdmin} style={{marginTop:'20px', background:'none', border:'1px solid #ef4444', color:'#ef4444', padding:'5px 10px', fontSize:'10px', opacity:0.3}}>ADMIN PANEL</button>
+        <button onClick={runAdmin} style={{marginTop:'20px', background:'none', border:'1px solid #ef4444', color:'#ef4444', padding:'5px 10px', borderRadius:'5px', cursor:'pointer'}}>
+          ADMIN PANEL
+        </button>
       )}
     </div>
   );
