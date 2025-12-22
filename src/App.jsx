@@ -33,7 +33,7 @@ const playSound = (key) => {
   audio.play().catch(() => {});
 };
 
-// --- 📖 HOW TO PLAY GUIDE ---
+// --- 📖 HOW TO PLAY GUIDE (Fixed Layout) ---
 const HowToPlay = ({ onClose }) => {
   return (
     <div className="modal-overlay">
@@ -41,24 +41,39 @@ const HowToPlay = ({ onClose }) => {
         <button className="close-btn" onClick={onClose}>✕</button>
         <h2 style={{color: '#fbbf24', textAlign:'center', marginBottom:'20px'}}>How to Win 🏆</h2>
         
-        <div style={{display:'flex', gap:'15px', marginBottom:'20px', alignItems:'center'}}>
-          <div style={{background:'#3b82f6', borderRadius:'50%', width:'30px', height:'30px', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold'}}>1</div>
+        {/* STEP 1 */}
+        <div style={{display:'flex', gap:'15px', marginBottom:'20px', alignItems:'flex-start'}}>
+          <div style={{
+            background:'#3b82f6', borderRadius:'50%', width:'30px', height:'30px', flexShrink: 0,
+            display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold', marginTop:'2px'
+          }}>1</div>
           <div>
             <div style={{fontWeight:'bold', color:'white'}}>Deposit Crypto</div>
             <div style={{fontSize:'12px', color:'#94a3b8'}}>Add ETH (Base Network) to your Vault.</div>
           </div>
         </div>
 
-        <div style={{display:'flex', gap:'15px', marginBottom:'20px', alignItems:'center'}}>
-          <div style={{background:'#ef4444', borderRadius:'50%', width:'30px', height:'30px', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold'}}>2</div>
+        {/* STEP 2 - Added Timer Rule Here */}
+        <div style={{display:'flex', gap:'15px', marginBottom:'20px', alignItems:'flex-start'}}>
+          <div style={{
+            background:'#ef4444', borderRadius:'50%', width:'30px', height:'30px', flexShrink: 0,
+            display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold', marginTop:'2px'
+          }}>2</div>
           <div>
             <div style={{fontWeight:'bold', color:'white'}}>Place a Bid</div>
-            <div style={{fontSize:'12px', color:'#94a3b8'}}>Each bid costs $1.00 and resets the timer.</div>
+            <div style={{fontSize:'12px', color:'#94a3b8'}}>
+              Each bid costs $1.00. <br/>
+              <span style={{color:'#fbbf24'}}>*Timer bumps up to 10s if low!</span>
+            </div>
           </div>
         </div>
 
-        <div style={{display:'flex', gap:'15px', marginBottom:'20px', alignItems:'center'}}>
-          <div style={{background:'#22c55e', borderRadius:'50%', width:'30px', height:'30px', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold'}}>3</div>
+        {/* STEP 3 - Fixed Alignment */}
+        <div style={{display:'flex', gap:'15px', marginBottom:'20px', alignItems:'flex-start'}}>
+          <div style={{
+            background:'#22c55e', borderRadius:'50%', width:'30px', height:'30px', flexShrink: 0,
+            display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold', marginTop:'2px'
+          }}>3</div>
           <div>
             <div style={{fontWeight:'bold', color:'white'}}>Be the Last One</div>
             <div style={{fontSize:'12px', color:'#94a3b8'}}>If the timer hits zero and you are the last bidder, you win the <span style={{color:'#fbbf24', fontWeight:'bold'}}>ENTIRE JACKPOT!</span></div>
