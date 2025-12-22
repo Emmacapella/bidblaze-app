@@ -76,7 +76,7 @@ const HowToPlay = ({ onClose }) => {
   );
 };
 
-// --- 🏦 SMART VAULT (With History) ---
+// --- 🏦 SMART VAULT (Corrected) ---
 const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
   const { wallets } = useWallets();
   const [mode, setMode] = useState('AUTO'); 
@@ -86,23 +86,28 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
   const [status, setStatus] = useState("");
   const [isError, setIsError] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [history, setHistory] = useState([]); // <--- NEW STATE
+  const [history, setHistory] = useState([]); 
 
   const ETH_PRICE_RATE = 0.0003; 
 
   useEffect(() => {
+    // Listen for Deposit Events
     socket.on('depositError', (msg) => { setStatus(msg); setIsError(true); setLoading(false); });
     socket.on('depositSuccess', (msg) => { setStatus(msg); setIsError(false); setLoading(false); setTimeout(onClose, 2000); });
     
+    // Listen for Withdrawal Events
     socket.on('withdrawError', (msg) => { setStatus(msg); setIsError(true); setLoading(false); });
     socket.on('withdrawSuccess', (msg) => { 
         setStatus(msg); setIsError(false); setLoading(false); 
-        // Refresh history immediately after success
+        // 🔄 Refresh history immediately after success
         if(userEmail) socket.emit('getWithdrawals', userEmail);
     });
 
-    // Receive History Data
-    socket.on('withdrawalHistory', (data) => setHistory(data));
+    // Listen for History Data
+    socket.on('withdrawalHistory', (data) => {
+        console.log("📜 Received History:", data); // Debug log
+        setHistory(data);
+    });
 
     return () => { 
         socket.off('depositError'); socket.off('depositSuccess'); 
@@ -114,10 +119,12 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
   // Load history when entering Withdraw Tab
   useEffect(() => {
       if (mode === 'WITHDRAW' && userEmail) {
+          console.log("🔄 Fetching History for:", userEmail);
           socket.emit('getWithdrawals', userEmail);
       }
   }, [mode, userEmail]);
 
+  // --- ACTIONS ---
   const handleAutoDeposit = async () => {
     if (!amountUSD || parseFloat(amountUSD) <= 0) return;
     setLoading(true); setIsError(false); setStatus("Initiating Transaction...");
