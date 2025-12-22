@@ -222,7 +222,7 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
   );
 };
 
-// --- 🎮 GAME DASHBOARD (Clean Layout) ---
+// --- 🎮 GAME DASHBOARD (Logo at Bottom) ---
 function GameDashboard({ logout, user }) {
   const [gameState, setGameState] = useState(null);
   const [credits, setCredits] = useState(0.00);
@@ -233,7 +233,6 @@ function GameDashboard({ logout, user }) {
   const [floatingBids, setFloatingBids] = useState([]);
   const [restartCount, setRestartCount] = useState(15);
   
-  // 🔊 Sound Effects & State Ref
   const prevStatus = useRef("ACTIVE");
   const { wallets } = useWallets();
   const userAddress = wallets.find(w => w.walletClientType === 'privy')?.address || user.wallet?.address;
@@ -246,7 +245,6 @@ function GameDashboard({ logout, user }) {
       setGameState(data);
       if (data.status === 'ACTIVE' && data.history.length > 0) playSound('soundBid');
 
-      // --- 🏆 WINNER LOGIC ---
       if (data.status === 'ENDED' && prevStatus.current === 'ACTIVE') {
         playSound('soundWin');
         if (data.lastBidder === user?.email?.address) {
@@ -296,7 +294,6 @@ function GameDashboard({ logout, user }) {
     else if (action === '4') socket.emit('adminAction', { password: pwd, action: 'CHECK_PROFIT' });
   };
 
-  // --- ⏳ LOADING SCREEN ---
   if (!gameState) return (
     <div className="loading-screen" style={{display:'flex', flexDirection:'column', alignItems:'center', gap:'20px'}}>
       <div className="spinner"></div>
@@ -312,12 +309,10 @@ function GameDashboard({ logout, user }) {
       {showVault && <WalletVault onClose={() => setShowVault(false)} userAddress={userAddress} userEmail={user.email?.address} currentCredits={credits} />}
       {showHelp && <HowToPlay onClose={() => setShowHelp(false)} />}
 
-      {/* 🔧 CLEAN NAV BAR (Controls Only) */}
+      {/* TOP NAVBAR (Controls Only) */}
       <nav className="glass-nav" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 15px'}}>
         <button className="nav-btn vault-btn" onClick={() => setShowVault(true)}>🏦 ${credits.toFixed(2)}</button>
-        
         <div className="live-pill">● {gameState.connectedUsers || 1} LIVE</div>
-        
         <div style={{display:'flex', gap:'8px'}}>
            <button className="nav-btn" onClick={() => setShowHelp(true)} style={{fontSize:'18px'}}>❓</button>
            <button className="nav-btn logout-btn" onClick={logout}>✕</button>
@@ -325,19 +320,7 @@ function GameDashboard({ logout, user }) {
       </nav>
 
       <div className="game-stage">
-        
-        {/* 🖼️ BRANDING (Moved Here - Above the Ring) */}
-        <div style={{display:'flex', flexDirection:'column', alignItems:'center', marginBottom:'15px', marginTop:'10px'}}>
-            <div style={{display:'flex', alignItems:'center', gap:'8px', opacity:0.9}}>
-                <img src="/logo.png" alt="Logo" style={{width:'28px', height:'28px'}} />
-                <span style={{fontWeight:'800', fontSize:'20px', letterSpacing:'1px', color:'white'}}>
-                    BID<span style={{color:'#fbbf24'}}>BLAZE</span>
-                </span>
-            </div>
-        </div>
-
         <ReactorRing targetDate={gameState.endTime} status={gameState.status} />
-        
         <div className="jackpot-core">
           {gameState.status === 'ACTIVE' ? (
             <>
@@ -373,8 +356,24 @@ function GameDashboard({ logout, user }) {
         </div>
       </div>
       
+      {/* ⬇️ LOGO MOVED TO BOTTOM FOOTER ⬇️ */}
+      <div style={{
+          display:'flex', 
+          justifyContent:'center', 
+          alignItems:'center', 
+          gap:'10px', 
+          marginTop:'30px', 
+          marginBottom:'20px', 
+          opacity: 0.5
+      }}>
+          <img src="/logo.png" alt="Logo" style={{width:'24px', height:'24px', objectFit:'contain', filter:'grayscale(100%)'}} />
+          <span style={{fontWeight:'600', fontSize:'14px', letterSpacing:'1px', color:'#94a3b8'}}>
+            BID<span style={{color:'#cbd5e1'}}>BLAZE</span>
+          </span>
+      </div>
+
       {user?.email?.address?.toLowerCase() === MY_EMAIL && (
-        <button onClick={runAdmin} style={{marginTop:'20px', background:'none', border:'1px solid #ef4444', color:'#ef4444', padding:'5px 10px'}}>ADMIN</button>
+        <button onClick={runAdmin} style={{marginTop:'10px', background:'none', border:'1px solid #ef4444', color:'#ef4444', padding:'5px 10px'}}>ADMIN</button>
       )}
     </div>
   );
