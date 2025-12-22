@@ -392,10 +392,30 @@ function LandingPage({ login }) {
     <div className="landing-container">
       <GlobalStyle />
       <div className="landing-content">
-        <div style={{fontSize:'80px'}}>⚡</div>
+        {/* 🖼️ NEW LOGO HERE */}
+        <img 
+          src="/logo.png" 
+          alt="BidBlaze Logo" 
+          style={{
+            width: '120px', 
+            height: '120px', 
+            marginBottom: '20px', 
+            objectFit: 'contain',
+            filter: 'drop-shadow(0 0 15px rgba(251, 191, 36, 0.3))' // Adds a subtle gold glow
+          }} 
+        />
+        
         <h1>BidBlaze <span style={{color:'#fbbf24'}}>Pro</span></h1>
-        <p>Real-Time Crypto Auctions</p>
-        <button className="start-btn" onClick={login}>Play Now</button>
+        <p style={{color:'#94a3b8', fontSize:'16px', marginTop:'-10px'}}>Real-Time Crypto Auctions</p>
+        
+        <button className="start-btn" onClick={login} style={{marginTop:'20px'}}>
+          🚀 Play Now
+        </button>
+
+        <div style={{marginTop:'40px', display:'flex', gap:'20px', justifyContent:'center', opacity:0.6}}>
+           <span style={{fontSize:'12px', color:'#64748b'}}>⚡ Base Network</span>
+           <span style={{fontSize:'12px', color:'#64748b'}}>🛡️ Secure Login</span>
+        </div>
       </div>
     </div>
   );
