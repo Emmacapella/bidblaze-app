@@ -9,6 +9,7 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
   const { wallets } = useWallets();
   const [mode, setMode] = useState('AUTO'); 
   const [amountUSD, setAmountUSD] = useState("");
+  const [ethPrice, setEthPrice] = useState(0); // 📉 Stores Live ETH Price
   const [manualHash, setManualHash] = useState(""); 
   const [withdrawAddress, setWithdrawAddress] = useState(userAddress || ""); 
   const [status, setStatus] = useState("");
@@ -16,14 +17,30 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([]); 
 
-  const ETH_PRICE_RATE = 0.0003; 
+  // --- 1. 🌍 FETCH LIVE ETH PRICE ---
+  useEffect(() => {
+    const fetchPrice = async () => {
+        try {
+            const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+            const data = await res.json();
+            setEthPrice(data.ethereum.usd);
+        } catch (e) {
+            console.error("Price fetch failed", e);
+            setEthPrice(3300); // Fallback safe price if API fails
+        }
+    };
+    fetchPrice();
+    // Refresh price every 60 seconds
+    const interval = setInterval(fetchPrice, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
-  // Function to refresh history
+  // --- REFRESH FUNCTION ---
   const refreshHistory = () => {
     if(userEmail) {
-        setStatus("Refreshing history...");
+        setStatus("Refreshing list...");
         socket.emit('getWithdrawals', userEmail);
-        setTimeout(() => setStatus(""), 1000);
+        setTimeout(() => setStatus(""), 800);
     }
   };
 
@@ -38,9 +55,7 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
         refreshHistory();
     });
 
-    socket.on('withdrawalHistory', (data) => { 
-        setHistory(data || []); 
-    });
+    socket.on('withdrawalHistory', (data) => { setHistory(data || []); });
 
     return () => { 
         socket.off('depositError'); socket.off('depositSuccess'); 
@@ -54,16 +69,22 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
       else setStatus("");
   }, [mode, userEmail]);
 
+  // --- 2. 🧮 CALCULATE DYNAMIC ETH AMOUNT ---
   const handleAutoDeposit = async () => {
     if (!amountUSD || parseFloat(amountUSD) <= 0) return;
+    if (ethPrice === 0) { setStatus("⏳ Fetching live price... please wait."); return; }
+
     setLoading(true); setIsError(false); setStatus("Initiating Transaction...");
     try {
       const w = wallets.find(w => w.address.toLowerCase() === userAddress.toLowerCase());
       if (!w) throw new Error("Wallet not connected. Try Manual Mode.");
       
-      const ethAmount = (parseFloat(amountUSD) * ETH_PRICE_RATE).toFixed(6);
+      // LOGIC: Requested USD / Live Price = Exact ETH
+      // Example: $10 / $3300 = 0.00303 ETH
+      const calculatedEth = (parseFloat(amountUSD) / ethPrice).toFixed(8); 
+      
       await w.switchChain(8453);
-      const valWei = ethers.utils.parseEther(ethAmount);
+      const valWei = ethers.utils.parseEther(calculatedEth);
 
       const hash = await w.sendTransaction({ 
           to: TREASURY_ADDRESS, value: valWei, chainId: 8453 
@@ -93,12 +114,12 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
       socket.emit('requestWithdrawal', { email: userEmail, amount: parseFloat(amountUSD), address: withdrawAddress });
   };
 
-  // Helper to determine badge color
   const getStatusColor = (st) => {
-      const s = st.toLowerCase();
-      if (s === 'paid' || s === 'success' || s === 'completed') return 'paid'; // Green
-      if (s === 'rejected' || s === 'failed') return 'failed'; // Red
-      return 'pending'; // Yellow
+      if (!st) return 'pending';
+      const s = st.toLowerCase().trim();
+      if (['paid', 'success', 'completed', 'sent', 'approved'].includes(s)) return 'paid';
+      if (['rejected', 'failed', 'declined', 'cancelled'].includes(s)) return 'failed';
+      return 'pending'; 
   };
 
   return (
@@ -120,9 +141,19 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
 
         {mode === 'AUTO' && (
           <div className="tab-content fade-in">
-            <p className="hint">Rate: $1 ≈ {ETH_PRICE_RATE} ETH (Base Chain)</p>
+            {/* 3. SHOW LIVE RATE */}
+            <div className="rate-box">
+                <span style={{color:'#94a3b8'}}>Live Rate:</span> 
+                <span style={{color:'#22c55e', fontWeight:'bold', marginLeft:'5px'}}>
+                   1 ETH = ${ethPrice.toLocaleString()}
+                </span>
+            </div>
+
             <input className="input-field" type="number" placeholder="Amount in USD (e.g. 20)" value={amountUSD} onChange={e => setAmountUSD(e.target.value)} />
-            <button className="action-btn" onClick={handleAutoDeposit} disabled={loading}>{loading ? "Processing..." : `DEPOSIT $${amountUSD || '0'}`}</button>
+            
+            <button className="action-btn" onClick={handleAutoDeposit} disabled={loading}>
+                {loading ? "Processing..." : `DEPOSIT $${amountUSD || '0'}`}
+            </button>
           </div>
         )}
 
@@ -155,9 +186,8 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
                         history.map(req => (
                             <div key={req.id} className="history-item">
                                 <span className="amt">${parseFloat(req.amount).toFixed(2)}</span>
-                                {/* ✅ SHOWS EXACT DB STATUS */}
                                 <span className={`badge ${getStatusColor(req.status)}`}>
-                                    {req.status.toUpperCase()}
+                                    {req.status ? req.status.toUpperCase() : 'PENDING'}
                                 </span>
                             </div>
                         ))
@@ -178,6 +208,7 @@ const WalletVault = ({ onClose, userAddress, userEmail, currentCredits }) => {
         .tab { flex: 1; padding: 10px; background: transparent; border: none; color: #64748b; cursor: pointer; border-radius: 8px; font-weight: 600; font-size: 13px; }
         .tab.active { background: #334155; color: white; }
         .input-field { width: 100%; padding: 12px; margin-bottom: 12px; background: rgba(0,0,0,0.4); border: 1px solid #334155; border-radius: 8px; color: white; }
+        .rate-box { font-size: 12px; margin-bottom: 10px; text-align: center; background: rgba(34, 197, 94, 0.1); padding: 8px; border-radius: 6px; border: 1px solid rgba(34, 197, 94, 0.3); }
         .action-btn { width: 100%; padding: 14px; background: #fbbf24; border: none; border-radius: 8px; font-weight: 800; color: black; cursor: pointer; }
         .withdraw-btn { background: #ef4444; color: white; }
         .copy-box { background: #1e293b; padding: 10px; border-radius: 8px; font-size: 11px; margin-bottom: 15px; cursor: pointer; border: 1px dashed #475569; text-align: center; }
