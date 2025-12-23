@@ -198,6 +198,7 @@ function GameDashboard({ logout, user }) {
       <button className={`main-btn ${isCooldown ? 'cooldown' : ''}`} onClick={placeBid} disabled={gameState.status !== 'ACTIVE' || isCooldown}>
         {gameState.status === 'ENDED' ? 'GAME CLOSED' : (isCooldown ? `WAIT (${cd}s)` : `BID NOW ($${gameState.bidCost})`)}
       </button>
+
       {/* 🏆 NEW RECENT WINNERS PANEL 🏆 */}
       {gameState.recentWinners && gameState.recentWinners.length > 0 && (
         <div className="glass-panel" style={{borderColor: '#fbbf24', background: 'rgba(251, 191, 36, 0.05)'}}>
