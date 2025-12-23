@@ -27,12 +27,6 @@ const BASE_CHAIN = {
   blockExplorers: { default: { name: 'Basescan', url: 'https://basescan.org' } }
 };
 
-const playSound = (key) => {
-  const audio = new Audio(ASSETS[key]);
-  audio.volume = 0.5;
-  audio.play().catch(() => {});
-};
-
 // --- 📖 HOW TO PLAY GUIDE ---
 const HowToPlay = ({ onClose }) => {
   return (
@@ -45,7 +39,7 @@ const HowToPlay = ({ onClose }) => {
           <div style={{background:'#3b82f6', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center'}}>1</div>
           <div>
             <div style={{fontWeight:'bold', color:'white'}}>Deposit Crypto</div>
-            <div style={{fontSize:'12px', color:'#94a3b8'}}>Add Funds to your account using the Deposit button.</div>
+            <div style={{fontSize:'12px', color:'#94a3b8'}}>Add Funds (BNB, ETH, or Base) to play.</div>
           </div>
         </div>
         <div style={{display:'flex', gap:'15px', marginBottom:'20px', alignItems:'flex-start'}}>
@@ -60,13 +54,6 @@ const HowToPlay = ({ onClose }) => {
           <div>
             <div style={{fontWeight:'bold', color:'white'}}>Be the Last One</div>
             <div style={{fontSize:'12px', color:'#94a3b8'}}>If timer hits zero & you are the last bidder, you win the <span style={{color:'#fbbf24'}}>JACKPOT!</span></div>
-          </div>
-        </div>
-        <div style={{display:'flex', gap:'15px', marginBottom:'20px', alignItems:'flex-start', background:'rgba(255,255,255,0.05)', padding:'10px', borderRadius:'10px'}}>
-          <div style={{fontSize:'20px'}}>🛡️</div>
-          <div>
-            <div style={{fontWeight:'bold', color:'white'}}>Fair Play Guarantee</div>
-            <div style={{fontSize:'12px', color:'#94a3b8'}}>If you are the <b>ONLY</b> bidder when the game ends, your fees are 100% refunded.</div>
           </div>
         </div>
         <button className="action-btn" onClick={onClose}>Got it! Let's Play</button>
@@ -87,11 +74,14 @@ function GameDashboard({ logout, user }) {
   const [restartCount, setRestartCount] = useState(15);
 
   const prevStatus = useRef("ACTIVE");
+  const lastBidId = useRef(null); // 👈 Fix: To track new bids
+  const audioRef = useRef(null);  // 👈 Fix: To control sound overlap
+
   const { wallets } = useWallets();
   const userAddress = wallets.find(w => w.walletClientType === 'privy')?.address || user.wallet?.address;
   const MY_EMAIL = "tinyearner8@gmail.com";
 
-  // --- 💰 DEPOSIT STATE VARIABLES ---
+  // --- 💰 DEPOSIT STATE ---
   const [showDeposit, setShowDeposit] = useState(false);
   const [depositStep, setDepositStep] = useState(1); 
   const [selectedNetwork, setSelectedNetwork] = useState('BSC');
@@ -100,7 +90,25 @@ function GameDashboard({ logout, user }) {
   const [adminWallet, setAdminWallet] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
 
-  // --- 💰 DEPOSIT FUNCTIONS ---
+  // --- 💸 WITHDRAW STATE ---
+  const [showWithdraw, setShowWithdraw] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawAddress, setWithdrawAddress] = useState('');
+
+  // --- 🔊 SOUND FUNCTION (FIXED) ---
+  const playSound = (key) => {
+    // Stop any currently playing sound first
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    const audio = new Audio(ASSETS[key]);
+    audio.volume = 0.5;
+    audioRef.current = audio; // Save reference
+    audio.play().catch(() => {});
+  };
+
+  // --- DEPOSIT FUNCTIONS ---
   const handleLinkWallet = () => {
     if (userWallet.length < 10) return alert("Enter a valid wallet address");
     socket.emit('linkWallet', { email: user.email.address, walletAddress: userWallet });
@@ -117,6 +125,25 @@ function GameDashboard({ logout, user }) {
     socket.emit('cancelDeposit', user.email.address);
   };
 
+  // --- WITHDRAW FUNCTION ---
+  const handleWithdraw = () => {
+      const amt = parseFloat(withdrawAmount);
+      if (isNaN(amt) || amt < 10) return alert("Minimum withdrawal is $10.00");
+      if (withdrawAddress.length < 10) return alert("Enter a valid receiving address");
+      if (credits < amt) return alert("Insufficient Balance");
+
+      socket.emit('requestWithdrawal', { 
+          email: user.email.address, 
+          amount: amt, 
+          address: withdrawAddress, 
+          network: selectedNetwork 
+      });
+      setShowWithdraw(false);
+      setWithdrawAmount('');
+      setWithdrawAddress('');
+      alert("✅ Withdrawal Requested! Admin will process it shortly.");
+  };
+
   useEffect(() => {
     // --- SOCKET LISTENERS ---
     socket.on('walletLinked', ({ success, adminWallet }) => {
@@ -128,7 +155,7 @@ function GameDashboard({ logout, user }) {
     });
 
     socket.on('depositSuccess', (newBalance) => {
-      setCredits(newBalance); // Update local credits immediately
+      setCredits(newBalance); 
       setShowDeposit(false);
       setDepositStep(1);
       setUserWallet('');
@@ -147,12 +174,29 @@ function GameDashboard({ logout, user }) {
       setStatusMsg(msg);
     });
 
+    socket.on('withdrawalSuccess', (newBalance) => {
+        setCredits(newBalance);
+        alert("✅ Withdrawal Request Sent!");
+    });
+    
+    socket.on('withdrawalError', (msg) => {
+        alert(`❌ Withdrawal Failed: ${msg}`);
+    });
+
     // --- GAME LISTENERS ---
     if(user?.email?.address) socket.emit('getUserBalance', user.email.address);
 
     socket.on('gameState', (data) => {
       setGameState(data);
-      if (data.status === 'ACTIVE' && data.history.length > 0) playSound('soundBid');
+      
+      // 🛑 BUG FIX: Only play sound if it is a NEW BID
+      if (data.status === 'ACTIVE' && data.history.length > 0) {
+        const latestBid = data.history[0];
+        if (latestBid.id !== lastBidId.current) {
+           playSound('soundBid');
+           lastBidId.current = latestBid.id; // Update tracker
+        }
+      }
 
       if (data.status === 'ENDED' && prevStatus.current === 'ACTIVE') {
         playSound('soundWin');
@@ -167,13 +211,14 @@ function GameDashboard({ logout, user }) {
     socket.on('bidError', (msg) => alert(msg));
     
     return () => { 
-      socket.off('gameState'); 
-      socket.off('balanceUpdate'); 
-      socket.off('bidError'); 
-      socket.off('walletLinked');
-      socket.off('depositSuccess');
-      socket.off('depositError');
-      socket.off('depositCancelled');
+      // Cleanup sounds on unmount
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      socket.off('gameState'); socket.off('balanceUpdate'); socket.off('bidError'); 
+      socket.off('walletLinked'); socket.off('depositSuccess'); socket.off('depositError');
+      socket.off('withdrawalSuccess'); socket.off('withdrawalError');
     };
   }, [user]);
 
@@ -194,9 +239,11 @@ function GameDashboard({ logout, user }) {
 
   const placeBid = () => {
     if (isCooldown) return;
-    if (credits < 1.00) { setShowDeposit(true); return; } // Trigger Deposit instead of Vault
+    if (credits < 1.00) { setShowDeposit(true); return; } 
     setFloatingBids(prev => [...prev, Date.now()]);
-    playSound('soundPop');
+    // 'soundPop' is instant, so we might allow it to overlap or control it too
+    // For now, let's just use the safer playSound
+    playSound('soundPop'); 
     socket.emit('placeBid', user.email ? user.email.address : "User");
     setIsCooldown(true);
     setCd(8);
@@ -205,7 +252,7 @@ function GameDashboard({ logout, user }) {
   const runAdmin = () => {
     const pwd = prompt("🔐 ADMIN PANEL\nEnter Password:");
     if (!pwd) return;
-    const action = prompt("1. Reset Game\n2. Set Jackpot\n3. Add Time\n4. Check Profit");
+    const action = prompt("1. Reset Game\n2. Set Jackpot\n3. Add Time");
     if (action === '1') socket.emit('adminAction', { password: pwd, action: 'RESET' });
     else if (action === '2') socket.emit('adminAction', { password: pwd, action: 'SET_JACKPOT', value: prompt("Amount:") });
     else if (action === '3') socket.emit('adminAction', { password: pwd, action: 'ADD_TIME', value: 299 });
@@ -228,14 +275,13 @@ function GameDashboard({ logout, user }) {
       
       {showHelp && <HowToPlay onClose={() => setShowHelp(false)} />}
 
-      {/* 💰 DEPOSIT POPUP WINDOW 💰 */}
+      {/* 💰 DEPOSIT POPUP 💰 */}
       {showDeposit && (
         <div className="modal-overlay">
           <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
             <button className="close-btn" onClick={() => setShowDeposit(false)}>✕</button>
             <h2 style={{color: '#22c55e', textAlign:'center', marginTop:0}}>ADD FUNDS</h2>
             
-            {/* STEP 1: LINK WALLET */}
             {depositStep === 1 && (
               <>
                 <p style={{color:'#94a3b8', fontSize:'14px'}}>Select Network:</p>
@@ -243,7 +289,6 @@ function GameDashboard({ logout, user }) {
                   <option value="BSC">BNB Smart Chain (BEP20)</option>
                   <option value="ETH">Ethereum (ERC20)</option>
                   <option value="BASE">Base Network</option>
-                  <option value="TRON">Tron (TRC20)</option>
                 </select>
 
                 <p style={{color:'#94a3b8', fontSize:'14px'}}>Enter YOUR Wallet Address (Sender):</p>
@@ -261,7 +306,6 @@ function GameDashboard({ logout, user }) {
               </>
             )}
 
-            {/* STEP 2: VERIFY */}
             {depositStep === 2 && (
               <>
                 <div style={{background:'#333', padding:'15px', borderRadius:'8px', marginBottom:'15px', wordBreak:'break-all', textAlign:'center'}}>
@@ -288,8 +332,48 @@ function GameDashboard({ logout, user }) {
                 </button>
               </>
             )}
-
             <p style={{fontSize:'12px', color:'#fbbf24', marginTop:'15px', textAlign:'center', minHeight:'20px'}}>{statusMsg}</p>
+          </div>
+        </div>
+      )}
+
+      {/* 💸 WITHDRAW POPUP 💸 */}
+      {showWithdraw && (
+        <div className="modal-overlay">
+          <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
+            <button className="close-btn" onClick={() => setShowWithdraw(false)}>✕</button>
+            <h2 style={{color: '#ef4444', textAlign:'center', marginTop:0}}>WITHDRAW</h2>
+            
+            <p style={{color:'#94a3b8', fontSize:'14px'}}>Select Network:</p>
+            <select value={selectedNetwork} onChange={(e) => setSelectedNetwork(e.target.value)} className="input-field" style={{marginTop:'5px'}}>
+               <option value="BSC">BNB Smart Chain (BEP20)</option>
+               <option value="ETH">Ethereum (ERC20)</option>
+               <option value="BASE">Base Network</option>
+            </select>
+
+            <p style={{color:'#94a3b8', fontSize:'14px'}}>Amount ($):</p>
+            <input 
+              type="number" 
+              placeholder="Min $10.00" 
+              value={withdrawAmount}
+              onChange={(e) => setWithdrawAmount(e.target.value)}
+              className="input-field"
+              style={{marginTop:'5px'}}
+            />
+
+            <p style={{color:'#94a3b8', fontSize:'14px'}}>Receiving Address:</p>
+            <input 
+              type="text" 
+              placeholder="0x..." 
+              value={withdrawAddress}
+              onChange={(e) => setWithdrawAddress(e.target.value)}
+              className="input-field"
+              style={{marginTop:'5px'}}
+            />
+
+            <button className="action-btn" onClick={handleWithdraw} style={{background:'#ef4444', color:'white'}}>
+               REQUEST WITHDRAWAL
+            </button>
           </div>
         </div>
       )}
@@ -330,18 +414,19 @@ function GameDashboard({ logout, user }) {
         {gameState.status === 'ENDED' ? 'GAME CLOSED' : (isCooldown ? `WAIT (${cd}s)` : `BID NOW ($${gameState.bidCost})`)}
       </button>
 
-      {/* 👇👇 THE ACTION BUTTONS (RULES & DEPOSIT) 👇👇 */}
+      {/* 👇👇 ACTION BUTTONS: DEPOSIT & WITHDRAW 👇👇 */}
       <div className="action-buttons" style={{display: 'flex', gap: '15px', justifyContent: 'center', margin: '25px 0', width:'100%', maxWidth:'350px'}}>
-        <button className="nav-btn" onClick={() => setShowRules(true)} style={{border:'1px solid #334155', borderRadius:'12px', padding:'12px 20px'}}>
-            📜 RULES
-        </button>
         
-        <button className="deposit-btn" onClick={() => setShowDeposit(true)} style={{background:'#22c55e', color:'white', border:'none', padding:'12px 25px', borderRadius:'12px', fontWeight:'bold', display:'flex', alignItems:'center', gap:'5px', flex:1, justifyContent:'center'}}>
+        <button className="deposit-btn" onClick={() => setShowDeposit(true)} style={{background:'#22c55e', color:'white', border:'none', padding:'12px 25px', borderRadius:'12px', fontWeight:'bold', display:'flex', alignItems:'center', gap:'5px', flex:1, justifyContent:'center', fontSize:'14px'}}>
           💰 DEPOSIT
+        </button>
+
+        <button className="withdraw-btn" onClick={() => setShowWithdraw(true)} style={{background:'#ef4444', color:'white', border:'none', padding:'12px 25px', borderRadius:'12px', fontWeight:'bold', display:'flex', alignItems:'center', gap:'5px', flex:1, justifyContent:'center', fontSize:'14px'}}>
+          💸 WITHDRAW
         </button>
       </div>
 
-      {/* WINNERS PANEL (GOLD) */}
+      {/* WINNERS PANEL */}
       {gameState.recentWinners && gameState.recentWinners.length > 0 && (
         <div className="glass-panel" style={{borderColor: '#fbbf24', background: 'rgba(251, 191, 36, 0.05)', marginBottom:'20px'}}>
           <div className="panel-header" style={{color: '#fbbf24'}}>🏆 RECENT BIG WINS</div>
@@ -360,7 +445,7 @@ function GameDashboard({ logout, user }) {
         </div>
       )}
 
-      {/* BIDS HISTORY PANEL (BLUE) */}
+      {/* BIDS HISTORY */}
       <div className="glass-panel history-panel">
         <div className="panel-header">LAST 30 BIDS</div>
         <div className="history-list">
@@ -373,7 +458,6 @@ function GameDashboard({ logout, user }) {
         </div>
       </div>
 
-      {/* FOOTER */}
       <div style={{marginTop: '40px', marginBottom: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', opacity: 0.8}}>
           <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
              <span style={{fontSize:'24px', fontWeight:'900', color:'white', letterSpacing:'1px'}}>BID<span style={{color:'#fbbf24'}}>BLAZE</span></span>
@@ -389,7 +473,6 @@ function GameDashboard({ logout, user }) {
 }
 
 // --- SUB-COMPONENTS ---
-
 const ReactorRing = ({ targetDate, status }) => {
   const [progress, setProgress] = useState(100);
   const [displayTime, setDisplayTime] = useState("299");
@@ -497,4 +580,4 @@ export default function App() {
       {authenticated ? <GameDashboard logout={logout} user={user} /> : <LandingPage login={login} />}
     </PrivyProvider>
   );
-}
+} 
