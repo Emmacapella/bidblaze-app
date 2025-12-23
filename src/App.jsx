@@ -34,27 +34,18 @@ const HowToPlay = ({ onClose }) => {
       <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
         <button className="close-btn" onClick={onClose}>✕</button>
         <h2 style={{color: '#fbbf24', textAlign:'center', marginBottom:'20px'}}>How to Win 🏆</h2>
-
+        {/* ... (Same as before) ... */}
         <div style={{display:'flex', gap:'15px', marginBottom:'20px', alignItems:'flex-start'}}>
           <div style={{background:'#3b82f6', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center'}}>1</div>
-          <div>
-            <div style={{fontWeight:'bold', color:'white'}}>Deposit Crypto</div>
-            <div style={{fontSize:'12px', color:'#94a3b8'}}>Add Funds (BNB, ETH, or Base) to play.</div>
-          </div>
+          <div><div style={{fontWeight:'bold', color:'white'}}>Deposit Crypto</div><div style={{fontSize:'12px', color:'#94a3b8'}}>Add Funds (BNB, ETH, or Base).</div></div>
         </div>
         <div style={{display:'flex', gap:'15px', marginBottom:'20px', alignItems:'flex-start'}}>
           <div style={{background:'#ef4444', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center'}}>2</div>
-          <div>
-            <div style={{fontWeight:'bold', color:'white'}}>Place a Bid</div>
-            <div style={{fontSize:'12px', color:'#94a3b8'}}>Each bid costs $1.00. <br/><span style={{color:'#fbbf24'}}>*Timer bumps to 10s if low.*</span></div>
-          </div>
+          <div><div style={{fontWeight:'bold', color:'white'}}>Place a Bid</div><div style={{fontSize:'12px', color:'#94a3b8'}}>Bid costs $1.00.</div></div>
         </div>
         <div style={{display:'flex', gap:'15px', marginBottom:'20px', alignItems:'flex-start'}}>
           <div style={{background:'#22c55e', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center'}}>3</div>
-          <div>
-            <div style={{fontWeight:'bold', color:'white'}}>Be the Last One</div>
-            <div style={{fontSize:'12px', color:'#94a3b8'}}>If timer hits zero & you are the last bidder, you win the <span style={{color:'#fbbf24'}}>JACKPOT!</span></div>
-          </div>
+          <div><div style={{fontWeight:'bold', color:'white'}}>Be the Last One</div><div style={{fontSize:'12px', color:'#94a3b8'}}>Last bidder wins the <span style={{color:'#fbbf24'}}>JACKPOT!</span></div></div>
         </div>
         <button className="action-btn" onClick={onClose}>Got it! Let's Play</button>
       </div>
@@ -74,8 +65,8 @@ function GameDashboard({ logout, user }) {
   const [restartCount, setRestartCount] = useState(15);
 
   const prevStatus = useRef("ACTIVE");
-  const lastBidId = useRef(null); // 👈 Fix: To track new bids
-  const audioRef = useRef(null);  // 👈 Fix: To control sound overlap
+  const lastBidId = useRef(null);
+  const audioRef = useRef(null);
 
   const { wallets } = useWallets();
   const userAddress = wallets.find(w => w.walletClientType === 'privy')?.address || user.wallet?.address;
@@ -87,24 +78,24 @@ function GameDashboard({ logout, user }) {
   const [selectedNetwork, setSelectedNetwork] = useState('BSC');
   const [userWallet, setUserWallet] = useState('');
   const [txHash, setTxHash] = useState('');
-  const [adminWallet, setAdminWallet] = useState('');
+  const [adminWallet, setAdminWallet] = useState(''); // Stores the address
   const [statusMsg, setStatusMsg] = useState('');
 
   // --- 💸 WITHDRAW STATE ---
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
+  const [withdrawHistory, setWithdrawHistory] = useState([]); // Stores history
 
-  // --- 🔊 SOUND FUNCTION (FIXED) ---
+  // --- 🔊 SOUND FUNCTION ---
   const playSound = (key) => {
-    // Stop any currently playing sound first
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
     const audio = new Audio(ASSETS[key]);
     audio.volume = 0.5;
-    audioRef.current = audio; // Save reference
+    audioRef.current = audio;
     audio.play().catch(() => {});
   };
 
@@ -138,17 +129,15 @@ function GameDashboard({ logout, user }) {
           address: withdrawAddress, 
           network: selectedNetwork 
       });
-      setShowWithdraw(false);
       setWithdrawAmount('');
       setWithdrawAddress('');
-      alert("✅ Withdrawal Requested! Admin will process it shortly.");
   };
 
   useEffect(() => {
     // --- SOCKET LISTENERS ---
     socket.on('walletLinked', ({ success, adminWallet }) => {
       if (success) {
-        setAdminWallet(adminWallet);
+        setAdminWallet(adminWallet); // Save Address
         setDepositStep(2); 
         setStatusMsg('Wallet Linked! Now send funds to the address below.');
       }
@@ -183,21 +172,23 @@ function GameDashboard({ logout, user }) {
         alert(`❌ Withdrawal Failed: ${msg}`);
     });
 
+    // Receive History from Server
+    socket.on('withdrawalHistory', (data) => {
+        setWithdrawHistory(data);
+    });
+
     // --- GAME LISTENERS ---
     if(user?.email?.address) socket.emit('getUserBalance', user.email.address);
 
     socket.on('gameState', (data) => {
       setGameState(data);
-      
-      // 🛑 BUG FIX: Only play sound if it is a NEW BID
       if (data.status === 'ACTIVE' && data.history.length > 0) {
         const latestBid = data.history[0];
         if (latestBid.id !== lastBidId.current) {
            playSound('soundBid');
-           lastBidId.current = latestBid.id; // Update tracker
+           lastBidId.current = latestBid.id;
         }
       }
-
       if (data.status === 'ENDED' && prevStatus.current === 'ACTIVE') {
         playSound('soundWin');
         if (data.lastBidder === user?.email?.address) {
@@ -211,14 +202,10 @@ function GameDashboard({ logout, user }) {
     socket.on('bidError', (msg) => alert(msg));
     
     return () => { 
-      // Cleanup sounds on unmount
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
       socket.off('gameState'); socket.off('balanceUpdate'); socket.off('bidError'); 
       socket.off('walletLinked'); socket.off('depositSuccess'); socket.off('depositError');
-      socket.off('withdrawalSuccess'); socket.off('withdrawalError');
+      socket.off('withdrawalSuccess'); socket.off('withdrawalError'); socket.off('withdrawalHistory');
     };
   }, [user]);
 
@@ -241,8 +228,6 @@ function GameDashboard({ logout, user }) {
     if (isCooldown) return;
     if (credits < 1.00) { setShowDeposit(true); return; } 
     setFloatingBids(prev => [...prev, Date.now()]);
-    // 'soundPop' is instant, so we might allow it to overlap or control it too
-    // For now, let's just use the safer playSound
     playSound('soundPop'); 
     socket.emit('placeBid', user.email ? user.email.address : "User");
     setIsCooldown(true);
@@ -272,7 +257,6 @@ function GameDashboard({ logout, user }) {
       {gameState?.status === 'ENDED' && <Confetti width={window.innerWidth} height={window.innerHeight} recycle={false} numberOfPieces={500} colors={['#fbbf24', '#ffffff', '#22c55e']} />}
       
       {showVault && <WalletVault onClose={() => setShowVault(false)} userAddress={userAddress} userEmail={user.email?.address} currentCredits={credits} />}
-      
       {showHelp && <HowToPlay onClose={() => setShowHelp(false)} />}
 
       {/* 💰 DEPOSIT POPUP 💰 */}
@@ -293,15 +277,12 @@ function GameDashboard({ logout, user }) {
 
                 <p style={{color:'#94a3b8', fontSize:'14px'}}>Enter YOUR Wallet Address (Sender):</p>
                 <input 
-                  type="text" 
-                  placeholder="0x..." 
-                  value={userWallet}
+                  type="text" placeholder="0x..." value={userWallet}
                   onChange={(e) => setUserWallet(e.target.value)}
-                  className="input-field"
-                  style={{marginTop:'5px'}}
+                  className="input-field" style={{marginTop:'5px'}}
                 />
                 <button className="action-btn" onClick={handleLinkWallet} style={{background:'#22c55e', color:'white'}}>
-                  NEXT: REVEAL ADMIN WALLET
+                  NEXT: REVEAL DEPOSIT ADDRESS
                 </button>
               </>
             )}
@@ -310,23 +291,19 @@ function GameDashboard({ logout, user }) {
               <>
                 <div style={{background:'#333', padding:'15px', borderRadius:'8px', marginBottom:'15px', wordBreak:'break-all', textAlign:'center'}}>
                   <p style={{color:'#aaa', fontSize:'12px', margin:0}}>Send Funds To:</p>
-                  <p style={{color:'#fbbf24', fontWeight:'bold', margin:'5px 0', fontSize:'14px'}}>{adminWallet}</p>
+                  <p style={{color:'#fbbf24', fontWeight:'bold', margin:'5px 0', fontSize:'14px', userSelect:'all'}}>{adminWallet}</p>
                 </div>
 
                 <p style={{color:'#94a3b8', fontSize:'14px'}}>Paste Transaction Hash (TxHash):</p>
                 <input 
-                  type="text" 
-                  placeholder="0x..." 
-                  value={txHash}
+                  type="text" placeholder="0x..." value={txHash}
                   onChange={(e) => setTxHash(e.target.value)}
-                  className="input-field"
-                  style={{marginTop:'5px'}}
+                  className="input-field" style={{marginTop:'5px'}}
                 />
                 
                 <button className="action-btn" onClick={handleVerify} style={{background:'#22c55e', color:'white', marginBottom:'10px'}}>
                   VERIFY DEPOSIT
                 </button>
-
                 <button className="action-btn" onClick={handleCancel} style={{background:'#ef4444', color:'white'}}>
                   CANCEL / RESET
                 </button>
@@ -337,7 +314,7 @@ function GameDashboard({ logout, user }) {
         </div>
       )}
 
-      {/* 💸 WITHDRAW POPUP 💸 */}
+      {/* 💸 WITHDRAW POPUP + HISTORY 💸 */}
       {showWithdraw && (
         <div className="modal-overlay">
           <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
@@ -353,27 +330,38 @@ function GameDashboard({ logout, user }) {
 
             <p style={{color:'#94a3b8', fontSize:'14px'}}>Amount ($):</p>
             <input 
-              type="number" 
-              placeholder="Min $10.00" 
-              value={withdrawAmount}
+              type="number" placeholder="Min $10.00" value={withdrawAmount}
               onChange={(e) => setWithdrawAmount(e.target.value)}
-              className="input-field"
-              style={{marginTop:'5px'}}
+              className="input-field" style={{marginTop:'5px'}}
             />
 
             <p style={{color:'#94a3b8', fontSize:'14px'}}>Receiving Address:</p>
             <input 
-              type="text" 
-              placeholder="0x..." 
-              value={withdrawAddress}
+              type="text" placeholder="0x..." value={withdrawAddress}
               onChange={(e) => setWithdrawAddress(e.target.value)}
-              className="input-field"
-              style={{marginTop:'5px'}}
+              className="input-field" style={{marginTop:'5px'}}
             />
 
-            <button className="action-btn" onClick={handleWithdraw} style={{background:'#ef4444', color:'white'}}>
+            <button className="action-btn" onClick={handleWithdraw} style={{background:'#ef4444', color:'white', marginBottom:'20px'}}>
                REQUEST WITHDRAWAL
             </button>
+
+            {/* --- WITHDRAWAL HISTORY SECTION --- */}
+            <div style={{borderTop:'1px solid #334155', paddingTop:'15px'}}>
+                <p style={{fontSize:'12px', color:'#94a3b8', fontWeight:'bold', marginBottom:'10px'}}>RECENT WITHDRAWALS</p>
+                {withdrawHistory.length === 0 ? (
+                    <p style={{fontSize:'12px', color:'#64748b', textAlign:'center'}}>No recent withdrawals.</p>
+                ) : (
+                    <div style={{maxHeight:'100px', overflowY:'auto'}}>
+                        {withdrawHistory.map((item) => (
+                            <div key={item.id} style={{display:'flex', justifyContent:'space-between', fontSize:'12px', marginBottom:'8px', background:'#1e293b', padding:'8px', borderRadius:'6px'}}>
+                                <span style={{color:'white'}}>${item.amount.toFixed(2)}</span>
+                                <span style={{color: item.status === 'PENDING' ? 'orange' : '#22c55e', fontWeight:'bold'}}>{item.status}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
           </div>
         </div>
       )}
@@ -414,13 +402,11 @@ function GameDashboard({ logout, user }) {
         {gameState.status === 'ENDED' ? 'GAME CLOSED' : (isCooldown ? `WAIT (${cd}s)` : `BID NOW ($${gameState.bidCost})`)}
       </button>
 
-      {/* 👇👇 ACTION BUTTONS: DEPOSIT & WITHDRAW 👇👇 */}
+      {/* ACTION BUTTONS */}
       <div className="action-buttons" style={{display: 'flex', gap: '15px', justifyContent: 'center', margin: '25px 0', width:'100%', maxWidth:'350px'}}>
-        
         <button className="deposit-btn" onClick={() => setShowDeposit(true)} style={{background:'#22c55e', color:'white', border:'none', padding:'12px 25px', borderRadius:'12px', fontWeight:'bold', display:'flex', alignItems:'center', gap:'5px', flex:1, justifyContent:'center', fontSize:'14px'}}>
           💰 DEPOSIT
         </button>
-
         <button className="withdraw-btn" onClick={() => setShowWithdraw(true)} style={{background:'#ef4444', color:'white', border:'none', padding:'12px 25px', borderRadius:'12px', fontWeight:'bold', display:'flex', alignItems:'center', gap:'5px', flex:1, justifyContent:'center', fontSize:'14px'}}>
           💸 WITHDRAW
         </button>
@@ -433,18 +419,13 @@ function GameDashboard({ logout, user }) {
           <div className="history-list" style={{maxHeight: '120px'}}>
             {gameState.recentWinners.map((win, index) => (
               <div key={index} className="history-row">
-                <span className="user" style={{color: 'white', fontWeight:'bold'}}>
-                  {win.user.split('@')[0].slice(0,12)}...
-                </span>
-                <span className="bid-amt" style={{fontSize:'14px', color:'#fbbf24'}}>
-                  +${win.amount.toFixed(2)}
-                </span>
+                <span className="user" style={{color: 'white', fontWeight:'bold'}}>{win.user.split('@')[0].slice(0,12)}...</span>
+                <span className="bid-amt" style={{fontSize:'14px', color:'#fbbf24'}}>+${win.amount.toFixed(2)}</span>
               </div>
             ))}
           </div>
         </div>
       )}
-
       {/* BIDS HISTORY */}
       <div className="glass-panel history-panel">
         <div className="panel-header">LAST 30 BIDS</div>
@@ -580,4 +561,4 @@ export default function App() {
       {authenticated ? <GameDashboard logout={logout} user={user} /> : <LandingPage login={login} />}
     </PrivyProvider>
   );
-} 
+}
