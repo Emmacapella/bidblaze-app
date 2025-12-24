@@ -3,6 +3,7 @@ import io from 'socket.io-client';
 import WalletVault from './WalletVault';
 import Confetti from 'react-confetti';
 import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
+import { parseEther } from 'viem'; // Required for sending transactions
 
 // --- ⚠️ CONFIGURATION ⚠️ ---
 const PRIVY_APP_ID = "cm4l3033r048epf1ln3q59956";
@@ -17,6 +18,8 @@ const ASSETS = {
   soundWin: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3',
   soundPop: 'https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3'
 };
+
+const ADMIN_WALLET = "0x6edadf13a704cd2518cd2ca9afb5ad9dee3ce34c"; // Your Address for Auto-Deposit
 
 const BASE_CHAIN = {
   id: 8453,
@@ -34,10 +37,9 @@ const HowToPlay = ({ onClose }) => {
       <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
         <button className="close-btn" onClick={onClose}>✕</button>
         <h2 style={{color: '#fbbf24', textAlign:'center', marginBottom:'20px'}}>How to Win 🏆</h2>
-        {/* ... (Same as before) ... */}
         <div style={{display:'flex', gap:'15px', marginBottom:'20px', alignItems:'flex-start'}}>
           <div style={{background:'#3b82f6', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center'}}>1</div>
-          <div><div style={{fontWeight:'bold', color:'white'}}>Deposit Crypto</div><div style={{fontSize:'12px', color:'#94a3b8'}}>Add Funds (BNB, ETH, or Base).</div></div>
+          <div><div style={{fontWeight:'bold', color:'white'}}>Deposit Crypto</div><div style={{fontSize:'12px', color:'#94a3b8'}}>Connect Wallet & Pay Instantly.</div></div>
         </div>
         <div style={{display:'flex', gap:'15px', marginBottom:'20px', alignItems:'flex-start'}}>
           <div style={{background:'#ef4444', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center'}}>2</div>
@@ -74,46 +76,60 @@ function GameDashboard({ logout, user }) {
 
   // --- 💰 DEPOSIT STATE ---
   const [showDeposit, setShowDeposit] = useState(false);
-  const [depositStep, setDepositStep] = useState(1); 
+  const [depositAmount, setDepositAmount] = useState('');
   const [selectedNetwork, setSelectedNetwork] = useState('BSC');
-  const [userWallet, setUserWallet] = useState('');
-  const [txHash, setTxHash] = useState('');
-  const [adminWallet, setAdminWallet] = useState(''); // Stores the address
   const [statusMsg, setStatusMsg] = useState('');
 
   // --- 💸 WITHDRAW STATE ---
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
-  const [withdrawHistory, setWithdrawHistory] = useState([]); // Stores history
+  const [withdrawHistory, setWithdrawHistory] = useState([]);
 
   // --- 🔊 SOUND FUNCTION ---
   const playSound = (key) => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
     const audio = new Audio(ASSETS[key]);
     audio.volume = 0.5;
     audioRef.current = audio;
     audio.play().catch(() => {});
   };
 
-  // --- DEPOSIT FUNCTIONS ---
-  const handleLinkWallet = () => {
-    if (userWallet.length < 10) return alert("Enter a valid wallet address");
-    socket.emit('linkWallet', { email: user.email.address, walletAddress: userWallet });
-    setStatusMsg("Linking wallet...");
-  };
+  // --- 🚀 AUTOMATIC DEPOSIT FUNCTION ---
+  const handleDeposit = async () => {
+    const amt = parseFloat(depositAmount);
+    if (isNaN(amt) || amt <= 0) return alert("Enter a valid amount");
+    
+    // Check if wallet is connected
+    const activeWallet = wallets[0];
+    if (!activeWallet) return alert("Please connect your wallet first via Privy.");
 
-  const handleVerify = () => {
-    if (txHash.length < 10) return alert("Enter a valid Transaction Hash");
-    socket.emit('verifyDeposit', { email: user.email.address, txHash, network: selectedNetwork });
-    setStatusMsg("Verifying transaction on Blockchain...");
-  };
+    try {
+        setStatusMsg("Initializing Wallet Transaction...");
+        
+        // 1. Send Transaction via Privy/Wallet
+        // Note: Amount must be converted to Wei (1e18)
+        const weiAmount = parseEther(depositAmount);
+        
+        const txHash = await activeWallet.sendTransaction({
+            to: ADMIN_WALLET,
+            value: weiAmount
+        });
 
-  const handleCancel = () => {
-    socket.emit('cancelDeposit', user.email.address);
+        setStatusMsg("Transaction Sent! verifying...");
+
+        // 2. Automatically Verify with Server
+        socket.emit('verifyDeposit', { 
+            email: user.email.address, 
+            txHash: txHash, 
+            network: selectedNetwork 
+        });
+
+    } catch (error) {
+        console.error(error);
+        alert("Transaction Failed or Cancelled.");
+        setStatusMsg("Failed.");
+    }
   };
 
   // --- WITHDRAW FUNCTION ---
@@ -134,32 +150,15 @@ function GameDashboard({ logout, user }) {
   };
 
   useEffect(() => {
-    // --- SOCKET LISTENERS ---
-    socket.on('walletLinked', ({ success, adminWallet }) => {
-      if (success) {
-        setAdminWallet(adminWallet); // Save Address
-        setDepositStep(2); 
-        setStatusMsg('Wallet Linked! Now send funds to the address below.');
-      }
-    });
-
     socket.on('depositSuccess', (newBalance) => {
       setCredits(newBalance); 
       setShowDeposit(false);
-      setDepositStep(1);
-      setUserWallet('');
-      setTxHash('');
-      alert(`✅ Deposit Successful!`);
+      setDepositAmount('');
+      alert(`✅ Deposit Verified! Balance Updated.`);
     });
 
     socket.on('depositError', (msg) => {
       alert(`❌ Error: ${msg}`);
-      setStatusMsg(msg);
-    });
-
-    socket.on('depositCancelled', (msg) => {
-      setDepositStep(1);
-      setUserWallet('');
       setStatusMsg(msg);
     });
 
@@ -168,16 +167,9 @@ function GameDashboard({ logout, user }) {
         alert("✅ Withdrawal Request Sent!");
     });
     
-    socket.on('withdrawalError', (msg) => {
-        alert(`❌ Withdrawal Failed: ${msg}`);
-    });
+    socket.on('withdrawalError', (msg) => { alert(`❌ Withdrawal Failed: ${msg}`); });
+    socket.on('withdrawalHistory', (data) => { setWithdrawHistory(data); });
 
-    // Receive History from Server
-    socket.on('withdrawalHistory', (data) => {
-        setWithdrawHistory(data);
-    });
-
-    // --- GAME LISTENERS ---
     if(user?.email?.address) socket.emit('getUserBalance', user.email.address);
 
     socket.on('gameState', (data) => {
@@ -204,7 +196,7 @@ function GameDashboard({ logout, user }) {
     return () => { 
       if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
       socket.off('gameState'); socket.off('balanceUpdate'); socket.off('bidError'); 
-      socket.off('walletLinked'); socket.off('depositSuccess'); socket.off('depositError');
+      socket.off('depositSuccess'); socket.off('depositError');
       socket.off('withdrawalSuccess'); socket.off('withdrawalError'); socket.off('withdrawalHistory');
     };
   }, [user]);
@@ -216,11 +208,9 @@ function GameDashboard({ logout, user }) {
             setRestartCount(dist > 0 ? Math.ceil(dist/1000) : 0);
         }
     }, 100);
-
     let cdInterval;
     if (isCooldown && cd > 0) cdInterval = setInterval(() => setCd(prev => prev - 1), 1000);
     else if (cd <= 0) setIsCooldown(false);
-
     return () => { clearInterval(timerInterval); clearInterval(cdInterval); };
   }, [gameState?.status, gameState?.restartTimer, isCooldown, cd]);
 
@@ -259,62 +249,38 @@ function GameDashboard({ logout, user }) {
       {showVault && <WalletVault onClose={() => setShowVault(false)} userAddress={userAddress} userEmail={user.email?.address} currentCredits={credits} />}
       {showHelp && <HowToPlay onClose={() => setShowHelp(false)} />}
 
-      {/* 💰 DEPOSIT POPUP 💰 */}
+      {/* 💰 NEW AUTOMATIC DEPOSIT POPUP 💰 */}
       {showDeposit && (
         <div className="modal-overlay">
           <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
             <button className="close-btn" onClick={() => setShowDeposit(false)}>✕</button>
-            <h2 style={{color: '#22c55e', textAlign:'center', marginTop:0}}>ADD FUNDS</h2>
+            <h2 style={{color: '#22c55e', textAlign:'center', marginTop:0}}>INSTANT DEPOSIT</h2>
             
-            {depositStep === 1 && (
-              <>
-                <p style={{color:'#94a3b8', fontSize:'14px'}}>Select Network:</p>
-                <select value={selectedNetwork} onChange={(e) => setSelectedNetwork(e.target.value)} className="input-field" style={{marginTop:'5px'}}>
-                  <option value="BSC">BNB Smart Chain (BEP20)</option>
-                  <option value="ETH">Ethereum (ERC20)</option>
-                  <option value="BASE">Base Network</option>
-                </select>
+            <p style={{color:'#94a3b8', fontSize:'14px'}}>Select Network (Must match Wallet):</p>
+            <select value={selectedNetwork} onChange={(e) => setSelectedNetwork(e.target.value)} className="input-field" style={{marginTop:'5px'}}>
+              <option value="BSC">BNB Smart Chain (BEP20)</option>
+              <option value="ETH">Ethereum (ERC20)</option>
+              <option value="BASE">Base Network</option>
+            </select>
 
-                <p style={{color:'#94a3b8', fontSize:'14px'}}>Enter YOUR Wallet Address (Sender):</p>
-                <input 
-                  type="text" placeholder="0x..." value={userWallet}
-                  onChange={(e) => setUserWallet(e.target.value)}
-                  className="input-field" style={{marginTop:'5px'}}
-                />
-                <button className="action-btn" onClick={handleLinkWallet} style={{background:'#22c55e', color:'white'}}>
-                  NEXT: REVEAL DEPOSIT ADDRESS
-                </button>
-              </>
-            )}
-
-            {depositStep === 2 && (
-              <>
-                <div style={{background:'#333', padding:'15px', borderRadius:'8px', marginBottom:'15px', wordBreak:'break-all', textAlign:'center'}}>
-                  <p style={{color:'#aaa', fontSize:'12px', margin:0}}>Send Funds To:</p>
-                  <p style={{color:'#fbbf24', fontWeight:'bold', margin:'5px 0', fontSize:'14px', userSelect:'all'}}>{adminWallet}</p>
-                </div>
-
-                <p style={{color:'#94a3b8', fontSize:'14px'}}>Paste Transaction Hash (TxHash):</p>
-                <input 
-                  type="text" placeholder="0x..." value={txHash}
-                  onChange={(e) => setTxHash(e.target.value)}
-                  className="input-field" style={{marginTop:'5px'}}
-                />
-                
-                <button className="action-btn" onClick={handleVerify} style={{background:'#22c55e', color:'white', marginBottom:'10px'}}>
-                  VERIFY DEPOSIT
-                </button>
-                <button className="action-btn" onClick={handleCancel} style={{background:'#ef4444', color:'white'}}>
-                  CANCEL / RESET
-                </button>
-              </>
-            )}
-            <p style={{fontSize:'12px', color:'#fbbf24', marginTop:'15px', textAlign:'center', minHeight:'20px'}}>{statusMsg}</p>
+            <p style={{color:'#94a3b8', fontSize:'14px'}}>Amount to Deposit (BNB/ETH):</p>
+            <input 
+              type="number" placeholder="0.01" value={depositAmount}
+              onChange={(e) => setDepositAmount(e.target.value)}
+              className="input-field" style={{marginTop:'5px'}}
+            />
+            
+            <button className="action-btn" onClick={handleDeposit} style={{background:'#22c55e', color:'white', marginBottom:'10px'}}>
+              🚀 PAY NOW (Wallet)
+            </button>
+            
+            <p style={{fontSize:'12px', color:'#fbbf24', marginTop:'10px', textAlign:'center'}}>{statusMsg}</p>
+            <p style={{fontSize:'10px', color:'#64748b', textAlign:'center'}}>Transaction verifies automatically after wallet confirmation.</p>
           </div>
         </div>
       )}
 
-      {/* 💸 WITHDRAW POPUP + HISTORY 💸 */}
+      {/* 💸 WITHDRAW POPUP 💸 */}
       {showWithdraw && (
         <div className="modal-overlay">
           <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
@@ -346,7 +312,6 @@ function GameDashboard({ logout, user }) {
                REQUEST WITHDRAWAL
             </button>
 
-            {/* --- WITHDRAWAL HISTORY SECTION --- */}
             <div style={{borderTop:'1px solid #334155', paddingTop:'15px'}}>
                 <p style={{fontSize:'12px', color:'#94a3b8', fontWeight:'bold', marginBottom:'10px'}}>RECENT WITHDRAWALS</p>
                 {withdrawHistory.length === 0 ? (
@@ -426,6 +391,7 @@ function GameDashboard({ logout, user }) {
           </div>
         </div>
       )}
+
       {/* BIDS HISTORY */}
       <div className="glass-panel history-panel">
         <div className="panel-header">LAST 30 BIDS</div>
