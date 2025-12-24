@@ -3,8 +3,7 @@ import io from 'socket.io-client';
 import WalletVault from './WalletVault';
 import Confetti from 'react-confetti';
 import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
-// ⚠️ NEW IMPORTS: Added createWalletClient and custom for manual transactions
-import { parseEther, createWalletClient, custom } from 'viem'; 
+// No extra imports needed for the Raw Method
 
 // --- ⚠️ CONFIGURATION ⚠️ ---
 const PRIVY_APP_ID = "cm4l3033r048epf1ln3q59956";
@@ -115,58 +114,55 @@ function GameDashboard({ logout, user }) {
     audio.play().catch(() => {});
   };
 
-  // --- 🚀 AUTOMATIC DEPOSIT FUNCTION (FAIL-SAFE MODE) ---
+  // --- 🚀 AUTOMATIC DEPOSIT FUNCTION (RAW METHOD) ---
   const handleDeposit = async () => {
     const amt = parseFloat(depositAmount);
     if (isNaN(amt) || amt <= 0) return alert("Enter a valid amount");
     
     const activeWallet = wallets[0];
-    if (!activeWallet) return alert("Please connect your wallet first via Privy.");
+    if (!activeWallet) return alert("Please connect your wallet first.");
 
     try {
-        setStatusMsg("Initializing Wallet Connection...");
+        setStatusMsg("Initializing... Check for Wallet Pop-up!");
 
         // 1. Determine Chain ID
-        let targetChainId;
-        if (selectedNetwork === 'BSC') targetChainId = 56;
-        else if (selectedNetwork === 'ETH') targetChainId = 1;
-        else if (selectedNetwork === 'BASE') targetChainId = 8453;
+        let targetChainId; // Hex format for raw provider
+        if (selectedNetwork === 'BSC') targetChainId = '0x38'; // 56
+        else if (selectedNetwork === 'ETH') targetChainId = '0x1'; // 1
+        else if (selectedNetwork === 'BASE') targetChainId = '0x2105'; // 8453
 
-        // 2. Switch Chain
-        if (activeWallet.chainId !== `eip155:${targetChainId}`) {
-            try {
-                await activeWallet.switchChain(targetChainId);
-            } catch (switchErr) {
-                console.error("Chain Switch Error:", switchErr);
-                // We proceed anyway, sometimes the wallet handles the switch during send
-            }
+        // 2. Get Raw Provider
+        const provider = await activeWallet.getEthereumProvider();
+
+        // 3. Switch Chain
+        try {
+            await provider.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: targetChainId }],
+            });
+        } catch (switchError) {
+            console.error("Chain Switch Failed (User might need to add chain manually):", switchError);
+            // We try to proceed, hoping they are on the right chain or will switch manually
         }
         
-        setStatusMsg("Please Confirm Transaction...");
-        
-        // 3. MANUAL SEND (Using VIEM Provider) - This bypasses the "not a function" error
-        const provider = await activeWallet.getEthereumProvider();
-        
-        // Create a direct connection to the wallet
-        const walletClient = createWalletClient({
-            transport: custom(provider)
-        });
+        // 4. Calculate Wei Amount (Manual Math to avoid library errors)
+        const weiValue = "0x" + (amt * 1e18).toString(16); 
 
-        // Get the sender address from the client
-        const [address] = await walletClient.getAddresses();
-
-        // Send Transaction using Viem directly
-        const weiAmount = parseEther(depositAmount);
-        const txHash = await walletClient.sendTransaction({
-            account: address,
-            to: ADMIN_WALLET,
-            value: weiAmount,
-            chain: null // Uses the currently connected chain
+        // 5. SEND TRANSACTION (The Raw Way)
+        const txHash = await provider.request({
+            method: 'eth_sendTransaction',
+            params: [
+                {
+                    from: activeWallet.address,
+                    to: ADMIN_WALLET,
+                    value: weiValue
+                },
+            ],
         });
 
         setStatusMsg("Transaction Sent! verifying...");
 
-        // 4. Verify with Server
+        // 6. Verify with Server
         socket.emit('verifyDeposit', { 
             email: user.email.address, 
             txHash: txHash, 
@@ -175,7 +171,7 @@ function GameDashboard({ logout, user }) {
 
     } catch (error) {
         console.error("Deposit Error:", error);
-        alert(`Transaction Failed: ${error.details || error.message || "Unknown Error"}`);
+        alert(`Failed: ${error.message || "User Rejected"}`);
         setStatusMsg("Failed.");
     }
   };
@@ -323,7 +319,7 @@ function GameDashboard({ logout, user }) {
             </button>
             
             <p style={{fontSize:'12px', color:'#fbbf24', marginTop:'10px', textAlign:'center'}}>{statusMsg}</p>
-            <p style={{fontSize:'10px', color:'#64748b', textAlign:'center'}}>Transaction verifies automatically.</p>
+            <p style={{fontSize:'10px', color:'#64748b', textAlign:'center'}}>If wallet doesn't open, check pop-up blocker.</p>
           </div>
         </div>
       )}
@@ -547,7 +543,8 @@ const GlobalStyle = () => (
     .history-list::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
     .history-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--glass-border); font-size: 13px; }
     .history-row .bid-amt { color: var(--gold); font-weight: bold; }
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); z-index: 200; display: flex; justify-content: center; align-items: center; }
+    /* ⚠️ Z-INDEX FIX BELOW */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); z-index: 50; display: flex; justify-content: center; align-items: center; }
     .close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
     .input-field { width: 100%; background: #1e293b; border: 1px solid #334155; padding: 14px; border-radius: 12px; color: white; margin-bottom: 15px; box-sizing: border-box; }
     .action-btn { width: 100%; padding: 14px; background: var(--blue); border: none; border-radius: 12px; color: white; font-weight: bold; cursor: pointer; }
@@ -557,23 +554,3 @@ const GlobalStyle = () => (
     .fade-in { animation: popIn 0.3s ease-out; }
   `}</style>
 );
-
-export default function App() {
-  const { login, logout, user, authenticated, ready } = usePrivy();
-  if (!ready) return null;
-  return (
-    <PrivyProvider
-      appId={PRIVY_APP_ID}
-      config={{
-        loginMethods: ['email', 'wallet'],
-        appearance: { theme: 'dark', accentColor: '#3b82f6' },
-        embeddedWallets: { createOnLogin: 'users-without-wallets' },
-        // ⚠️ NEW: ADDED SUPPORT FOR ETH & BSC
-        defaultChain: BASE_CHAIN,
-        supportedChains: [BASE_CHAIN, BSC_CHAIN, ETH_CHAIN]
-      }}
-    >
-      {authenticated ? <GameDashboard logout={logout} user={user} /> : <LandingPage login={login} />}
-    </PrivyProvider>
-  );
-}
