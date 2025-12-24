@@ -3,7 +3,8 @@ import io from 'socket.io-client';
 import WalletVault from './WalletVault';
 import Confetti from 'react-confetti';
 import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
-import { parseEther } from 'viem'; 
+// ⚠️ NEW IMPORTS: Added createWalletClient and custom for manual transactions
+import { parseEther, createWalletClient, custom } from 'viem'; 
 
 // --- ⚠️ CONFIGURATION ⚠️ ---
 const PRIVY_APP_ID = "cm4l3033r048epf1ln3q59956";
@@ -21,7 +22,7 @@ const ASSETS = {
 
 const ADMIN_WALLET = "0x6edadf13a704cd2518cd2ca9afb5ad9dee3ce34c"; 
 
-// --- 🌐 CHAIN CONFIGURATIONS (FIXED) ---
+// --- 🌐 CHAIN CONFIGURATIONS ---
 const BASE_CHAIN = {
   id: 8453,
   name: 'Base',
@@ -114,7 +115,7 @@ function GameDashboard({ logout, user }) {
     audio.play().catch(() => {});
   };
 
-  // --- 🚀 AUTOMATIC DEPOSIT FUNCTION (FIXED) ---
+  // --- 🚀 AUTOMATIC DEPOSIT FUNCTION (FAIL-SAFE MODE) ---
   const handleDeposit = async () => {
     const amt = parseFloat(depositAmount);
     if (isNaN(amt) || amt <= 0) return alert("Enter a valid amount");
@@ -123,7 +124,7 @@ function GameDashboard({ logout, user }) {
     if (!activeWallet) return alert("Please connect your wallet first via Privy.");
 
     try {
-        setStatusMsg("Checking Wallet Network...");
+        setStatusMsg("Initializing Wallet Connection...");
 
         // 1. Determine Chain ID
         let targetChainId;
@@ -131,24 +132,36 @@ function GameDashboard({ logout, user }) {
         else if (selectedNetwork === 'ETH') targetChainId = 1;
         else if (selectedNetwork === 'BASE') targetChainId = 8453;
 
-        // 2. Switch Chain if Needed
+        // 2. Switch Chain
         if (activeWallet.chainId !== `eip155:${targetChainId}`) {
             try {
                 await activeWallet.switchChain(targetChainId);
             } catch (switchErr) {
                 console.error("Chain Switch Error:", switchErr);
-                // Continue anyway, user might already be on right chain or manual switch
+                // We proceed anyway, sometimes the wallet handles the switch during send
             }
         }
         
         setStatusMsg("Please Confirm Transaction...");
         
-        // 3. Send Transaction
+        // 3. MANUAL SEND (Using VIEM Provider) - This bypasses the "not a function" error
+        const provider = await activeWallet.getEthereumProvider();
+        
+        // Create a direct connection to the wallet
+        const walletClient = createWalletClient({
+            transport: custom(provider)
+        });
+
+        // Get the sender address from the client
+        const [address] = await walletClient.getAddresses();
+
+        // Send Transaction using Viem directly
         const weiAmount = parseEther(depositAmount);
-        const txHash = await activeWallet.sendTransaction({
+        const txHash = await walletClient.sendTransaction({
+            account: address,
             to: ADMIN_WALLET,
             value: weiAmount,
-            chainId: targetChainId // Explicitly set chain
+            chain: null // Uses the currently connected chain
         });
 
         setStatusMsg("Transaction Sent! verifying...");
@@ -162,7 +175,7 @@ function GameDashboard({ logout, user }) {
 
     } catch (error) {
         console.error("Deposit Error:", error);
-        alert(`Transaction Failed: ${error.message || "User Rejected"}`);
+        alert(`Transaction Failed: ${error.details || error.message || "Unknown Error"}`);
         setStatusMsg("Failed.");
     }
   };
