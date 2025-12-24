@@ -3,7 +3,7 @@ import io from 'socket.io-client';
 import WalletVault from './WalletVault';
 import Confetti from 'react-confetti';
 import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
-import { parseEther } from 'viem'; // Required for sending transactions
+import { parseEther } from 'viem'; 
 
 // --- ⚠️ CONFIGURATION ⚠️ ---
 const PRIVY_APP_ID = "cm4l3033r048epf1ln3q59956";
@@ -19,8 +19,9 @@ const ASSETS = {
   soundPop: 'https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3'
 };
 
-const ADMIN_WALLET = "0x6edadf13a704cd2518cd2ca9afb5ad9dee3ce34c"; // Your Address for Auto-Deposit
+const ADMIN_WALLET = "0x6edadf13a704cd2518cd2ca9afb5ad9dee3ce34c"; 
 
+// --- 🌐 CHAIN CONFIGURATIONS (FIXED) ---
 const BASE_CHAIN = {
   id: 8453,
   name: 'Base',
@@ -28,6 +29,24 @@ const BASE_CHAIN = {
   nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
   rpcUrls: { default: { http: ['https://mainnet.base.org'] } },
   blockExplorers: { default: { name: 'Basescan', url: 'https://basescan.org' } }
+};
+
+const BSC_CHAIN = {
+  id: 56,
+  name: 'BNB Smart Chain',
+  network: 'bsc',
+  nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+  rpcUrls: { default: { http: ['https://bsc-dataseed.binance.org'] } },
+  blockExplorers: { default: { name: 'BscScan', url: 'https://bscscan.com' } }
+};
+
+const ETH_CHAIN = {
+  id: 1,
+  name: 'Ethereum',
+  network: 'homestead',
+  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+  rpcUrls: { default: { http: ['https://cloudflare-eth.com'] } },
+  blockExplorers: { default: { name: 'Etherscan', url: 'https://etherscan.io' } }
 };
 
 // --- 📖 HOW TO PLAY GUIDE ---
@@ -95,30 +114,46 @@ function GameDashboard({ logout, user }) {
     audio.play().catch(() => {});
   };
 
-  // --- 🚀 AUTOMATIC DEPOSIT FUNCTION ---
+  // --- 🚀 AUTOMATIC DEPOSIT FUNCTION (FIXED) ---
   const handleDeposit = async () => {
     const amt = parseFloat(depositAmount);
     if (isNaN(amt) || amt <= 0) return alert("Enter a valid amount");
     
-    // Check if wallet is connected
     const activeWallet = wallets[0];
     if (!activeWallet) return alert("Please connect your wallet first via Privy.");
 
     try {
-        setStatusMsg("Initializing Wallet Transaction...");
+        setStatusMsg("Checking Wallet Network...");
+
+        // 1. Determine Chain ID
+        let targetChainId;
+        if (selectedNetwork === 'BSC') targetChainId = 56;
+        else if (selectedNetwork === 'ETH') targetChainId = 1;
+        else if (selectedNetwork === 'BASE') targetChainId = 8453;
+
+        // 2. Switch Chain if Needed
+        if (activeWallet.chainId !== `eip155:${targetChainId}`) {
+            try {
+                await activeWallet.switchChain(targetChainId);
+            } catch (switchErr) {
+                console.error("Chain Switch Error:", switchErr);
+                // Continue anyway, user might already be on right chain or manual switch
+            }
+        }
         
-        // 1. Send Transaction via Privy/Wallet
-        // Note: Amount must be converted to Wei (1e18)
+        setStatusMsg("Please Confirm Transaction...");
+        
+        // 3. Send Transaction
         const weiAmount = parseEther(depositAmount);
-        
         const txHash = await activeWallet.sendTransaction({
             to: ADMIN_WALLET,
-            value: weiAmount
+            value: weiAmount,
+            chainId: targetChainId // Explicitly set chain
         });
 
         setStatusMsg("Transaction Sent! verifying...");
 
-        // 2. Automatically Verify with Server
+        // 4. Verify with Server
         socket.emit('verifyDeposit', { 
             email: user.email.address, 
             txHash: txHash, 
@@ -126,8 +161,8 @@ function GameDashboard({ logout, user }) {
         });
 
     } catch (error) {
-        console.error(error);
-        alert("Transaction Failed or Cancelled.");
+        console.error("Deposit Error:", error);
+        alert(`Transaction Failed: ${error.message || "User Rejected"}`);
         setStatusMsg("Failed.");
     }
   };
@@ -256,7 +291,7 @@ function GameDashboard({ logout, user }) {
             <button className="close-btn" onClick={() => setShowDeposit(false)}>✕</button>
             <h2 style={{color: '#22c55e', textAlign:'center', marginTop:0}}>INSTANT DEPOSIT</h2>
             
-            <p style={{color:'#94a3b8', fontSize:'14px'}}>Select Network (Must match Wallet):</p>
+            <p style={{color:'#94a3b8', fontSize:'14px'}}>Select Network:</p>
             <select value={selectedNetwork} onChange={(e) => setSelectedNetwork(e.target.value)} className="input-field" style={{marginTop:'5px'}}>
               <option value="BSC">BNB Smart Chain (BEP20)</option>
               <option value="ETH">Ethereum (ERC20)</option>
@@ -275,7 +310,7 @@ function GameDashboard({ logout, user }) {
             </button>
             
             <p style={{fontSize:'12px', color:'#fbbf24', marginTop:'10px', textAlign:'center'}}>{statusMsg}</p>
-            <p style={{fontSize:'10px', color:'#64748b', textAlign:'center'}}>Transaction verifies automatically after wallet confirmation.</p>
+            <p style={{fontSize:'10px', color:'#64748b', textAlign:'center'}}>Transaction verifies automatically.</p>
           </div>
         </div>
       )}
@@ -520,8 +555,9 @@ export default function App() {
         loginMethods: ['email', 'wallet'],
         appearance: { theme: 'dark', accentColor: '#3b82f6' },
         embeddedWallets: { createOnLogin: 'users-without-wallets' },
+        // ⚠️ NEW: ADDED SUPPORT FOR ETH & BSC
         defaultChain: BASE_CHAIN,
-        supportedChains: [BASE_CHAIN]
+        supportedChains: [BASE_CHAIN, BSC_CHAIN, ETH_CHAIN]
       }}
     >
       {authenticated ? <GameDashboard logout={logout} user={user} /> : <LandingPage login={login} />}
