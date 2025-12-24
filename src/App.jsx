@@ -3,7 +3,7 @@ import io from 'socket.io-client';
 import WalletVault from './WalletVault';
 import Confetti from 'react-confetti';
 import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
-// No extra imports needed for the Raw Method
+import { parseEther, createWalletClient, custom } from 'viem'; 
 
 // --- ⚠️ CONFIGURATION ⚠️ ---
 const PRIVY_APP_ID = "cm4l3033r048epf1ln3q59956";
@@ -141,11 +141,11 @@ function GameDashboard({ logout, user }) {
                 params: [{ chainId: targetChainId }],
             });
         } catch (switchError) {
-            console.error("Chain Switch Failed (User might need to add chain manually):", switchError);
-            // We try to proceed, hoping they are on the right chain or will switch manually
+            console.error("Chain Switch Failed:", switchError);
+            // Continue in case user is already on the chain
         }
         
-        // 4. Calculate Wei Amount (Manual Math to avoid library errors)
+        // 4. Calculate Wei Amount 
         const weiValue = "0x" + (amt * 1e18).toString(16); 
 
         // 5. SEND TRANSACTION (The Raw Way)
@@ -176,7 +176,6 @@ function GameDashboard({ logout, user }) {
     }
   };
 
-  // --- WITHDRAW FUNCTION ---
   const handleWithdraw = () => {
       const amt = parseFloat(withdrawAmount);
       if (isNaN(amt) || amt < 10) return alert("Minimum withdrawal is $10.00");
@@ -554,3 +553,24 @@ const GlobalStyle = () => (
     .fade-in { animation: popIn 0.3s ease-out; }
   `}</style>
 );
+
+export default function App() {
+  const { login, logout, user, authenticated, ready } = usePrivy();
+  if (!ready) return null;
+  return (
+    <PrivyProvider
+      appId={PRIVY_APP_ID}
+      config={{
+        loginMethods: ['email', 'wallet'],
+        appearance: { theme: 'dark', accentColor: '#3b82f6' },
+        embeddedWallets: { createOnLogin: 'users-without-wallets' },
+        // ⚠️ NEW: ADDED SUPPORT FOR ETH & BSC
+        defaultChain: BASE_CHAIN,
+        supportedChains: [BASE_CHAIN, BSC_CHAIN, ETH_CHAIN]
+      }}
+    >
+      {authenticated ? <GameDashboard logout={logout} user={user} /> : <LandingPage login={login} />}
+    </PrivyProvider>
+  );
+}
+// END OF FILE
