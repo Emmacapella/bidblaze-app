@@ -49,7 +49,7 @@ const ETH_CHAIN = {
   blockExplorers: { default: { name: 'Etherscan', url: 'https://etherscan.io' } }
 };
 
-// --- HOW TO PLAY GUIDE ---
+// --- HOW TO PLAY GUIDE (RESTORED) ---
 const HowToPlay = ({ onClose }) => {
   return (
     <div className="modal-overlay">
@@ -123,7 +123,6 @@ function GameDashboard({ logout, user }) {
 
     setShowDeposit(false);
     setIsProcessing(true);
-    // REMOVED ALERTS FOR CLEANER UX
     
     try {
         const provider = await activeWallet.getEthereumProvider();
@@ -132,7 +131,7 @@ function GameDashboard({ logout, user }) {
         const valInWei = parseEther(depositAmount.toString());
         const hexValue = "0x" + valInWei.toString(16);
 
-        // --- 2. SEND TRANSACTION (No Chain Switch) ---
+        // --- 2. SEND TRANSACTION ---
         const txHash = await provider.request({
             method: 'eth_sendTransaction',
             params: [
@@ -373,12 +372,22 @@ function GameDashboard({ logout, user }) {
         </div>
       </nav>
 
-      {/* GAME STAGE */}
+      {/* GAME STAGE - RESTORED LOGIC HERE */}
       <div className="game-stage">
         <ReactorRing targetDate={gameState.endTime} status={gameState.status} />
         <div className="jackpot-core">
-          <div className="label">JACKPOT</div>
-          <div className="amount">${gameState.jackpot.toFixed(2)}</div>
+          {gameState.status === 'ACTIVE' ? (
+            <>
+              <div className="label">JACKPOT</div>
+              <div className="amount">${gameState.jackpot.toFixed(2)}</div>
+            </>
+          ) : (
+            <div className="restart-box">
+               <div className="restart-label">NEW GAME IN</div>
+               <div className="restart-timer">{restartCount}</div>
+               <div className="winner-badge">🏆 WINNER: {gameState.history[0]?.user.slice(0,10)}...</div>
+            </div>
+          )}
         </div>
         {floatingBids.map(id => (
           <div key={id} className="float-anim" onAnimationEnd={() => setFloatingBids(prev => prev.filter(bid => bid !== id))}>-$1.00</div>
@@ -399,7 +408,7 @@ function GameDashboard({ logout, user }) {
         </button>
       </div>
 
-      {/* WINNERS PANEL */}
+      {/* WINNERS PANEL - RESTORED HERE */}
       {gameState.recentWinners && gameState.recentWinners.length > 0 && (
         <div className="glass-panel" style={{borderColor: '#fbbf24', background: 'rgba(251, 191, 36, 0.05)', marginBottom:'20px'}}>
           <div className="panel-header" style={{color: '#fbbf24'}}>🏆 RECENT BIG WINS</div>
