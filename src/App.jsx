@@ -49,25 +49,38 @@ const ETH_CHAIN = {
   blockExplorers: { default: { name: 'Etherscan', url: 'https://etherscan.io' } }
 };
 
-// --- HOW TO PLAY GUIDE (RESTORED) ---
+// --- HOW TO PLAY GUIDE (FULL) ---
 const HowToPlay = ({ onClose }) => {
   return (
     <div className="modal-overlay">
       <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
         <button className="close-btn" onClick={onClose}>✕</button>
         <h2 style={{color: '#fbbf24', textAlign:'center', marginBottom:'20px'}}>How to Win 🏆</h2>
+        
         <div style={{display:'flex', gap:'15px', marginBottom:'20px', alignItems:'flex-start'}}>
           <div style={{background:'#3b82f6', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center'}}>1</div>
-          <div><div style={{fontWeight:'bold', color:'white'}}>Deposit Crypto</div><div style={{fontSize:'12px', color:'#94a3b8'}}>Connect Wallet & Pay Instantly.</div></div>
+          <div>
+            <div style={{fontWeight:'bold', color:'white'}}>Deposit Crypto</div>
+            <div style={{fontSize:'12px', color:'#94a3b8'}}>Connect Wallet & Pay Instantly (BSC/ETH/Base).</div>
+          </div>
         </div>
+
         <div style={{display:'flex', gap:'15px', marginBottom:'20px', alignItems:'flex-start'}}>
           <div style={{background:'#ef4444', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center'}}>2</div>
-          <div><div style={{fontWeight:'bold', color:'white'}}>Place a Bid</div><div style={{fontSize:'12px', color:'#94a3b8'}}>Bid costs $1.00.</div></div>
+          <div>
+            <div style={{fontWeight:'bold', color:'white'}}>Place a Bid</div>
+            <div style={{fontSize:'12px', color:'#94a3b8'}}>Each bid costs $1.00 and resets the timer.</div>
+          </div>
         </div>
+
         <div style={{display:'flex', gap:'15px', marginBottom:'20px', alignItems:'flex-start'}}>
           <div style={{background:'#22c55e', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center'}}>3</div>
-          <div><div style={{fontWeight:'bold', color:'white'}}>Be the Last One</div><div style={{fontSize:'12px', color:'#94a3b8'}}>Last bidder wins the <span style={{color:'#fbbf24'}}>JACKPOT!</span></div></div>
+          <div>
+            <div style={{fontWeight:'bold', color:'white'}}>Be the Last One</div>
+            <div style={{fontSize:'12px', color:'#94a3b8'}}>When the timer hits zero, the last bidder wins the <span style={{color:'#fbbf24'}}>JACKPOT!</span></div>
+          </div>
         </div>
+
         <button className="action-btn" onClick={onClose}>Got it! Let's Play</button>
       </div>
     </div>
@@ -372,7 +385,7 @@ function GameDashboard({ logout, user }) {
         </div>
       </nav>
 
-      {/* GAME STAGE - RESTORED LOGIC HERE */}
+      {/* GAME STAGE */}
       <div className="game-stage">
         <ReactorRing targetDate={gameState.endTime} status={gameState.status} />
         <div className="jackpot-core">
@@ -408,20 +421,22 @@ function GameDashboard({ logout, user }) {
         </button>
       </div>
 
-      {/* WINNERS PANEL - RESTORED HERE */}
-      {gameState.recentWinners && gameState.recentWinners.length > 0 && (
-        <div className="glass-panel" style={{borderColor: '#fbbf24', background: 'rgba(251, 191, 36, 0.05)', marginBottom:'20px'}}>
-          <div className="panel-header" style={{color: '#fbbf24'}}>🏆 RECENT BIG WINS</div>
-          <div className="history-list" style={{maxHeight: '120px'}}>
-            {gameState.recentWinners.map((win, index) => (
+      {/* WINNERS PANEL - ALWAYS VISIBLE */}
+      <div className="glass-panel" style={{borderColor: '#fbbf24', background: 'rgba(251, 191, 36, 0.05)', marginBottom:'20px'}}>
+        <div className="panel-header" style={{color: '#fbbf24'}}>🏆 RECENT BIG WINS</div>
+        <div className="history-list" style={{maxHeight: '120px'}}>
+          {gameState.recentWinners && gameState.recentWinners.length > 0 ? (
+            gameState.recentWinners.map((win, index) => (
               <div key={index} className="history-row">
                 <span className="user" style={{color: 'white', fontWeight:'bold'}}>{win.user.split('@')[0].slice(0,12)}...</span>
                 <span className="bid-amt" style={{fontSize:'14px', color:'#fbbf24'}}>+${win.amount.toFixed(2)}</span>
               </div>
-            ))}
-          </div>
+            ))
+          ) : (
+            <div style={{color: '#94a3b8', fontSize: '13px', textAlign: 'center', padding: '10px'}}>No winners yet. Be the first!</div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* BIDS HISTORY */}
       <div className="glass-panel history-panel">
