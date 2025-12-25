@@ -124,7 +124,7 @@ function GameDashboard({ logout, user }) {
     const activeWallet = wallets[0];
     if (!activeWallet) return alert("Please connect your wallet first.");
 
-    // HIDE MODAL IMMEDIATELY (Fixes "Behind the screen" issues)
+    // HIDE MODAL IMMEDIATELY
     setShowDeposit(false);
     setIsProcessing(true);
     alert("Step 1: Wallet Found. Opening...");
