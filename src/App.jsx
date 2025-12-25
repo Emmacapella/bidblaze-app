@@ -3,7 +3,7 @@ import io from 'socket.io-client';
 import WalletVault from './WalletVault';
 import Confetti from 'react-confetti';
 import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
-import { parseEther } from 'viem'; 
+import { parseEther, createWalletClient, custom } from 'viem'; 
 
 // --- ⚠️ CONFIGURATION ⚠️ ---
 const PRIVY_APP_ID = "cm4l3033r048epf1ln3q59956";
@@ -435,6 +435,7 @@ function GameDashboard({ logout, user }) {
           💸 WITHDRAW
         </button>
       </div>
+
 
       {/* WINNERS PANEL */}
       {gameState.recentWinners && gameState.recentWinners.length > 0 && (
