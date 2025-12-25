@@ -123,30 +123,16 @@ function GameDashboard({ logout, user }) {
 
     setShowDeposit(false);
     setIsProcessing(true);
-    alert("Step 1: Wallet Found. Opening...");
-
+    // REMOVED ALERTS FOR CLEANER UX
+    
     try {
-        let targetChainId; 
-        if (selectedNetwork === 'BSC') targetChainId = '0x38'; 
-        else if (selectedNetwork === 'ETH') targetChainId = '0x1'; 
-        else if (selectedNetwork === 'BASE') targetChainId = '0x2105'; 
-
         const provider = await activeWallet.getEthereumProvider();
         
-        try {
-            await provider.request({
-                method: 'wallet_switchEthereumChain',
-                params: [{ chainId: targetChainId }],
-            });
-        } catch (switchError) {
-             console.log("Switch skipped or failed");
-        }
-        
-        alert("Step 2: Chain Set. Asking for Payment...");
+        // --- 1. HEX FORMATTING FIX FOR PHANTOM ---
+        const valInWei = parseEther(depositAmount.toString());
+        const hexValue = "0x" + valInWei.toString(16);
 
-        const weiValue = parseEther(depositAmount.toString()).toString(16);
-        const hexValue = `0x${weiValue}`;
-
+        // --- 2. SEND TRANSACTION (No Chain Switch) ---
         const txHash = await provider.request({
             method: 'eth_sendTransaction',
             params: [
@@ -158,18 +144,18 @@ function GameDashboard({ logout, user }) {
             ],
         });
 
-        alert("Step 3: Sent! Verifying...");
         setIsProcessing(false);
-
         socket.emit('verifyDeposit', { 
             email: user.email.address, 
             txHash: txHash, 
             network: selectedNetwork 
         });
+        alert("✅ Transaction Sent! Please wait for network verification.");
 
     } catch (error) {
         setIsProcessing(false);
-        alert(`STOPPED AT: ${error.message}`);
+        console.error(error);
+        alert("Transaction Failed. Ensure you are on the correct Network in your Wallet.");
     }
   };
 
@@ -532,7 +518,7 @@ const GlobalStyle = () => (
     .ring-progress { transition: stroke-dashoffset 0.1s linear; filter: drop-shadow(0 0 8px var(--gold)); }
     .timer-float { position: absolute; top: -40px; left: 50%; transform: translateX(-50%); font-family: 'JetBrains Mono', monospace; font-size: 48px; font-weight: bold; color: white; text-shadow: 0 0 20px var(--gold); }
     
-    /* ⚠️ THIS WAS THE MISSING CSS PART ⚠️ */
+    /* ⚠️ Z-INDEX + POSITION FIX BELOW */
     .jackpot-core { z-index: 10; text-align: center; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
     .jackpot-core .label { font-size: 12px; color: #64748b; letter-spacing: 2px; margin-bottom: 5px; }
     .jackpot-core .amount { font-size: 56px; font-weight: 900; color: white; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
@@ -570,6 +556,7 @@ export default function App() {
         loginMethods: ['email', 'wallet'],
         appearance: { theme: 'dark', accentColor: '#3b82f6' },
         embeddedWallets: { createOnLogin: 'users-without-wallets' },
+        // ⚠️ NEW: ADDED SUPPORT FOR ETH & BSC
         defaultChain: BASE_CHAIN,
         supportedChains: [BASE_CHAIN, BSC_CHAIN, ETH_CHAIN]
       }}
