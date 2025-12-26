@@ -5,7 +5,6 @@ import Confetti from 'react-confetti';
 import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
 import { parseEther } from 'viem'; 
 
-// --- CONFIGURATION ---
 const PRIVY_APP_ID = "cm4l3033r048epf1ln3q59956";
 const SERVER_URL = "https://bidblaze-server.onrender.com"; 
 export const socket = io(SERVER_URL, { transports: ['websocket', 'polling'] });
@@ -25,15 +24,36 @@ const HowToPlay = ({ onClose }) => (
     <div className="modal-overlay">
       <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
         <button className="close-btn" onClick={onClose}>✕</button>
-        <h2 style={{color: '#fbbf24', textAlign:'center'}}>How to Win 🏆</h2>
-        <div style={{marginBottom:'15px'}}><strong style={{color:'white'}}>1. Deposit:</strong> <span style={{color:'#94a3b8'}}>Connect Wallet & Pay (BSC/ETH).</span></div>
-        <div style={{marginBottom:'15px'}}><strong style={{color:'white'}}>2. Bid:</strong> <span style={{color:'#94a3b8'}}>Each bid costs $1.00 & resets timer.</span></div>
-        <div style={{marginBottom:'15px'}}><strong style={{color:'white'}}>3. Win:</strong> <span style={{color:'#94a3b8'}}>Last bidder wins the JACKPOT!</span></div>
-        <button className="action-btn" onClick={onClose}>Let's Play</button>
+        <h2 style={{color: '#fbbf24', textAlign:'center', marginBottom:'20px'}}>How to Win 🏆</h2>
+        <div style={{display:'flex', gap:'15px', marginBottom:'15px'}}>
+          <div style={{background:'#3b82f6', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold'}}>1</div>
+          <div><div style={{fontWeight:'bold', color:'white'}}>Deposit Crypto</div><div style={{fontSize:'12px', color:'#94a3b8'}}>Connect Wallet & Pay (BSC/ETH).</div></div>
+        </div>
+        <div style={{display:'flex', gap:'15px', marginBottom:'15px'}}>
+          <div style={{background:'#ef4444', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold'}}>2</div>
+          <div><div style={{fontWeight:'bold', color:'white'}}>Place a Bid</div><div style={{fontSize:'12px', color:'#94a3b8'}}>Bid costs $1.00 & resets timer.</div></div>
+        </div>
+        <div style={{display:'flex', gap:'15px', marginBottom:'15px'}}>
+          <div style={{background:'#22c55e', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold'}}>3</div>
+          <div><div style={{fontWeight:'bold', color:'white'}}>Be the Last One</div><div style={{fontSize:'12px', color:'#94a3b8'}}>Last bidder wins the <span style={{color:'#fbbf24'}}>JACKPOT!</span></div></div>
+        </div>
+        <button className="action-btn" onClick={onClose}>Got it! Let's Play</button>
       </div>
     </div>
 );
 
+const ReactorRing = ({ targetDate, status }) => {
+  const [p, setP] = useState(100); const [d, setD] = useState("299");
+  useEffect(() => {
+    const i = setInterval(() => {
+      const dist = targetDate - Date.now();
+      if (status === 'ACTIVE') {
+        if (dist <= 0) { setD("0"); setP(0); } else { setP((dist/299000)*100); setD(Math.ceil(dist/1000).toString()); }
+      } else setP(0);
+    }, 50); return () => clearInterval(i);
+  }, [targetDate, status]);
+  return <div className="reactor-container"><div className="timer-float">{status === 'ACTIVE' ? d : ''}</div><svg className="progress-ring" width="280" height="280"><circle className="ring-bg" stroke="rgba(255,255,255,0.05)" strokeWidth="8" fill="transparent" r="130" cx="140" cy="140"/><circle className="ring-progress" stroke={status === 'ENDED'?'#ef4444':'#fbbf24'} strokeWidth="8" strokeDasharray={`${2*Math.PI*130}`} strokeDashoffset={2*Math.PI*130 - (p/100)*2*Math.PI*130} r="130" cx="140" cy="140"/></svg></div>;
+};
 function GameDashboard({ logout, user }) {
   const [gameState, setGameState] = useState(null);
   const [credits, setCredits] = useState(0.00);
@@ -60,35 +80,51 @@ function GameDashboard({ logout, user }) {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [withdrawHistory, setWithdrawHistory] = useState([]);
 
-  const playSound = (key) => { if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; } const audio = new Audio(ASSETS[key]); audio.volume = 0.5; audioRef.current = audio; audio.play().catch(() => {}); };
+  const playSound = (key) => {
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
+    const audio = new Audio(ASSETS[key]);
+    audio.volume = 0.5;
+    audioRef.current = audio;
+    audio.play().catch(() => {});
+  };
 
   const handleDeposit = async () => {
     const amt = parseFloat(depositAmount);
-    if (isNaN(amt) || amt <= 0) return alert("Invalid amount");
+    if (isNaN(amt) || amt <= 0) return alert("Enter a valid amount");
     const activeWallet = wallets[0];
-    if (!activeWallet) return alert("Connect Wallet");
+    if (!activeWallet) return alert("Please connect your wallet first.");
     setShowDeposit(false); setIsProcessing(true);
     try {
         const provider = await activeWallet.getEthereumProvider();
-        const hexValue = "0x" + parseEther(depositAmount.toString()).toString(16);
+        const valInWei = parseEther(depositAmount.toString());
+        const hexValue = "0x" + valInWei.toString(16);
+        let targetChainId = '0x38'; 
+        if (selectedNetwork === 'ETH') targetChainId = '0x1';
+        if (selectedNetwork === 'BASE') targetChainId = '0x2105';
+        try { await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: targetChainId }] }); } catch (e) { console.log("Chain switch skipped"); }
         const txHash = await provider.request({ method: 'eth_sendTransaction', params: [{ from: activeWallet.address, to: ADMIN_WALLET, value: hexValue }] });
         setIsProcessing(false);
-        socket.emit('verifyDeposit', { email: user.email.address, txHash, network: selectedNetwork });
-        alert("✅ Sent! Verifying...");
-    } catch (e) { setIsProcessing(false); alert("Failed. Check Wallet."); }
+        socket.emit('verifyDeposit', { email: user.email.address, txHash: txHash, network: selectedNetwork });
+        alert("✅ Transaction Sent! Verifying...");
+    } catch (error) {
+        setIsProcessing(false); console.error(error); alert(`Failed: ${error.message || "Wallet Closed"}`);
+    }
   };
 
   const handleWithdraw = () => {
       const amt = parseFloat(withdrawAmount);
-      if (credits < amt) return alert("Insufficient Funds");
+      if (isNaN(amt) || amt < 10) return alert("Minimum withdrawal is $10.00");
+      if (withdrawAddress.length < 10) return alert("Enter a valid receiving address");
+      if (credits < amt) return alert("Insufficient Balance");
       socket.emit('requestWithdrawal', { email: user.email.address, amount: amt, address: withdrawAddress, network: selectedNetwork });
       setWithdrawAmount(''); setWithdrawAddress('');
   };
 
   useEffect(() => {
-    socket.on('depositSuccess', (bal) => { setCredits(bal); setDepositAmount(''); alert("✅ Balance Updated!"); });
-    socket.on('depositError', (msg) => alert(`❌ ${msg}`));
-    socket.on('withdrawalSuccess', () => alert("✅ Request Sent"));
+    socket.on('depositSuccess', (bal) => { setCredits(bal); setDepositAmount(''); setIsProcessing(false); alert(`✅ SUCCESS! Balance Updated.`); });
+    socket.on('depositError', (msg) => { alert(`❌ Error: ${msg}`); setIsProcessing(false); });
+    socket.on('withdrawalSuccess', () => alert("✅ Withdrawal Request Sent!"));
+    socket.on('withdrawalError', (msg) => alert(`❌ Withdrawal Failed: ${msg}`));
     socket.on('withdrawalHistory', (data) => setWithdrawHistory(data));
     if(user?.email?.address) socket.emit('getUserBalance', user.email.address);
     socket.on('gameState', (data) => {
@@ -98,18 +134,17 @@ function GameDashboard({ logout, user }) {
       prevStatus.current = data.status;
     });
     socket.on('balanceUpdate', (bal) => setCredits(bal));
-    return () => { socket.off('gameState'); socket.off('balanceUpdate'); socket.off('depositSuccess'); };
+    return () => { socket.off('gameState'); socket.off('balanceUpdate'); socket.off('bidError'); socket.off('depositSuccess'); socket.off('depositError'); };
   }, [user]);
 
   useEffect(() => {
-    const t = setInterval(() => { if (gameState?.status === 'ENDED' && gameState?.restartTimer) setRestartCount(Math.ceil((gameState.restartTimer - Date.now())/1000)); }, 100);
-    let c; if (isCooldown && cd > 0) c = setInterval(() => setCd(p => p - 1), 1000); else if (cd <= 0) setIsCooldown(false);
-    return () => { clearInterval(t); clearInterval(c); };
+    const timerInterval = setInterval(() => { if (gameState?.status === 'ENDED' && gameState?.restartTimer) setRestartCount(Math.ceil((gameState.restartTimer - Date.now())/1000)); }, 100);
+    let cdInterval; if (isCooldown && cd > 0) cdInterval = setInterval(() => setCd(prev => prev - 1), 1000); else if (cd <= 0) setIsCooldown(false);
+    return () => { clearInterval(timerInterval); clearInterval(cdInterval); };
   }, [gameState?.status, gameState?.restartTimer, isCooldown, cd]);
 
-  const placeBid = () => { if (isCooldown || credits < 1.00) { if(credits < 1) setShowDeposit(true); return; } setFloatingBids(p => [...p, Date.now()]); playSound('soundPop'); socket.emit('placeBid', user.email.address); setIsCooldown(true); setCd(8); };
-  
-  const runAdmin = () => { const p = prompt("PWD"); if (p) socket.emit('adminAction', { password: p, action: 'RESET' }); };
+  const placeBid = () => { if (isCooldown || credits < 1.00) { if (credits < 1) setShowDeposit(true); return; } setFloatingBids(prev => [...prev, Date.now()]); playSound('soundPop'); socket.emit('placeBid', user.email ? user.email.address : "User"); setIsCooldown(true); setCd(8); };
+  const runAdmin = () => { const pwd = prompt("🔐 ADMIN PANEL"); if (pwd) socket.emit('adminAction', { password: pwd, action: 'RESET' }); };
   if (!gameState) return <div style={{color:'white', padding:'50px'}}>CONNECTING...</div>;
 
   return (
@@ -145,12 +180,17 @@ function GameDashboard({ logout, user }) {
         </div>
       )}
 
+      {/* NAV BAR */}
       <nav className="glass-nav">
         <button className="nav-btn vault-btn" onClick={() => setShowDeposit(true)}>🏦 ${credits.toFixed(2)}</button>
-        <div className="live-pill">● {gameState.connectedUsers} LIVE</div>
+        <div className="live-pill" style={{color:'#22c55e', fontWeight:'bold', display:'flex', alignItems:'center', gap:'5px'}}>
+           <div style={{width:'8px', height:'8px', background:'#22c55e', borderRadius:'50%', boxShadow:'0 0 10px #22c55e'}}></div>
+           {gameState.connectedUsers || 1} LIVE
+        </div>
         <div style={{display:'flex', gap:'5px'}}><button className="nav-btn" onClick={() => setShowHelp(true)}>❓</button><button className="nav-btn logout-btn" onClick={logout}>✕</button></div>
       </nav>
 
+      {/* GAME STAGE */}
       <div className="game-stage">
         <ReactorRing targetDate={gameState.endTime} status={gameState.status} />
         <div className="jackpot-core">
@@ -159,7 +199,7 @@ function GameDashboard({ logout, user }) {
         {floatingBids.map(id => <div key={id} className="float-anim">-$1.00</div>)}
       </div>
 
-      <button className={`main-btn ${isCooldown ? 'cooldown' : ''}`} onClick={placeBid} disabled={gameState.status !== 'ACTIVE' || isCooldown}>{gameState.status === 'ENDED' ? 'GAME CLOSED' : (isCooldown ? `WAIT (${cd}s)` : `BID ($${gameState.bidCost})`)}</button>
+      <button className={`main-btn ${isCooldown ? 'cooldown' : ''}`} onClick={placeBid} disabled={gameState.status !== 'ACTIVE' || isCooldown}>{gameState.status === 'ENDED' ? 'GAME CLOSED' : (isCooldown ? `WAIT (${cd}s)` : `BID NOW ($${gameState.bidCost})`)}</button>
 
       <div className="action-buttons" style={{display:'flex', gap:'10px', width:'100%', maxWidth:'350px'}}>
         <button className="deposit-btn" onClick={() => setShowDeposit(true)} style={{flex:1, padding:'15px', borderRadius:'10px', background:'#22c55e', border:'none', color:'white', fontWeight:'bold'}}>DEPOSIT</button>
@@ -167,13 +207,15 @@ function GameDashboard({ logout, user }) {
       </div>
 
       {/* WINNERS PANEL */}
-      <div className="glass-panel" style={{marginTop:'20px'}}>
-        <div className="panel-header">🏆 RECENT WINS</div>
-        {gameState.recentWinners?.length > 0 ? gameState.recentWinners.map((w, i) => <div key={i} className="history-row"><span style={{color:'white'}}>{w.user.slice(0,10)}</span><span style={{color:'#fbbf24'}}>+${w.amount.toFixed(2)}</span></div>) : <div style={{textAlign:'center', fontSize:'12px', color:'#64748b'}}>No recent winners yet.</div>}
+      <div className="glass-panel" style={{marginTop:'20px', borderColor:'#fbbf24', background:'rgba(251,191,36,0.05)'}}>
+        <div className="panel-header" style={{color:'#fbbf24'}}>🏆 RECENT BIG WINS</div>
+        <div className="history-list" style={{maxHeight:'100px'}}>
+          {gameState.recentWinners?.length > 0 ? gameState.recentWinners.map((w, i) => <div key={i} className="history-row"><span style={{color:'white', fontWeight:'bold'}}>{w.user.slice(0,10)}...</span><span style={{color:'#fbbf24'}}>+${w.amount.toFixed(2)}</span></div>) : <div style={{textAlign:'center', fontSize:'12px', color:'#94a3b8', padding:'10px'}}>No winners yet. Be the first!</div>}
+        </div>
       </div>
 
-      {/* ⚠️ LIVE BIDS HISTORY (THIS WAS MISSING) */}
-      <div className="glass-panel history-panel" style={{marginTop:'10px'}}>
+      {/* BIDS HISTORY (RESTORED) */}
+      <div className="glass-panel history-panel" style={{marginTop:'15px'}}>
         <div className="panel-header">LAST 30 BIDS</div>
         <div className="history-list">
           {gameState.history.slice(0, 30).map((bid) => (
@@ -184,28 +226,21 @@ function GameDashboard({ logout, user }) {
           ))}
         </div>
       </div>
+
+      {/* FOOTER (RESTORED) */}
+      <div style={{marginTop: '30px', marginBottom: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', opacity: 0.7}}>
+          <div style={{fontSize:'22px', fontWeight:'900', color:'white', letterSpacing:'1px'}}>BID<span style={{color:'#fbbf24'}}>BLAZE</span></div>
+          <div style={{fontSize:'10px', color:'#64748b', fontWeight:'600', letterSpacing:'2px', marginTop:'5px'}}>PROVABLY FAIR • INSTANT PAYOUTS</div>
+      </div>
       
       {user?.email?.address === MY_EMAIL && <button onClick={runAdmin} style={{marginTop:'20px'}}>ADMIN</button>}
     </div>
   );
 }
 
-const ReactorRing = ({ targetDate, status }) => {
-  const [p, setP] = useState(100); const [d, setD] = useState("299");
-  useEffect(() => {
-    const i = setInterval(() => {
-      const dist = targetDate - Date.now();
-      if (status === 'ACTIVE') {
-        if (dist <= 0) { setD("0"); setP(0); } else { setP((dist/299000)*100); setD(Math.ceil(dist/1000).toString()); }
-      } else setP(0);
-    }, 50); return () => clearInterval(i);
-  }, [targetDate, status]);
-  return <div className="reactor-container"><div className="timer-float">{status === 'ACTIVE' ? d : ''}</div><svg className="progress-ring" width="280" height="280"><circle className="ring-bg" stroke="rgba(255,255,255,0.05)" strokeWidth="8" fill="transparent" r="130" cx="140" cy="140"/><circle className="ring-progress" stroke={status === 'ENDED'?'#ef4444':'#fbbf24'} strokeWidth="8" strokeDasharray={`${2*Math.PI*130}`} strokeDashoffset={2*Math.PI*130 - (p/100)*2*Math.PI*130} r="130" cx="140" cy="140"/></svg></div>;
-};
-
 function LandingPage({ login }) { return <div className="landing-container"><GlobalStyle/><h1>BidBlaze</h1><button className="start-btn" onClick={login}>Play Now</button></div>; }
 
-const GlobalStyle = () => ( <style>{` @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&display=swap'); :root { --bg-dark: #020617; --glass: rgba(255, 255, 255, 0.05); } body { margin: 0; background: var(--bg-dark); color: white; font-family: 'Outfit', sans-serif; } .app-container { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; } .landing-container { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; } .glass-nav { width: 100%; max-width: 400px; display: flex; justify-content: space-between; padding: 10px; background: rgba(15,23,42,0.8); border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; } .nav-btn { background: none; border: none; color: #94a3b8; font-weight: bold; } .vault-btn { color: #3b82f6; background: rgba(59,130,246,0.1); border-radius: 8px; padding: 5px 10px; } .main-btn { width: 100%; max-width: 300px; padding: 20px; border-radius: 40px; border: none; font-size: 20px; font-weight: 900; color: white; background: #fbbf24; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(251,191,36,0.4); } .main-btn.cooldown { background: #334155; box-shadow: none; color: #64748b; } .start-btn { padding: 15px 40px; font-size: 18px; font-weight: bold; border-radius: 30px; border: none; background: white; color: black; } .game-stage { position: relative; width: 300px; height: 300px; display: flex; justify-content: center; align-items: center; } .reactor-container { position: absolute; width: 100%; height: 100%; } .progress-ring { transform: rotate(-90deg); width: 100%; height: 100%; overflow: visible; } .ring-progress { transition: stroke-dashoffset 0.1s linear; filter: drop-shadow(0 0 10px #fbbf24); } .timer-float { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); font-size: 40px; font-weight: bold; } .jackpot-core { z-index: 10; text-align: center; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); } .jackpot-core .label { font-size: 12px; color: #64748b; letter-spacing: 2px; } .jackpot-core .amount { font-size: 50px; font-weight: 900; } .glass-panel { background: var(--glass); border: 1px solid rgba(255,255,255,0.1); border-radius: 15px; width: 100%; max-width: 350px; padding: 15px; box-sizing: border-box; } .history-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; } .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; display: flex; justify-content: center; align-items: center; } .glass-card { background: #0f172a; border: 1px solid #334155; border-radius: 20px; padding: 25px; width: 90%; max-width: 350px; position: relative; } .close-btn { position: absolute; top: 10px; right: 10px; background: none; border: none; color: white; font-size: 20px; } .input-field { width: 100%; background: #1e293b; border: 1px solid #334155; padding: 12px; border-radius: 10px; color: white; margin-bottom: 15px; box-sizing: border-box; } .action-btn { width: 100%; padding: 12px; background: #3b82f6; border: none; border-radius: 10px; color: white; font-weight: bold; } .float-anim { position: absolute; color: #ef4444; font-weight: 900; font-size: 20px; animation: floatUp 0.8s forwards; pointer-events: none; } @keyframes floatUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-50px); } } .fade-in { animation: popIn 0.3s ease-out; } @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } } .spinner { border: 4px solid rgba(255,255,255,0.1); border-left-color: #3b82f6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; } @keyframes spin { 100% { transform: rotate(360deg); } } `}</style> );
+const GlobalStyle = () => ( <style>{` @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&display=swap'); :root { --bg-dark: #020617; --glass: rgba(255, 255, 255, 0.05); --glass-border: rgba(255, 255, 255, 0.1); } body { margin: 0; background: var(--bg-dark); color: white; font-family: 'Outfit', sans-serif; overflow-y: auto; } .app-container { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; background: radial-gradient(circle at top, #1e293b 0%, #020617 100%); } .landing-container { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: linear-gradient(135deg, #1e293b, #0f172a); } .glass-nav { width: 100%; max-width: 450px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 12px 20px; background: rgba(15, 23, 42, 0.8); border-radius: 20px; border: 1px solid var(--glass-border); backdrop-filter: blur(10px); } .nav-btn { background: transparent; border: none; color: #94a3b8; font-weight: bold; cursor: pointer; padding: 8px 12px; } .vault-btn { color: #3b82f6; background: rgba(59, 130, 246, 0.1); border-radius: 12px; } .main-btn { width: 100%; max-width: 350px; padding: 22px; border-radius: 50px; border: none; font-size: 20px; font-weight: 900; color: white; background: linear-gradient(135deg, #fbbf24, #d97706); cursor: pointer; box-shadow: 0 10px 20px rgba(251, 191, 36, 0.3); transition: transform 0.1s; margin-bottom: 10px; } .main-btn:active { transform: translateY(6px); } .main-btn.cooldown { background: #334155; box-shadow: none; transform: translateY(6px); color: #64748b; cursor: not-allowed; } .start-btn { padding: 20px 60px; font-size: 20px; font-weight: bold; border-radius: 50px; border: none; background: white; color: black; } .game-stage { position: relative; width: 300px; height: 300px; display: flex; justify-content: center; align-items: center; margin: 20px 0; } .reactor-container { position: absolute; width: 100%; height: 100%; } .progress-ring { transform: rotate(-90deg); width: 100%; height: 100%; overflow: visible; } .ring-progress { transition: stroke-dashoffset 0.1s linear; filter: drop-shadow(0 0 8px #fbbf24); } .timer-float { position: absolute; top: -40px; left: 50%; transform: translateX(-50%); font-family: 'monospace'; font-size: 48px; font-weight: bold; color: white; text-shadow: 0 0 20px #fbbf24; } .jackpot-core { z-index: 10; text-align: center; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); } .jackpot-core .label { font-size: 12px; color: #64748b; letter-spacing: 2px; margin-bottom: 5px; } .jackpot-core .amount { font-size: 56px; font-weight: 900; color: white; text-shadow: 0 4px 20px rgba(0,0,0,0.5); } .glass-panel { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 20px; backdrop-filter: blur(10px); width: 100%; max-width: 400px; padding: 20px; box-sizing: border-box; } .history-list { max-height: 300px; overflow-y: auto; padding-right: 5px; } .history-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--glass-border); font-size: 13px; } .history-row .bid-amt { color: #fbbf24; font-weight: bold; } .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); z-index: 50; display: flex; justify-content: center; align-items: center; } .glass-card { background: #0f172a; border: 1px solid #334155; border-radius: 24px; padding: 30px; width: 90%; max-width: 380px; text-align: center; position: relative; } .close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: white; font-size: 20px; cursor: pointer; } .input-field { width: 100%; background: #1e293b; border: 1px solid #334155; padding: 14px; border-radius: 12px; color: white; margin-bottom: 15px; box-sizing: border-box; } .action-btn { width: 100%; padding: 14px; background: #3b82f6; border: none; border-radius: 12px; color: white; font-weight: bold; cursor: pointer; } .float-anim { position: absolute; color: #ef4444; font-weight: 900; font-size: 24px; animation: floatUp 0.8s forwards; z-index: 50; pointer-events: none; } @keyframes popIn { 0% { transform: scale(0); } 100% { transform: scale(1); } } @keyframes floatUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-80px); } } .fade-in { animation: popIn 0.3s ease-out; } .spinner { border: 4px solid rgba(255,255,255,0.1); border-left-color: #3b82f6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; } @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } } `}</style> );
 
 export default function App() {
   const { login, logout, user, authenticated, ready } = usePrivy();
