@@ -3,7 +3,7 @@ import io from 'socket.io-client';
 import WalletVault from './WalletVault';
 import Confetti from 'react-confetti';
 import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
-import { parseEther, createWalletClient, custom } from 'viem'; 
+import { parseEther } from 'viem'; 
 
 // --- CONFIGURATION ---
 const PRIVY_APP_ID = "cm4l3033r048epf1ln3q59956";
@@ -140,11 +140,20 @@ function GameDashboard({ logout, user }) {
     try {
         const provider = await activeWallet.getEthereumProvider();
         
-        // --- 1. HEX FORMATTING FIX FOR PHANTOM ---
+        // 1. Calculate Hex Value (Phantom Fix)
         const valInWei = parseEther(depositAmount.toString());
         const hexValue = "0x" + valInWei.toString(16);
 
-        // --- 2. SEND TRANSACTION ---
+        // 2. Network Switch (Optional - Silent Fail)
+        let targetChainId = '0x38'; // BSC Default
+        if (selectedNetwork === 'ETH') targetChainId = '0x1';
+        if (selectedNetwork === 'BASE') targetChainId = '0x2105';
+        
+        try {
+            await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: targetChainId }] });
+        } catch (e) { console.log("Chain switch skipped"); }
+
+        // 3. SEND TRANSACTION (Raw Method)
         const txHash = await provider.request({
             method: 'eth_sendTransaction',
             params: [
@@ -162,12 +171,12 @@ function GameDashboard({ logout, user }) {
             txHash: txHash, 
             network: selectedNetwork 
         });
-        alert("✅ Transaction Sent! Please wait for network verification.");
+        alert("✅ Transaction Sent! Verifying...");
 
     } catch (error) {
         setIsProcessing(false);
         console.error(error);
-        alert("Transaction Failed. Ensure you are on the correct Network in your Wallet.");
+        alert(`Failed: ${error.message || "Wallet Closed"}`);
     }
   };
 
@@ -192,7 +201,7 @@ function GameDashboard({ logout, user }) {
       setCredits(newBalance); 
       setDepositAmount('');
       setIsProcessing(false);
-      alert(`✅ SUCCESS! Deposit Verified.`);
+      alert(`✅ SUCCESS! Balance Updated.`);
     });
 
     socket.on('depositError', (msg) => {
