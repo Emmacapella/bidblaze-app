@@ -59,7 +59,7 @@ const parseEtherVal = (amount) => {
     } catch (e) { return "0x0"; }
 };
 
-// --- HOW TO PLAY GUIDE (UPDATED WITH REFUND RULE) ---
+// --- HOW TO PLAY GUIDE (FULL) ---
 const HowToPlay = ({ onClose }) => {
   return (
     <div className="modal-overlay">
@@ -338,7 +338,7 @@ function GameDashboard({ logout, user }) {
         </div>
       )}
 
-      {/* WITHDRAW POPUP */}
+      {/* WITHDRAW POPUP (FIXED HISTORY) */}
       {showWithdraw && (
         <div className="modal-overlay">
           <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
@@ -370,7 +370,8 @@ function GameDashboard({ logout, user }) {
                REQUEST WITHDRAWAL
             </button>
 
-            <div style={{borderTop:'1px solid #334155', paddingTop:'15px'}}>
+            {/* RESTORED HISTORY SECTION */}
+            <div style={{borderTop:'1px solid #334155', paddingTop:'15px', marginTop:'15px'}}>
                 <p style={{fontSize:'12px', color:'#94a3b8', fontWeight:'bold', marginBottom:'10px'}}>RECENT WITHDRAWALS</p>
                 {withdrawHistory.length === 0 ? (
                     <p style={{fontSize:'12px', color:'#64748b', textAlign:'center'}}>No recent withdrawals.</p>
@@ -549,9 +550,12 @@ const GlobalStyle = () => (
     .progress-ring { transform: rotate(-90deg); width: 100%; height: 100%; overflow: visible; }
     .ring-progress { transition: stroke-dashoffset 0.1s linear; filter: drop-shadow(0 0 8px var(--gold)); }
     .timer-float { position: absolute; top: -40px; left: 50%; transform: translateX(-50%); font-family: 'JetBrains Mono', monospace; font-size: 48px; font-weight: bold; color: white; text-shadow: 0 0 20px var(--gold); }
+    
+    /* ⚠️ Z-INDEX + POSITION FIX BELOW */
     .jackpot-core { z-index: 10; text-align: center; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
     .jackpot-core .label { font-size: 12px; color: #64748b; letter-spacing: 2px; margin-bottom: 5px; }
     .jackpot-core .amount { font-size: 56px; font-weight: 900; color: white; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+    
     .restart-box { animation: popIn 0.3s; }
     .restart-label { color: #ef4444; font-size: 14px; font-weight: bold; letter-spacing: 2px; margin-bottom: 5px; }
     .restart-timer { font-size: 60px; font-weight: 900; color: white; text-shadow: 0 0 20px rgba(239, 68, 68, 0.5); line-height: 1; }
@@ -585,6 +589,7 @@ export default function App() {
         loginMethods: ['email', 'wallet'],
         appearance: { theme: 'dark', accentColor: '#3b82f6' },
         embeddedWallets: { createOnLogin: 'users-without-wallets' },
+        // ⚠️ NEW: ADDED SUPPORT FOR ETH & BSC
         defaultChain: BASE_CHAIN,
         supportedChains: [BASE_CHAIN, BSC_CHAIN, ETH_CHAIN]
       }}
