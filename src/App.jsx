@@ -3,14 +3,15 @@ import io from 'socket.io-client';
 import WalletVault from './WalletVault';
 import Confetti from 'react-confetti';
 import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
-import { parseEther } from 'viem'; 
+import { parseEther } from 'viem';
 
 // --- CONFIGURATION ---
 const PRIVY_APP_ID = "cm4l3033r048epf1ln3q59956";
-const SERVER_URL = "https://bidblaze-server.onrender.com"; 
+const SERVER_URL = "https://bidblaze-server.onrender.com";
 
 export const socket = io(SERVER_URL, {
-  transports: ['websocket', 'polling']
+  transports: ['websocket', 'polling'],
+  autoConnect: true
 });
 
 const ASSETS = {
@@ -19,7 +20,7 @@ const ASSETS = {
   soundPop: 'https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3'
 };
 
-const ADMIN_WALLET = "0x6edadf13a704cd2518cd2ca9afb5ad9dee3ce34c"; 
+const ADMIN_WALLET = "0x6edadf13a704cd2518cd2ca9afb5ad9dee3ce34c";
 
 // --- CHAIN CONFIGURATIONS ---
 const BASE_CHAIN = {
@@ -66,7 +67,7 @@ const HowToPlay = ({ onClose }) => {
       <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
         <button className="close-btn" onClick={onClose}>✕</button>
         <h2 style={{color: '#fbbf24', textAlign:'center', marginBottom:'20px'}}>How to Win 🏆</h2>
-        
+
         <div style={{display:'flex', gap:'15px', marginBottom:'15px'}}>
           <div style={{background:'#3b82f6', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold'}}>1</div>
           <div><div style={{fontWeight:'bold', color:'white'}}>Deposit Crypto</div><div style={{fontSize:'12px', color:'#94a3b8'}}>Connect Wallet & Pay (BSC/ETH/Base).</div></div>
@@ -118,7 +119,7 @@ function GameDashboard({ logout, user }) {
   const [depositAmount, setDepositAmount] = useState('');
   const [selectedNetwork, setSelectedNetwork] = useState('BSC');
   const [statusMsg, setStatusMsg] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false); 
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
@@ -226,19 +227,24 @@ const handleDeposit = async () => {
       if (withdrawAddress.length < 10) return alert("Enter a valid receiving address");
       if (credits < amt) return alert("Insufficient Balance");
 
-      socket.emit('requestWithdrawal', { 
-          email: user.email.address, 
-          amount: amt, 
-          address: withdrawAddress, 
-          network: selectedNetwork 
+      socket.emit('requestWithdrawal', {
+          email: user.email.address,
+          amount: amt,
+          address: withdrawAddress,
+          network: selectedNetwork
       });
       setWithdrawAmount('');
       setWithdrawAddress('');
   };
 
   useEffect(() => {
+    // Force connection on mount
+    if (!socket.connected) {
+        socket.connect();
+    }
+
     socket.on('depositSuccess', (newBalance) => {
-      setCredits(newBalance); 
+      setCredits(newBalance);
       setDepositAmount('');
       setIsProcessing(false);
       alert(`✅ SUCCESS! Deposit Verified.`);
@@ -253,7 +259,7 @@ const handleDeposit = async () => {
         setCredits(newBalance);
         alert("✅ Withdrawal Request Sent!");
     });
-    
+
     socket.on('withdrawalError', (msg) => { alert(`❌ Withdrawal Failed: ${msg}`); });
     socket.on('withdrawalHistory', (data) => { setWithdrawHistory(data); });
 
@@ -279,10 +285,10 @@ const handleDeposit = async () => {
 
     socket.on('balanceUpdate', (bal) => setCredits(bal));
     socket.on('bidError', (msg) => alert(msg));
-    
-    return () => { 
+
+    return () => {
       if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-      socket.off('gameState'); socket.off('balanceUpdate'); socket.off('bidError'); 
+      socket.off('gameState'); socket.off('balanceUpdate'); socket.off('bidError');
       socket.off('depositSuccess'); socket.off('depositError');
       socket.off('withdrawalSuccess'); socket.off('withdrawalError'); socket.off('withdrawalHistory');
     };
@@ -303,9 +309,9 @@ const handleDeposit = async () => {
 
   const placeBid = () => {
     if (isCooldown) return;
-    if (credits < 1.00) { setShowDeposit(true); return; } 
+    if (credits < 1.00) { setShowDeposit(true); return; }
     setFloatingBids(prev => [...prev, Date.now()]);
-    playSound('soundPop'); 
+    playSound('soundPop');
     socket.emit('placeBid', user.email ? user.email.address : "User");
     setIsCooldown(true);
     setCd(8);
@@ -332,7 +338,7 @@ const handleDeposit = async () => {
     <div className="app-container">
       <GlobalStyle />
       {gameState?.status === 'ENDED' && <Confetti width={window.innerWidth} height={window.innerHeight} recycle={false} numberOfPieces={500} colors={['#fbbf24', '#ffffff', '#22c55e']} />}
-      
+
       {showVault && <WalletVault onClose={() => setShowVault(false)} userAddress={userAddress} userEmail={user.email?.address} currentCredits={credits} />}
       {showHelp && <HowToPlay onClose={() => setShowHelp(false)} />}
 
@@ -349,7 +355,7 @@ const handleDeposit = async () => {
           <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
             <button className="close-btn" onClick={() => setShowDeposit(false)}>✕</button>
             <h2 style={{color: '#22c55e', textAlign:'center', marginTop:0}}>INSTANT DEPOSIT</h2>
-            
+
             <p style={{color:'#94a3b8', fontSize:'14px'}}>Select Network:</p>
             <select value={selectedNetwork} onChange={(e) => setSelectedNetwork(e.target.value)} className="input-field" style={{marginTop:'5px'}}>
               <option value="BSC">BNB Smart Chain (BEP20)</option>
@@ -358,16 +364,16 @@ const handleDeposit = async () => {
             </select>
 
             <p style={{color:'#94a3b8', fontSize:'14px'}}>Amount to Deposit (BNB/ETH):</p>
-            <input 
+            <input
               type="number" placeholder="0.01" value={depositAmount}
               onChange={(e) => setDepositAmount(e.target.value)}
               className="input-field" style={{marginTop:'5px'}}
             />
-            
+
             <button className="action-btn" onClick={handleDeposit} style={{background:'#22c55e', color:'white', marginBottom:'10px'}}>
               🚀 PAY NOW (Wallet)
             </button>
-            
+
             <p style={{fontSize:'12px', color:'#fbbf24', marginTop:'10px', textAlign:'center'}}>{statusMsg}</p>
             <p style={{fontSize:'10px', color:'#64748b', textAlign:'center'}}>If wallet doesn't open, check pop-up blocker.</p>
           </div>
@@ -380,7 +386,7 @@ const handleDeposit = async () => {
           <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
             <button className="close-btn" onClick={() => setShowWithdraw(false)}>✕</button>
             <h2 style={{color: '#ef4444', textAlign:'center', marginTop:0}}>WITHDRAW</h2>
-            
+
             <p style={{color:'#94a3b8', fontSize:'14px'}}>Select Network:</p>
             <select value={selectedNetwork} onChange={(e) => setSelectedNetwork(e.target.value)} className="input-field" style={{marginTop:'5px'}}>
                <option value="BSC">BNB Smart Chain (BEP20)</option>
@@ -389,14 +395,14 @@ const handleDeposit = async () => {
             </select>
 
             <p style={{color:'#94a3b8', fontSize:'14px'}}>Amount ($):</p>
-            <input 
+            <input
               type="number" placeholder="Min $10.00" value={withdrawAmount}
               onChange={(e) => setWithdrawAmount(e.target.value)}
               className="input-field" style={{marginTop:'5px'}}
             />
 
             <p style={{color:'#94a3b8', fontSize:'14px'}}>Receiving Address:</p>
-            <input 
+            <input
               type="text" placeholder="0x..." value={withdrawAddress}
               onChange={(e) => setWithdrawAddress(e.target.value)}
               className="input-field" style={{marginTop:'5px'}}
@@ -465,7 +471,7 @@ const handleDeposit = async () => {
         {gameState.status === 'ENDED' ? 'GAME CLOSED' : (isCooldown ? `WAIT (${cd}s)` : `BID NOW ($${gameState.bidCost})`)}
       </button>
 
-      {/* ACTION BUTTONS */}
+     {/* ACTION BUTTONS */}
       <div className="action-buttons" style={{display: 'flex', gap: '15px', justifyContent: 'center', margin: '25px 0', width:'100%', maxWidth:'350px'}}>
         <button className="deposit-btn" onClick={() => setShowDeposit(true)} style={{background:'#22c55e', color:'white', border:'none', padding:'12px 25px', borderRadius:'12px', fontWeight:'bold', display:'flex', alignItems:'center', gap:'5px', flex:1, justifyContent:'center', fontSize:'14px'}}>
           💰 DEPOSIT
@@ -586,12 +592,12 @@ const GlobalStyle = () => (
     .progress-ring { transform: rotate(-90deg); width: 100%; height: 100%; overflow: visible; }
     .ring-progress { transition: stroke-dashoffset 0.1s linear; filter: drop-shadow(0 0 8px var(--gold)); }
     .timer-float { position: absolute; top: -40px; left: 50%; transform: translateX(-50%); font-family: 'JetBrains Mono', monospace; font-size: 48px; font-weight: bold; color: white; text-shadow: 0 0 20px var(--gold); }
-    
+
     /* ⚠️ Z-INDEX + POSITION FIX BELOW */
     .jackpot-core { z-index: 10; text-align: center; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
     .jackpot-core .label { font-size: 12px; color: #64748b; letter-spacing: 2px; margin-bottom: 5px; }
     .jackpot-core .amount { font-size: 56px; font-weight: 900; color: white; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-    
+
     .restart-box { animation: popIn 0.3s; }
     .restart-label { color: #ef4444; font-size: 14px; font-weight: bold; letter-spacing: 2px; margin-bottom: 5px; }
     .restart-timer { font-size: 60px; font-weight: 900; color: white; text-shadow: 0 0 20px rgba(239, 68, 68, 0.5); line-height: 1; }
@@ -634,4 +640,3 @@ export default function App() {
     </PrivyProvider>
   );
 }
-// END OF FILE
