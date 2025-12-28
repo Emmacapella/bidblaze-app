@@ -135,54 +135,90 @@ function GameDashboard({ logout, user }) {
   };
 
   // --- DEPOSIT LOGIC (Safe Method) ---
-  const handleDeposit = async () => {
-    const amt = parseFloat(depositAmount);
-    if (isNaN(amt) || amt <= 0) return alert("Enter a valid amount");
-    
-    const activeWallet = wallets[0];
-    if (!activeWallet) return alert("Please connect your wallet first.");
-
-    setShowDeposit(false);
-    setIsProcessing(true);
-    
-    try {
-        const provider = await activeWallet.getEthereumProvider();
-        
-        // Manual Hex Conversion
-        const hexValue = parseEtherVal(depositAmount);
-
-        let targetChainId = '0x38'; 
-        if (selectedNetwork === 'ETH') targetChainId = '0x1';
-        if (selectedNetwork === 'BASE') targetChainId = '0x2105';
-        
-        try { await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: targetChainId }] }); } catch (e) { console.log("Chain switch skipped"); }
-
-        // SEND TRANSACTION
-        const txHash = await provider.request({
-            method: 'eth_sendTransaction',
-            params: [
-                {
-                    from: activeWallet.address,
-                    to: ADMIN_WALLET,
-                    value: hexValue
-                },
-            ],
-        });
-
-        setIsProcessing(false);
-        socket.emit('verifyDeposit', { 
-            email: user.email.address, 
-            txHash: txHash, 
-            network: selectedNetwork 
-        });
-        alert("✅ Transaction Sent! Please wait for network verification.");
-
-    } catch (error) {
-        setIsProcessing(false);
-        console.error(error);
-        alert("Transaction Failed. Ensure you are on the correct Network in your Wallet.");
+const handleDeposit = async () => {
+  try {
+    const amt = Number(depositAmount);
+    if (!amt || amt <= 0) {
+      alert("Enter a valid amount");
+      return;
     }
-  };
+
+    // ✅ Pick a wallet that can actually sign transactions
+    const activeWallet = wallets.find(w =>
+      w.walletClientType === 'metamask' ||
+      w.walletClientType === 'wallet_connect' ||
+      w.walletClientType === 'coinbase_wallet' ||
+      w.walletClientType === 'privy'
+    );
+
+    if (!activeWallet) {
+      alert("Please connect a wallet that supports transactions.");
+      return;
+    }
+
+    setIsProcessing(true);
+    setShowDeposit(false);
+
+    const provider = await activeWallet.getEthereumProvider();
+
+    // ✅ Request account access (forces wallet UI)
+    const [from] = await provider.request({
+      method: 'eth_requestAccounts'
+    });
+
+    // ✅ Chain configuration
+    const chainMap = {
+      BSC: { chainId: '0x38' },
+      ETH: { chainId: '0x1' },
+      BASE: { chainId: '0x2105' }
+    };
+
+    const targetChain = chainMap[selectedNetwork];
+
+    if (!targetChain) {
+      throw new Error("Unsupported network selected");
+    }
+
+    // ✅ Enforce correct chain
+    await provider.request({
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: targetChain.chainId }]
+    });
+
+    // ✅ SAFE ether parsing
+    const value = `0x${parseEther(depositAmount).toString(16)}`;
+
+    // ✅ Send REAL transaction
+    const txHash = await provider.request({
+      method: 'eth_sendTransaction',
+      params: [{
+        from,
+        to: ADMIN_WALLET,
+        value,
+        // gas is optional but helps BSC/Base wallets
+        gas: '0x5208' // 21000
+      }]
+    });
+
+    socket.emit('verifyDeposit', {
+      email: user.email.address,
+      txHash,
+      network: selectedNetwork
+    });
+
+    alert("✅ Transaction sent. Waiting for confirmation...");
+  } catch (err) {
+    console.error(err);
+
+    if (err.code === 4001) {
+      alert("Transaction rejected by user.");
+    } else {
+      alert(err.message || "Deposit failed. Check wallet and network.");
+    }
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   const handleWithdraw = () => {
       const amt = parseFloat(withdrawAmount);
