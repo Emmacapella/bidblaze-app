@@ -135,91 +135,126 @@ function GameDashboard({ logout, user }) {
     audio.play().catch(() => {});
   };
 
-  // --- DEPOSIT LOGIC (Safe Method) ---
-const handleDeposit = async () => {
-  try {
-    const amt = Number(depositAmount);
-    if (!amt || amt <= 0) {
-      alert("Enter a valid amount");
-      return;
+  // --- DEPOSIT LOGIC (Corrected for Mobile/Wallet Compatibility) ---
+  const handleDeposit = async () => {
+    try {
+      const amt = Number(depositAmount);
+      if (!amt || amt <= 0) {
+        alert("Enter a valid amount");
+        return;
+      }
+  
+      const activeWallet = wallets.find(w =>
+        w.walletClientType === 'metamask' ||
+        w.walletClientType === 'wallet_connect' ||
+        w.walletClientType === 'coinbase_wallet' ||
+        w.walletClientType === 'privy'
+      );
+  
+      if (!activeWallet) {
+        alert("Please connect a wallet that supports transactions.");
+        return;
+      }
+  
+      setIsProcessing(true);
+      setShowDeposit(false);
+  
+      const provider = await activeWallet.getEthereumProvider();
+      
+      // 1. Ensure we have the account
+      const [from] = await provider.request({ method: 'eth_requestAccounts' });
+  
+      // 2. Comprehensive Chain Configuration
+      const chains = {
+        BSC: { 
+          chainId: '0x38', // 56
+          chainName: 'BNB Smart Chain',
+          nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+          rpcUrls: ['https://bsc-dataseed.binance.org'],
+          blockExplorerUrls: ['https://bscscan.com']
+        },
+        ETH: { 
+          chainId: '0x1', // 1
+          chainName: 'Ethereum Mainnet',
+          // ETH usually doesn't need to be added, but handled for switch logic
+        },
+        BASE: { 
+          chainId: '0x2105', // 8453
+          chainName: 'Base',
+          nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+          rpcUrls: ['https://mainnet.base.org'],
+          blockExplorerUrls: ['https://basescan.org']
+        }
+      };
+  
+      const targetChain = chains[selectedNetwork];
+  
+      // 3. Switch or Add Network
+      try {
+        await provider.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: targetChain.chainId }],
+        });
+      } catch (switchError) {
+        // This error code indicates that the chain has not been added to MetaMask
+        if (switchError.code === 4902 && selectedNetwork !== 'ETH') {
+          try {
+            await provider.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: targetChain.chainId,
+                chainName: targetChain.chainName,
+                nativeCurrency: targetChain.nativeCurrency,
+                rpcUrls: targetChain.rpcUrls,
+                blockExplorerUrls: targetChain.blockExplorerUrls
+              }],
+            });
+          } catch (addError) {
+            throw new Error("Could not add network to wallet.");
+          }
+        } else {
+          // If it's another error, or ETH (which can't be added), rethrow
+          console.error("Switch error:", switchError);
+        }
+      }
+  
+      // 4. Send Transaction
+      // IMPORTANT: Removed 'gas' parameter to let wallet estimate it. 
+      // Hardcoded gas causes mobile wallets to hang if estimation differs slightly.
+      const weiValue = parseEther(depositAmount);
+      const hexValue = `0x${weiValue.toString(16)}`;
+  
+      const txHash = await provider.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from,
+          to: ADMIN_WALLET,
+          value: hexValue,
+          data: '0x' // Empty data for simple transfer
+        }]
+      });
+  
+      if (txHash) {
+        socket.emit('verifyDeposit', {
+          email: user.email.address,
+          txHash,
+          network: selectedNetwork
+        });
+        alert("✅ Transaction Sent! Check your wallet to confirm.");
+      }
+  
+    } catch (err) {
+      console.error(err);
+      // Handle user rejection specifically
+      if (err.code === 4001 || err.message?.includes("rejected")) {
+        alert("Transaction cancelled by user.");
+      } else {
+        alert("Deposit failed. Ensure you have enough funds for gas.");
+      }
+    } finally {
+      setIsProcessing(false);
     }
-
-    // ✅ Pick a wallet that can actually sign transactions
-    const activeWallet = wallets.find(w =>
-      w.walletClientType === 'metamask' ||
-      w.walletClientType === 'wallet_connect' ||
-      w.walletClientType === 'coinbase_wallet' ||
-      w.walletClientType === 'privy'
-    );
-
-    if (!activeWallet) {
-      alert("Please connect a wallet that supports transactions.");
-      return;
-    }
-
-    setIsProcessing(true);
-    setShowDeposit(false);
-
-    const provider = await activeWallet.getEthereumProvider();
-
-    // ✅ Request account access (forces wallet UI)
-    const [from] = await provider.request({
-      method: 'eth_requestAccounts'
-    });
-
-    // ✅ Chain configuration
-    const chainMap = {
-      BSC: { chainId: '0x38' },
-      ETH: { chainId: '0x1' },
-      BASE: { chainId: '0x2105' }
-    };
-
-    const targetChain = chainMap[selectedNetwork];
-
-    if (!targetChain) {
-      throw new Error("Unsupported network selected");
-    }
-
-    // ✅ Enforce correct chain
-    await provider.request({
-      method: 'wallet_switchEthereumChain',
-      params: [{ chainId: targetChain.chainId }]
-    });
-
-    // ✅ SAFE ether parsing
-    const value = `0x${parseEther(depositAmount).toString(16)}`;
-
-    // ✅ Send REAL transaction
-    const txHash = await provider.request({
-      method: 'eth_sendTransaction',
-      params: [{
-        from,
-        to: ADMIN_WALLET,
-        value,
-        // gas is optional but helps BSC/Base wallets
-        gas: '0x5208' // 21000
-      }]
-    });
-
-    socket.emit('verifyDeposit', {
-      email: user.email.address,
-      txHash,
-      network: selectedNetwork
-    });
-
-    alert("✅ Transaction sent. Waiting for confirmation...");
-  } catch (err) {
-    console.error(err);
-
-    if (err.code === 4001) {
-      alert("Transaction rejected by user.");
-    } else {
-      alert(err.message || "Deposit failed. Check wallet and network.");
-    }
-  } finally {
-    setIsProcessing(false);
-  }
-};
+  };
 
   const handleWithdraw = () => {
       const amt = parseFloat(withdrawAmount);
@@ -471,7 +506,7 @@ const handleDeposit = async () => {
         {gameState.status === 'ENDED' ? 'GAME CLOSED' : (isCooldown ? `WAIT (${cd}s)` : `BID NOW ($${gameState.bidCost})`)}
       </button>
 
-     {/* ACTION BUTTONS */}
+      {/* ACTION BUTTONS */}
       <div className="action-buttons" style={{display: 'flex', gap: '15px', justifyContent: 'center', margin: '25px 0', width:'100%', maxWidth:'350px'}}>
         <button className="deposit-btn" onClick={() => setShowDeposit(true)} style={{background:'#22c55e', color:'white', border:'none', padding:'12px 25px', borderRadius:'12px', fontWeight:'bold', display:'flex', alignItems:'center', gap:'5px', flex:1, justifyContent:'center', fontSize:'14px'}}>
           💰 DEPOSIT
@@ -639,4 +674,4 @@ export default function App() {
       {authenticated ? <GameDashboard logout={logout} user={user} /> : <LandingPage login={login} />}
     </PrivyProvider>
   );
-}
+}      
