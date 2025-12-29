@@ -83,10 +83,10 @@ const HowToPlay = ({ onClose }) => {
           <div><div style={{fontWeight:'bold', color:'white'}}>Be the Last One</div><div style={{fontSize:'12px', color:'#94a3b8'}}>Last bidder wins the <span style={{color:'#fbbf24'}}>JACKPOT!</span></div></div>
         </div>
 
-        {/* RULE #4: REFUND POLICY */}
+        {/* RULE #4: REFUND POLICY (UPDATED) */}
         <div style={{display:'flex', gap:'15px', marginBottom:'15px'}}>
           <div style={{background:'#a855f7', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold'}}>4</div>
-          <div><div style={{fontWeight:'bold', color:'white'}}>No Opponent?</div><div style={{fontSize:'12px', color:'#94a3b8'}}>If no one joins, you get a <span style={{color:'#fbbf24'}}>FULL REFUND</span> instantly.</div></div>
+          <div><div style={{fontWeight:'bold', color:'white'}}>Only Bidder?</div><div style={{fontSize:'12px', color:'#94a3b8'}}>If no one challenges you, the game voids and you get a <span style={{color:'#fbbf24'}}>FULL REFUND</span>.</div></div>
         </div>
 
         <button className="action-btn" onClick={onClose}>Got it! Let's Play</button>
@@ -161,25 +161,22 @@ function GameDashboard({ logout, user }) {
   
       const provider = await activeWallet.getEthereumProvider();
       
-      // 1. Ensure we have the account
       const [from] = await provider.request({ method: 'eth_requestAccounts' });
   
-      // 2. Comprehensive Chain Configuration
       const chains = {
         BSC: { 
-          chainId: '0x38', // 56
+          chainId: '0x38', 
           chainName: 'BNB Smart Chain',
           nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
           rpcUrls: ['https://bsc-dataseed.binance.org'],
           blockExplorerUrls: ['https://bscscan.com']
         },
         ETH: { 
-          chainId: '0x1', // 1
+          chainId: '0x1', 
           chainName: 'Ethereum Mainnet',
-          // ETH usually doesn't need to be added, but handled for switch logic
         },
         BASE: { 
-          chainId: '0x2105', // 8453
+          chainId: '0x2105', 
           chainName: 'Base',
           nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
           rpcUrls: ['https://mainnet.base.org'],
@@ -189,14 +186,12 @@ function GameDashboard({ logout, user }) {
   
       const targetChain = chains[selectedNetwork];
   
-      // 3. Switch or Add Network
       try {
         await provider.request({
           method: 'wallet_switchEthereumChain',
           params: [{ chainId: targetChain.chainId }],
         });
       } catch (switchError) {
-        // This error code indicates that the chain has not been added to MetaMask
         if (switchError.code === 4902 && selectedNetwork !== 'ETH') {
           try {
             await provider.request({
@@ -213,14 +208,10 @@ function GameDashboard({ logout, user }) {
             throw new Error("Could not add network to wallet.");
           }
         } else {
-          // If it's another error, or ETH (which can't be added), rethrow
           console.error("Switch error:", switchError);
         }
       }
   
-      // 4. Send Transaction
-      // IMPORTANT: Removed 'gas' parameter to let wallet estimate it. 
-      // Hardcoded gas causes mobile wallets to hang if estimation differs slightly.
       const weiValue = parseEther(depositAmount);
       const hexValue = `0x${weiValue.toString(16)}`;
   
@@ -230,7 +221,7 @@ function GameDashboard({ logout, user }) {
           from,
           to: ADMIN_WALLET,
           value: hexValue,
-          data: '0x' // Empty data for simple transfer
+          data: '0x' 
         }]
       });
   
@@ -245,7 +236,6 @@ function GameDashboard({ logout, user }) {
   
     } catch (err) {
       console.error(err);
-      // Handle user rejection specifically
       if (err.code === 4001 || err.message?.includes("rejected")) {
         alert("Transaction cancelled by user.");
       } else {
@@ -273,7 +263,6 @@ function GameDashboard({ logout, user }) {
   };
 
   useEffect(() => {
-    // Force connection on mount
     if (!socket.connected) {
         socket.connect();
     }
@@ -377,14 +366,12 @@ function GameDashboard({ logout, user }) {
       {showVault && <WalletVault onClose={() => setShowVault(false)} userAddress={userAddress} userEmail={user.email?.address} currentCredits={credits} />}
       {showHelp && <HowToPlay onClose={() => setShowHelp(false)} />}
 
-      {/* Global Loading Spinner */}
       {isProcessing && (
           <div className="modal-overlay">
               <div className="spinner" style={{width:'60px', height:'60px'}}></div>
           </div>
       )}
 
-      {/* DEPOSIT POPUP */}
       {showDeposit && (
         <div className="modal-overlay">
           <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
@@ -415,7 +402,6 @@ function GameDashboard({ logout, user }) {
         </div>
       )}
 
-      {/* WITHDRAW POPUP (FIXED HISTORY) */}
       {showWithdraw && (
         <div className="modal-overlay">
           <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
@@ -447,7 +433,6 @@ function GameDashboard({ logout, user }) {
                REQUEST WITHDRAWAL
             </button>
 
-            {/* RESTORED HISTORY SECTION */}
             <div style={{borderTop:'1px solid #334155', paddingTop:'15px', marginTop:'15px'}}>
                 <p style={{fontSize:'12px', color:'#94a3b8', fontWeight:'bold', marginBottom:'10px'}}>RECENT WITHDRAWALS</p>
                 {withdrawHistory.length === 0 ? (
@@ -493,7 +478,18 @@ function GameDashboard({ logout, user }) {
             <div className="restart-box">
                <div className="restart-label">NEW GAME IN</div>
                <div className="restart-timer">{restartCount}</div>
-               <div className="winner-badge">🏆 WINNER: {gameState.history[0]?.user.slice(0,10)}...</div>
+               
+               {/* --- REFUND LOGIC VISUALIZER --- */}
+               {/* Checks if only 1 unique user exists in the history */}
+               {new Set(gameState.history.map(b => b.user)).size === 1 ? (
+                  <div className="winner-badge" style={{background:'#3b82f6'}}>
+                    ♻️ REFUNDED: {gameState.history[0]?.user.slice(0,10)}...
+                  </div>
+               ) : (
+                  <div className="winner-badge">
+                    🏆 WINNER: {gameState.history[0]?.user.slice(0,10)}...
+                  </div>
+               )}
             </div>
           )}
         </div>
@@ -516,7 +512,6 @@ function GameDashboard({ logout, user }) {
         </button>
       </div>
 
-      {/* WINNERS PANEL */}
       <div className="glass-panel" style={{marginTop:'20px', borderColor: '#fbbf24', background: 'rgba(251, 191, 36, 0.05)'}}>
         <div className="panel-header" style={{color: '#fbbf24'}}>🏆 RECENT BIG WINS</div>
         <div className="history-list" style={{maxHeight: '120px'}}>
@@ -533,7 +528,6 @@ function GameDashboard({ logout, user }) {
         </div>
       </div>
 
-      {/* LIVE BIDS HISTORY */}
       <div className="glass-panel history-panel" style={{marginTop:'15px'}}>
         <div className="panel-header">LAST 30 BIDS</div>
         <div className="history-list">
@@ -546,7 +540,6 @@ function GameDashboard({ logout, user }) {
         </div>
       </div>
 
-      {/* FOOTER */}
       <div style={{marginTop: '40px', marginBottom: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', opacity: 0.8}}>
           <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
              <span style={{fontSize:'24px', fontWeight:'900', color:'white', letterSpacing:'1px'}}>BID<span style={{color:'#fbbf24'}}>BLAZE</span></span>
@@ -666,7 +659,6 @@ export default function App() {
         loginMethods: ['email', 'wallet'],
         appearance: { theme: 'dark', accentColor: '#3b82f6' },
         embeddedWallets: { createOnLogin: 'users-without-wallets' },
-        // ⚠️ NEW: ADDED SUPPORT FOR ETH & BSC
         defaultChain: BASE_CHAIN,
         supportedChains: [BASE_CHAIN, BSC_CHAIN, ETH_CHAIN]
       }}
@@ -674,4 +666,4 @@ export default function App() {
       {authenticated ? <GameDashboard logout={logout} user={user} /> : <LandingPage login={login} />}
     </PrivyProvider>
   );
-}      
+}
