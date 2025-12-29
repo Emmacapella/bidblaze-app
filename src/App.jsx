@@ -83,7 +83,6 @@ const HowToPlay = ({ onClose }) => {
           <div><div style={{fontWeight:'bold', color:'white'}}>Be the Last One</div><div style={{fontSize:'12px', color:'#94a3b8'}}>Last bidder wins the <span style={{color:'#fbbf24'}}>JACKPOT!</span></div></div>
         </div>
 
-        {/* RULE #4: REFUND POLICY (UPDATED) */}
         <div style={{display:'flex', gap:'15px', marginBottom:'15px'}}>
           <div style={{background:'#a855f7', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold'}}>4</div>
           <div><div style={{fontWeight:'bold', color:'white'}}>Only Bidder?</div><div style={{fontSize:'12px', color:'#94a3b8'}}>If no one challenges you, the game voids and you get a <span style={{color:'#fbbf24'}}>FULL REFUND</span>.</div></div>
@@ -135,7 +134,7 @@ function GameDashboard({ logout, user }) {
     audio.play().catch(() => {});
   };
 
-  // --- DEPOSIT LOGIC (Corrected for Mobile/Wallet Compatibility) ---
+  // --- DEPOSIT LOGIC (Corrected for dApp Browsers) ---
   const handleDeposit = async () => {
     try {
       const amt = Number(depositAmount);
@@ -143,26 +142,29 @@ function GameDashboard({ logout, user }) {
         alert("Enter a valid amount");
         return;
       }
-  
-      const activeWallet = wallets.find(w =>
-        w.walletClientType === 'metamask' ||
-        w.walletClientType === 'wallet_connect' ||
-        w.walletClientType === 'coinbase_wallet' ||
-        w.walletClientType === 'privy'
-      );
-  
+
+      // ⚠️ CRITICAL FIX: Prioritize the External Wallet (MetaMask/Trust) over Privy Embedded
+      // This forces the app to look for the "Injected" provider (window.ethereum) first.
+      let activeWallet = wallets.find(w => w.walletClientType !== 'privy'); 
       if (!activeWallet) {
-        alert("Please connect a wallet that supports transactions.");
+          // If no external wallet found, fall back to whatever is available (e.g. Embedded)
+          activeWallet = wallets[0];
+      }
+
+      if (!activeWallet) {
+        alert("Please connect a wallet first.");
         return;
       }
-  
+
       setIsProcessing(true);
       setShowDeposit(false);
   
       const provider = await activeWallet.getEthereumProvider();
       
+      // 1. Request Accounts (This triggers the popup)
       const [from] = await provider.request({ method: 'eth_requestAccounts' });
   
+      // 2. Chain Config
       const chains = {
         BSC: { 
           chainId: '0x38', 
@@ -186,6 +188,7 @@ function GameDashboard({ logout, user }) {
   
       const targetChain = chains[selectedNetwork];
   
+      // 3. Force Switch (Crucial for mobile wallets)
       try {
         await provider.request({
           method: 'wallet_switchEthereumChain',
@@ -205,13 +208,12 @@ function GameDashboard({ logout, user }) {
               }],
             });
           } catch (addError) {
-            throw new Error("Could not add network to wallet.");
+            // Ignore error, wallet might just prompt to switch anyway
           }
-        } else {
-          console.error("Switch error:", switchError);
         }
       }
   
+      // 4. Send Transaction (NO HARDCODED GAS)
       const weiValue = parseEther(depositAmount);
       const hexValue = `0x${weiValue.toString(16)}`;
   
@@ -221,7 +223,7 @@ function GameDashboard({ logout, user }) {
           from,
           to: ADMIN_WALLET,
           value: hexValue,
-          data: '0x' 
+          data: '0x' // Essential for some wallets to treat it as a transfer
         }]
       });
   
@@ -231,19 +233,19 @@ function GameDashboard({ logout, user }) {
           txHash,
           network: selectedNetwork
         });
-        alert("✅ Transaction Sent! Check your wallet to confirm.");
+        alert("✅ Transaction Sent! Waiting for network confirmation...");
       }
   
     } catch (err) {
       console.error(err);
-      if (err.code === 4001 || err.message?.includes("rejected")) {
-        alert("Transaction cancelled by user.");
-      } else {
-        alert("Deposit failed. Ensure you have enough funds for gas.");
-      }
-    } finally {
       setIsProcessing(false);
+      // Don't show alert if user just closed the popup
+      if (err.code !== 4001) {
+        alert("Deposit failed. Check your wallet balance and connection.");
+      }
     }
+    // Note: We keep isProcessing true if successful until backend confirms, 
+    // or the socket error handler turns it off.
   };
 
   const handleWithdraw = () => {
@@ -480,7 +482,6 @@ function GameDashboard({ logout, user }) {
                <div className="restart-timer">{restartCount}</div>
                
                {/* --- REFUND LOGIC VISUALIZER --- */}
-               {/* Checks if only 1 unique user exists in the history */}
                {new Set(gameState.history.map(b => b.user)).size === 1 ? (
                   <div className="winner-badge" style={{background:'#3b82f6'}}>
                     ♻️ REFUNDED: {gameState.history[0]?.user.slice(0,10)}...
