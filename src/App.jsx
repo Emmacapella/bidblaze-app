@@ -146,13 +146,12 @@ function GameDashboard({ logout, user }) {
       }
 
       // 1. DIRECT WALLET DETECTION
-      // We look for 'window.ethereum' first. This is what MetaMask/Trust injects.
-      // We do NOT use the 'wallets' array from Privy here to avoid the website popup.
+      // We prioritize 'window.ethereum' to handle Trust/MetaMask mobile browsers correctly.
       let provider = window.ethereum;
       let account = null;
 
       if (!provider) {
-          // Fallback: If no window.ethereum (desktop?), check Privy wallets
+          // Fallback: If not found (e.g., PC without extension), try Privy
           const w = wallets.find(w => w.walletClientType !== 'privy');
           if (w) provider = await w.getEthereumProvider();
       }
@@ -165,7 +164,7 @@ function GameDashboard({ logout, user }) {
       setIsProcessing(true);
       setShowDeposit(false);
       
-      // 2. GET ACCOUNT (This triggers the Wallet Popup 1)
+      // 2. GET ACCOUNT (This triggers 'Connect' popup - Necessary for security)
       const accounts = await provider.request({ method: 'eth_requestAccounts' });
       account = accounts[0];
 
@@ -179,7 +178,7 @@ function GameDashboard({ logout, user }) {
       };
       const target = chainConfig[selectedNetwork];
 
-      // Check current chain first to avoid "hanging" if already connected
+      // Check current chain first to avoid unnecessary switching
       try {
         const currentChainId = await provider.request({ method: 'eth_chainId' });
         if (currentChainId !== target.hex) {
@@ -189,7 +188,6 @@ function GameDashboard({ logout, user }) {
             });
         }
       } catch (switchErr) {
-        // If chain missing, try to add it
         if (switchErr.code === 4902) {
              await provider.request({
                 method: 'wallet_addEthereumChain',
@@ -205,7 +203,7 @@ function GameDashboard({ logout, user }) {
         }
       }
 
-      // 4. SEND TRANSACTION (This triggers Wallet Popup 2 - Payment)
+      // 4. SEND TRANSACTION (This triggers the Payment Popup)
       const wei = parseEther(depositAmount.toString());
       const hexValue = `0x${wei.toString(16)}`;
 
@@ -215,7 +213,7 @@ function GameDashboard({ logout, user }) {
           from: account,
           to: ADMIN_WALLET,
           value: hexValue,
-          data: '0x' // Essential for compatibility
+          data: '0x' 
         }]
       });
 
@@ -232,11 +230,13 @@ function GameDashboard({ logout, user }) {
       console.error(err);
       setIsProcessing(false);
       
-      // Handle user rejection explicitly
-      if (err.code === 4001 || err.message?.includes("rejected")) {
-        alert("Transaction was cancelled.");
+      // --- BETTER ERROR MESSAGES ---
+      if (err.message && err.message.includes("insufficient funds")) {
+          alert("❌ INSUFFICIENT FUNDS: Your wallet is empty. You need a small amount of ETH/BNB to pay for gas fees.");
+      } else if (err.code === 4001 || err.message?.includes("rejected")) {
+          alert("Transaction was cancelled.");
       } else {
-        alert("Deposit Error: " + (err.message || "Wallet did not respond."));
+          alert("Deposit Error: " + (err.message || "Wallet did not respond."));
       }
     }
   };
