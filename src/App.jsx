@@ -25,7 +25,7 @@ const ASSETS = {
 
 const ADMIN_WALLET = "0x6edadf13a704cd2518cd2ca9afb5ad9dee3ce34c";
 
-// --- CHAIN CONFIGURATIONS (High Performance RPCs) ---
+// --- CHAIN CONFIGURATIONS ---
 const BASE_CHAIN = {
   id: 8453,
   name: 'Base',
@@ -63,7 +63,7 @@ const parseEtherVal = (amount) => {
     } catch (e) { return "0x0"; }
 };
 
-// --- HOW TO PLAY GUIDE (FULL) ---
+// --- HOW TO PLAY GUIDE ---
 const HowToPlay = ({ onClose }) => {
   return (
     <div className="modal-overlay">
@@ -136,7 +136,7 @@ function GameDashboard({ logout, user }) {
     audio.play().catch(() => {});
   };
 
-  // --- SAFE DEPOSIT LOGIC ---
+  // --- SAFE DEPOSIT LOGIC (Bypasses Privy for Native Wallets) ---
   const handleDeposit = async () => {
     try {
       const amt = Number(depositAmount);
@@ -145,76 +145,69 @@ function GameDashboard({ logout, user }) {
         return;
       }
 
-      // ⚠️ PRIORITY 1: CHECK FOR DIRECT WINDOW.ETHEREUM (dApp Browser Native)
-      // This bypasses Privy delays in Trust/MetaMask browsers
-      let provider = null;
+      // 1. DIRECT WALLET DETECTION
+      // We look for 'window.ethereum' first. This is what MetaMask/Trust injects.
+      // We do NOT use the 'wallets' array from Privy here to avoid the website popup.
+      let provider = window.ethereum;
       let account = null;
 
-      if (window.ethereum) {
-          // Direct Access for reliability
-          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-          account = accounts[0];
-          provider = window.ethereum;
-      } else {
-          // Fallback to Privy Wallets
-          const activeWallet = wallets.find(w => w.walletClientType !== 'privy') || wallets[0];
-          if (activeWallet) {
-              provider = await activeWallet.getEthereumProvider();
-              const accounts = await provider.request({ method: 'eth_requestAccounts' });
-              account = accounts[0];
-          }
+      if (!provider) {
+          // Fallback: If no window.ethereum (desktop?), check Privy wallets
+          const w = wallets.find(w => w.walletClientType !== 'privy');
+          if (w) provider = await w.getEthereumProvider();
       }
 
-      if (!provider || !account) {
-        alert("Wallet not found. Open this site inside MetaMask/Trust Wallet.");
+      if (!provider) {
+        alert("Wallet not detected. Please open this site inside MetaMask or Trust Wallet browser.");
         return;
       }
 
       setIsProcessing(true);
       setShowDeposit(false);
-  
-      // --- TIMEOUT PROTECTION ---
-      // If wallet doesn't open in 15 seconds, reset state so user can click again
-      const safetyTimeout = setTimeout(() => {
-          if (isProcessing) {
-              setIsProcessing(false);
-              alert("Wallet didn't respond. Please try clicking Deposit again.");
-          }
-      }, 15000);
+      
+      // 2. GET ACCOUNT (This triggers the Wallet Popup 1)
+      const accounts = await provider.request({ method: 'eth_requestAccounts' });
+      account = accounts[0];
 
-      // --- CHAIN CONFIG ---
-      const chains = {
-        BSC: { chainId: '0x38', rpcUrls: ['https://bsc-dataseed1.binance.org'] },
-        ETH: { chainId: '0x1' },
-        BASE: { chainId: '0x2105', rpcUrls: ['https://mainnet.base.org'] }
+      if (!account) throw new Error("No account found");
+
+      // 3. SMART CHAIN SWITCHING
+      const chainConfig = {
+        'BSC': { hex: '0x38', rpc: 'https://bsc-dataseed1.binance.org' },
+        'ETH': { hex: '0x1', rpc: 'https://cloudflare-eth.com' },
+        'BASE': { hex: '0x2105', rpc: 'https://mainnet.base.org' }
       };
-      const target = chains[selectedNetwork];
+      const target = chainConfig[selectedNetwork];
 
-      // --- FORCE SWITCH ---
+      // Check current chain first to avoid "hanging" if already connected
       try {
-        await provider.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: target.chainId }],
-        });
-      } catch (err) {
-        if (err.code === 4902 && selectedNetwork !== 'ETH') {
-           try {
+        const currentChainId = await provider.request({ method: 'eth_chainId' });
+        if (currentChainId !== target.hex) {
+            await provider.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: target.hex }]
+            });
+        }
+      } catch (switchErr) {
+        // If chain missing, try to add it
+        if (switchErr.code === 4902) {
              await provider.request({
-               method: 'wallet_addEthereumChain',
-               params: [{
-                 chainId: target.chainId,
-                 chainName: selectedNetwork === 'BSC' ? 'BNB Chain' : 'Base',
-                 nativeCurrency: { name: 'ETH', symbol: selectedNetwork === 'BSC' ? 'BNB' : 'ETH', decimals: 18 },
-                 rpcUrls: target.rpcUrls
-               }]
-             });
-           } catch(e) { console.warn(e); }
+                method: 'wallet_addEthereumChain',
+                params: [{
+                    chainId: target.hex,
+                    chainName: selectedNetwork,
+                    rpcUrls: [target.rpc],
+                    nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 }
+                }]
+            });
+        } else {
+            console.warn("Chain switch warning:", switchErr);
         }
       }
 
-      // --- SEND TX ---
-      const weiValue = parseEther(depositAmount);
-      const hexValue = `0x${weiValue.toString(16)}`;
+      // 4. SEND TRANSACTION (This triggers Wallet Popup 2 - Payment)
+      const wei = parseEther(depositAmount.toString());
+      const hexValue = `0x${wei.toString(16)}`;
 
       const txHash = await provider.request({
         method: 'eth_sendTransaction',
@@ -226,23 +219,25 @@ function GameDashboard({ logout, user }) {
         }]
       });
 
-      clearTimeout(safetyTimeout); // Wallet responded, clear timeout
-
       if (txHash) {
         socket.emit('verifyDeposit', {
           email: user.email.address,
           txHash,
           network: selectedNetwork
         });
-        alert("✅ Sent! Wait for confirmation...");
-      } else {
-        setIsProcessing(false);
+        alert("✅ Transaction Sent! Check your wallet activities.");
       }
   
     } catch (err) {
       console.error(err);
       setIsProcessing(false);
-      if (err.code !== 4001) alert("Deposit Failed. Please refresh and try again.");
+      
+      // Handle user rejection explicitly
+      if (err.code === 4001 || err.message?.includes("rejected")) {
+        alert("Transaction was cancelled.");
+      } else {
+        alert("Deposit Error: " + (err.message || "Wallet did not respond."));
+      }
     }
   };
 
@@ -263,7 +258,6 @@ function GameDashboard({ logout, user }) {
   };
 
   useEffect(() => {
-    // Force socket reconnect on load
     if(!socket.connected) socket.connect();
 
     socket.on('depositSuccess', (newBalance) => {
