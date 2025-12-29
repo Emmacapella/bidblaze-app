@@ -11,7 +11,9 @@ const SERVER_URL = "https://bidblaze-server.onrender.com";
 
 export const socket = io(SERVER_URL, {
   transports: ['websocket', 'polling'],
-  autoConnect: true
+  autoConnect: true,
+  reconnection: true,
+  reconnectionAttempts: 5
 });
 
 const ASSETS = {
@@ -22,7 +24,7 @@ const ASSETS = {
 
 const ADMIN_WALLET = "0x6edadf13a704cd2518cd2ca9afb5ad9dee3ce34c";
 
-// --- CHAIN CONFIGURATIONS ---
+// --- CHAIN CONFIGURATIONS (Optimized RPCs) ---
 const BASE_CHAIN = {
   id: 8453,
   name: 'Base',
@@ -37,7 +39,7 @@ const BSC_CHAIN = {
   name: 'BNB Smart Chain',
   network: 'bsc',
   nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
-  rpcUrls: { default: { http: ['https://bsc-dataseed.binance.org'] } },
+  rpcUrls: { default: { http: ['https://bsc-dataseed1.binance.org'] } },
   blockExplorers: { default: { name: 'BscScan', url: 'https://bscscan.com' } }
 };
 
@@ -125,7 +127,6 @@ function GameDashboard({ logout, user }) {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [withdrawHistory, setWithdrawHistory] = useState([]);
 
-  // --- SOUND ---
   const playSound = (key) => {
     if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
     const audio = new Audio(ASSETS[key]);
@@ -134,7 +135,7 @@ function GameDashboard({ logout, user }) {
     audio.play().catch(() => {});
   };
 
-  // --- DEPOSIT LOGIC (Corrected for dApp Browsers) ---
+  // --- DEPOSIT LOGIC (Robust Mobile Fix) ---
   const handleDeposit = async () => {
     try {
       const amt = Number(depositAmount);
@@ -143,13 +144,10 @@ function GameDashboard({ logout, user }) {
         return;
       }
 
-      // ⚠️ CRITICAL FIX: Prioritize the External Wallet (MetaMask/Trust) over Privy Embedded
-      // This forces the app to look for the "Injected" provider (window.ethereum) first.
+      // ⚠️ FIX: Force pick the injected provider (MetaMask/Trust)
+      // This bypasses Privy's internal UI if an external wallet is present.
       let activeWallet = wallets.find(w => w.walletClientType !== 'privy'); 
-      if (!activeWallet) {
-          // If no external wallet found, fall back to whatever is available (e.g. Embedded)
-          activeWallet = wallets[0];
-      }
+      if (!activeWallet) activeWallet = wallets[0];
 
       if (!activeWallet) {
         alert("Please connect a wallet first.");
@@ -161,16 +159,16 @@ function GameDashboard({ logout, user }) {
   
       const provider = await activeWallet.getEthereumProvider();
       
-      // 1. Request Accounts (This triggers the popup)
+      // 1. Force Request Accounts (Wakes up the wallet)
       const [from] = await provider.request({ method: 'eth_requestAccounts' });
   
-      // 2. Chain Config
+      // 2. Network Config
       const chains = {
         BSC: { 
           chainId: '0x38', 
           chainName: 'BNB Smart Chain',
           nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
-          rpcUrls: ['https://bsc-dataseed.binance.org'],
+          rpcUrls: ['https://bsc-dataseed1.binance.org'],
           blockExplorerUrls: ['https://bscscan.com']
         },
         ETH: { 
@@ -188,7 +186,7 @@ function GameDashboard({ logout, user }) {
   
       const targetChain = chains[selectedNetwork];
   
-      // 3. Force Switch (Crucial for mobile wallets)
+      // 3. Switch Network (Try/Catch wrapper for mobile compatibility)
       try {
         await provider.request({
           method: 'wallet_switchEthereumChain',
@@ -207,13 +205,11 @@ function GameDashboard({ logout, user }) {
                 blockExplorerUrls: targetChain.blockExplorerUrls
               }],
             });
-          } catch (addError) {
-            // Ignore error, wallet might just prompt to switch anyway
-          }
+          } catch (e) { console.log("Add chain error (safe to ignore if switch worked)"); }
         }
       }
   
-      // 4. Send Transaction (NO HARDCODED GAS)
+      // 4. Send Transaction (Gas Limit Removed for auto-calculation)
       const weiValue = parseEther(depositAmount);
       const hexValue = `0x${weiValue.toString(16)}`;
   
@@ -223,7 +219,7 @@ function GameDashboard({ logout, user }) {
           from,
           to: ADMIN_WALLET,
           value: hexValue,
-          data: '0x' // Essential for some wallets to treat it as a transfer
+          data: '0x' 
         }]
       });
   
@@ -233,19 +229,17 @@ function GameDashboard({ logout, user }) {
           txHash,
           network: selectedNetwork
         });
-        alert("✅ Transaction Sent! Waiting for network confirmation...");
+        alert("✅ Transaction Sent! Check wallet for confirmation.");
       }
   
     } catch (err) {
       console.error(err);
       setIsProcessing(false);
-      // Don't show alert if user just closed the popup
+      // Only alert if it's NOT a user rejection (code 4001)
       if (err.code !== 4001) {
-        alert("Deposit failed. Check your wallet balance and connection.");
+        alert("Deposit failed. Please refresh and try again.");
       }
     }
-    // Note: We keep isProcessing true if successful until backend confirms, 
-    // or the socket error handler turns it off.
   };
 
   const handleWithdraw = () => {
@@ -265,9 +259,9 @@ function GameDashboard({ logout, user }) {
   };
 
   useEffect(() => {
-    if (!socket.connected) {
-        socket.connect();
-    }
+    // ⚠️ FIX: Auto-reconnect if socket drops
+    const handleConnect = () => { if(user?.email?.address) socket.emit('getUserBalance', user.email.address); };
+    socket.on('connect', handleConnect);
 
     socket.on('depositSuccess', (newBalance) => {
       setCredits(newBalance);
@@ -289,7 +283,7 @@ function GameDashboard({ logout, user }) {
     socket.on('withdrawalError', (msg) => { alert(`❌ Withdrawal Failed: ${msg}`); });
     socket.on('withdrawalHistory', (data) => { setWithdrawHistory(data); });
 
-    if(user?.email?.address) socket.emit('getUserBalance', user.email.address);
+    if(user?.email?.address && socket.connected) socket.emit('getUserBalance', user.email.address);
 
     socket.on('gameState', (data) => {
       setGameState(data);
@@ -314,6 +308,7 @@ function GameDashboard({ logout, user }) {
 
     return () => {
       if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+      socket.off('connect', handleConnect);
       socket.off('gameState'); socket.off('balanceUpdate'); socket.off('bidError');
       socket.off('depositSuccess'); socket.off('depositError');
       socket.off('withdrawalSuccess'); socket.off('withdrawalError'); socket.off('withdrawalHistory');
@@ -481,7 +476,6 @@ function GameDashboard({ logout, user }) {
                <div className="restart-label">NEW GAME IN</div>
                <div className="restart-timer">{restartCount}</div>
                
-               {/* --- REFUND LOGIC VISUALIZER --- */}
                {new Set(gameState.history.map(b => b.user)).size === 1 ? (
                   <div className="winner-badge" style={{background:'#3b82f6'}}>
                     ♻️ REFUNDED: {gameState.history[0]?.user.slice(0,10)}...
