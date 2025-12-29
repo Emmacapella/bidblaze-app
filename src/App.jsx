@@ -127,6 +127,9 @@ function GameDashboard({ logout, user }) {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [withdrawHistory, setWithdrawHistory] = useState([]);
+  
+  // 🆕 NEW: Deposit History State
+  const [depositHistory, setDepositHistory] = useState([]);
 
   const playSound = (key) => {
     if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
@@ -279,6 +282,9 @@ function GameDashboard({ logout, user }) {
 
     socket.on('withdrawalError', (msg) => { alert(`❌ Withdrawal Failed: ${msg}`); });
     socket.on('withdrawalHistory', (data) => { setWithdrawHistory(data); });
+    
+    // 🆕 NEW: Listen for Deposit History
+    socket.on('depositHistory', (data) => { setDepositHistory(data); });
 
     if(user?.email?.address) socket.emit('getUserBalance', user.email.address);
 
@@ -308,6 +314,7 @@ function GameDashboard({ logout, user }) {
       socket.off('gameState'); socket.off('balanceUpdate'); socket.off('bidError');
       socket.off('depositSuccess'); socket.off('depositError');
       socket.off('withdrawalSuccess'); socket.off('withdrawalError'); socket.off('withdrawalHistory');
+      socket.off('depositHistory'); // 🆕 NEW: Cleanup
     };
   }, [user]);
 
@@ -388,6 +395,23 @@ function GameDashboard({ logout, user }) {
             <button className="action-btn" onClick={handleDeposit} style={{background:'#22c55e', color:'white', marginBottom:'10px'}}>
               🚀 PAY NOW (Wallet)
             </button>
+
+            {/* 🆕 NEW: DEPOSIT HISTORY SECTION */}
+            <div style={{marginTop:'15px', borderTop:'1px solid #334155', paddingTop:'15px'}}>
+                <p style={{fontSize:'12px', color:'#94a3b8', fontWeight:'bold', marginBottom:'10px'}}>RECENT DEPOSITS</p>
+                <div style={{maxHeight:'100px', overflowY:'auto'}}>
+                    {depositHistory.length === 0 ? (
+                        <p style={{fontSize:'12px', color:'#64748b', textAlign:'center'}}>No deposits yet.</p>
+                    ) : (
+                        depositHistory.map((item) => (
+                            <div key={item.id} style={{display:'flex', justifyContent:'space-between', fontSize:'12px', marginBottom:'8px', background:'#1e293b', padding:'8px', borderRadius:'6px'}}>
+                                <span style={{color:'white'}}>${Number(item.amount).toFixed(2)}</span>
+                                <span style={{color: '#22c55e', fontWeight:'bold'}}>{item.status}</span>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
 
             <p style={{fontSize:'12px', color:'#fbbf24', marginTop:'10px', textAlign:'center'}}>{statusMsg}</p>
             <p style={{fontSize:'10px', color:'#64748b', textAlign:'center'}}>If wallet doesn't open, check pop-up blocker.</p>
