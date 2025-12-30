@@ -131,11 +131,7 @@ function GameDashboard({ logout, user }) {
   // Deposit History State
   const [depositHistory, setDepositHistory] = useState([]);
 
-  // 🆕 NEW: Muted State
-  const [muted, setMuted] = useState(false);
-
   const playSound = (key) => {
-    if (muted) return; // 🔇 Check if muted before playing
     if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
     const audio = new Audio(ASSETS[key]);
     audio.volume = 0.5;
@@ -153,12 +149,10 @@ function GameDashboard({ logout, user }) {
       }
 
       // 1. DIRECT WALLET DETECTION
-      // We prioritize 'window.ethereum' to handle Trust/MetaMask mobile browsers correctly.
       let provider = window.ethereum;
       let account = null;
 
       if (!provider) {
-          // Fallback: If not found (e.g., PC without extension), try Privy
           const w = wallets.find(w => w.walletClientType !== 'privy');
           if (w) provider = await w.getEthereumProvider();
       }
@@ -171,7 +165,6 @@ function GameDashboard({ logout, user }) {
       setIsProcessing(true);
       setShowDeposit(false);
       
-      // 2. GET ACCOUNT (This triggers 'Connect' popup - Necessary for security)
       const accounts = await provider.request({ method: 'eth_requestAccounts' });
       account = accounts[0];
 
@@ -185,7 +178,6 @@ function GameDashboard({ logout, user }) {
       };
       const target = chainConfig[selectedNetwork];
 
-      // Check current chain first to avoid unnecessary switching
       try {
         const currentChainId = await provider.request({ method: 'eth_chainId' });
         if (currentChainId !== target.hex) {
@@ -210,7 +202,6 @@ function GameDashboard({ logout, user }) {
         }
       }
 
-      // 4. SEND TRANSACTION (This triggers the Payment Popup)
       const wei = parseEther(depositAmount.toString());
       const hexValue = `0x${wei.toString(16)}`;
 
@@ -237,7 +228,6 @@ function GameDashboard({ logout, user }) {
       console.error(err);
       setIsProcessing(false);
       
-      // --- BETTER ERROR MESSAGES ---
       if (err.message && err.message.includes("insufficient funds")) {
           alert("❌ INSUFFICIENT FUNDS: Your wallet is empty. You need a small amount of ETH/BNB to pay for gas fees.");
       } else if (err.code === 4001 || err.message?.includes("rejected")) {
@@ -287,7 +277,6 @@ function GameDashboard({ logout, user }) {
     socket.on('withdrawalError', (msg) => { alert(`❌ Withdrawal Failed: ${msg}`); });
     socket.on('withdrawalHistory', (data) => { setWithdrawHistory(data); });
     
-    // Deposit History Listener
     socket.on('depositHistory', (data) => { setDepositHistory(data); });
 
     if(user?.email?.address) socket.emit('getUserBalance', user.email.address);
@@ -320,7 +309,7 @@ function GameDashboard({ logout, user }) {
       socket.off('withdrawalSuccess'); socket.off('withdrawalError'); socket.off('withdrawalHistory');
       socket.off('depositHistory');
     };
-  }, [user, muted]); // Added muted dependency
+  }, [user]);
 
   useEffect(() => {
     const timerInterval = setInterval(() => {
@@ -481,10 +470,6 @@ function GameDashboard({ logout, user }) {
            {gameState.connectedUsers || 1} LIVE
         </div>
         <div style={{display:'flex', gap:'8px'}}>
-           {/* 🆕 NEW: MUTE BUTTON */}
-           <button className="nav-btn" onClick={() => setMuted(!muted)} style={{fontSize:'18px'}}>
-              {muted ? '🔇' : '🔊'}
-           </button>
            <button className="nav-btn" onClick={() => setShowHelp(true)} style={{fontSize:'18px'}}>❓</button>
            <button className="nav-btn logout-btn" onClick={logout}>✕</button>
         </div>
@@ -621,12 +606,34 @@ function LandingPage({ login }) {
   );
 }
 
+// --- NEW ANIMATED BACKGROUND STYLE ---
 const GlobalStyle = () => (
   <style>{`
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&family=JetBrains+Mono:wght@500&display=swap');
     :root { --bg-dark: #020617; --glass: rgba(255, 255, 255, 0.05); --glass-border: rgba(255, 255, 255, 0.1); --gold: #fbbf24; --blue: #3b82f6; --red: #ef4444; }
     body { margin: 0; background: var(--bg-dark); color: white; font-family: 'Outfit', sans-serif; overflow-y: auto; }
-    .app-container { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; background: radial-gradient(circle at top, #1e293b 0%, #020617 100%); }
+    
+    /* 🌟 ANIMATED MESH BACKGROUND */
+    .app-container { 
+        min-height: 100vh; 
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        padding: 20px; 
+        background-color: #0f172a;
+        background-image: 
+            radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+            radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
+            radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+        background-size: 200% 200%;
+        animation: gradientMove 15s ease infinite;
+    }
+    @keyframes gradientMove {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
     .landing-container { height: 100vh; display: flex; justify-content: center; align-items: center; background: linear-gradient(135deg, #1e293b, #0f172a); }
     .glass-nav { width: 100%; max-width: 450px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px 15px; background: rgba(15, 23, 42, 0.6); border-radius: 20px; border: 1px solid var(--glass-border); backdrop-filter: blur(10px); }
     .glass-panel { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 20px; backdrop-filter: blur(10px); width: 100%; max-width: 400px; padding: 20px; box-sizing: border-box; }
@@ -689,4 +696,4 @@ export default function App() {
       {authenticated ? <GameDashboard logout={logout} user={user} /> : <LandingPage login={login} />}
     </PrivyProvider>
   );
-}
+} 
