@@ -131,7 +131,11 @@ function GameDashboard({ logout, user }) {
   // Deposit History State
   const [depositHistory, setDepositHistory] = useState([]);
 
+  // 🔊 Mute State (Restored)
+  const [muted, setMuted] = useState(false);
+
   const playSound = (key) => {
+    if (muted) return; // 🔇 Check mute state
     if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
     const audio = new Audio(ASSETS[key]);
     audio.volume = 0.5;
@@ -309,7 +313,7 @@ function GameDashboard({ logout, user }) {
       socket.off('withdrawalSuccess'); socket.off('withdrawalError'); socket.off('withdrawalHistory');
       socket.off('depositHistory');
     };
-  }, [user]);
+  }, [user, muted]); // 🔊 Added muted to dependencies
 
   useEffect(() => {
     const timerInterval = setInterval(() => {
@@ -470,6 +474,10 @@ function GameDashboard({ logout, user }) {
            {gameState.connectedUsers || 1} LIVE
         </div>
         <div style={{display:'flex', gap:'8px'}}>
+           {/* 🔊 MUTE BUTTON RESTORED */}
+           <button className="nav-btn" onClick={() => setMuted(!muted)} style={{fontSize:'18px'}}>
+              {muted ? '🔇' : '🔊'}
+           </button>
            <button className="nav-btn" onClick={() => setShowHelp(true)} style={{fontSize:'18px'}}>❓</button>
            <button className="nav-btn logout-btn" onClick={logout}>✕</button>
         </div>
@@ -696,4 +704,4 @@ export default function App() {
       {authenticated ? <GameDashboard logout={logout} user={user} /> : <LandingPage login={login} />}
     </PrivyProvider>
   );
-} 
+}
