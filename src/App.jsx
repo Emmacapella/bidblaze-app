@@ -455,7 +455,7 @@ function GameDashboard({ logout, user }) {
             
             {/* MANUAL WITHDRAWAL WARNING */}
             <p style={{fontSize:'10px', color:'#94a3b8', marginTop:'10px', textAlign:'center'}}>
-               ⚠️ Notice: Withdrawals are processed manually within 12 hours for security.
+               ⚠️ Notice: Withdrawals are processed manually within 24 hours.
             </p>
 
             <div style={{borderTop:'1px solid #334155', paddingTop:'15px', marginTop:'15px'}}>
