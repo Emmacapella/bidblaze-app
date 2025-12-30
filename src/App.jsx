@@ -23,8 +23,6 @@ const ASSETS = {
   soundPop: 'https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3'
 };
 
-// 🛡️ SECURITY FIX: Wallet Address removed from here. It is now fetched securely.
-
 // --- CHAIN CONFIGURATIONS ---
 const BASE_CHAIN = {
   id: 8453,
@@ -328,7 +326,7 @@ function GameDashboard({ logout, user }) {
       socket.off('depositSuccess'); socket.off('depositError');
       socket.off('withdrawalSuccess'); socket.off('withdrawalError'); socket.off('withdrawalHistory');
       socket.off('depositHistory');
-      socket.off('gameConfig'); // Cleanup secure config listener
+      socket.off('gameConfig');
     };
   }, [user, muted]);
 
@@ -353,15 +351,6 @@ function GameDashboard({ logout, user }) {
     socket.emit('placeBid', user.email ? user.email.address : "User");
     setIsCooldown(true);
     setCd(8);
-  };
-
-  const runAdmin = () => {
-    const pwd = prompt("🔐 ADMIN PANEL\nEnter Password:");
-    if (!pwd) return;
-    const action = prompt("1. Reset Game\n2. Set Jackpot\n3. Add Time");
-    if (action === '1') socket.emit('adminAction', { password: pwd, action: 'RESET' });
-    else if (action === '2') socket.emit('adminAction', { password: pwd, action: 'SET_JACKPOT', value: prompt("Amount:") });
-    else if (action === '3') socket.emit('adminAction', { password: pwd, action: 'ADD_TIME', value: 299 });
   };
 
   if (!gameState) return (
@@ -513,7 +502,7 @@ function GameDashboard({ logout, user }) {
             <div className="restart-box">
                <div className="restart-label">NEW GAME IN</div>
                <div className="restart-timer">{restartCount}</div>
-
+               
                {new Set(gameState.history.map(b => b.user)).size === 1 ? (
                   <div className="winner-badge" style={{background:'#3b82f6'}}>
                     ♻️ REFUNDED: {gameState.history[0]?.user.slice(0,10)}...
@@ -579,10 +568,6 @@ function GameDashboard({ logout, user }) {
           </div>
           <div style={{fontSize:'10px', color:'#64748b', fontWeight:'600', letterSpacing:'2px'}}>PROVABLY FAIR • INSTANT PAYOUTS</div>
       </div>
-
-      {user?.email?.address?.toLowerCase() === MY_EMAIL && (
-        <button onClick={runAdmin} style={{marginTop:'10px', background:'none', border:'1px solid #ef4444', color:'#ef4444', padding:'5px 10px', fontSize:'10px'}}>ADMIN</button>
-      )}
     </div>
   );
 }
