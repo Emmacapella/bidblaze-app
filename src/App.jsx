@@ -23,7 +23,7 @@ const ASSETS = {
   soundPop: 'https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3'
 };
 
-const ADMIN_WALLET = "0x6edadf13a704cd2518cd2ca9afb5ad9dee3ce34c";
+// 🛡️ SECURITY FIX: Wallet Address removed from here. It is now fetched securely.
 
 // --- CHAIN CONFIGURATIONS ---
 const BASE_CHAIN = {
@@ -127,15 +127,18 @@ function GameDashboard({ logout, user }) {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [withdrawHistory, setWithdrawHistory] = useState([]);
-  
+
   // Deposit History State
   const [depositHistory, setDepositHistory] = useState([]);
+
+  // 🛡️ SECURITY FIX: State to hold Admin Wallet
+  const [adminWallet, setAdminWallet] = useState(null);
 
   // Mute State
   const [muted, setMuted] = useState(false);
 
   const playSound = (key) => {
-    if (muted) return; 
+    if (muted) return;
     if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
     const audio = new Audio(ASSETS[key]);
     audio.volume = 0.5;
@@ -150,6 +153,13 @@ function GameDashboard({ logout, user }) {
       if (!amt || amt <= 0) {
         alert("Enter a valid amount");
         return;
+      }
+
+      // 🛡️ SECURITY CHECK: Ensure wallet address is loaded
+      if (!adminWallet) {
+          alert("Secure connection pending. Please wait 2 seconds and try again.");
+          socket.emit('getGameConfig'); // Retry fetch
+          return;
       }
 
       // 1. DIRECT WALLET DETECTION
@@ -168,7 +178,7 @@ function GameDashboard({ logout, user }) {
 
       setIsProcessing(true);
       setShowDeposit(false);
-      
+
       const accounts = await provider.request({ method: 'eth_requestAccounts' });
       account = accounts[0];
 
@@ -213,9 +223,9 @@ function GameDashboard({ logout, user }) {
         method: 'eth_sendTransaction',
         params: [{
           from: account,
-          to: ADMIN_WALLET,
+          to: adminWallet, // 🛡️ USING SECURE VARIABLE
           value: hexValue,
-          data: '0x' 
+          data: '0x'
         }]
       });
 
@@ -227,11 +237,11 @@ function GameDashboard({ logout, user }) {
         });
         alert("✅ Transaction Sent! Check your wallet activities.");
       }
-  
+
     } catch (err) {
       console.error(err);
       setIsProcessing(false);
-      
+
       if (err.message && err.message.includes("insufficient funds")) {
           alert("❌ INSUFFICIENT FUNDS: Your wallet is empty. You need a small amount of ETH/BNB to pay for gas fees.");
       } else if (err.code === 4001 || err.message?.includes("rejected")) {
@@ -261,6 +271,12 @@ function GameDashboard({ logout, user }) {
   useEffect(() => {
     if(!socket.connected) socket.connect();
 
+    // 🛡️ SECURITY FIX: Fetch Admin Wallet Securely
+    socket.emit('getGameConfig');
+    socket.on('gameConfig', (cfg) => {
+        if(cfg && cfg.adminWallet) setAdminWallet(cfg.adminWallet);
+    });
+
     socket.on('depositSuccess', (newBalance) => {
       setCredits(newBalance);
       setDepositAmount('');
@@ -280,7 +296,7 @@ function GameDashboard({ logout, user }) {
 
     socket.on('withdrawalError', (msg) => { alert(`❌ Withdrawal Failed: ${msg}`); });
     socket.on('withdrawalHistory', (data) => { setWithdrawHistory(data); });
-    
+
     socket.on('depositHistory', (data) => { setDepositHistory(data); });
 
     if(user?.email?.address) socket.emit('getUserBalance', user.email.address);
@@ -312,6 +328,7 @@ function GameDashboard({ logout, user }) {
       socket.off('depositSuccess'); socket.off('depositError');
       socket.off('withdrawalSuccess'); socket.off('withdrawalError'); socket.off('withdrawalHistory');
       socket.off('depositHistory');
+      socket.off('gameConfig'); // Cleanup secure config listener
     };
   }, [user, muted]);
 
@@ -336,6 +353,15 @@ function GameDashboard({ logout, user }) {
     socket.emit('placeBid', user.email ? user.email.address : "User");
     setIsCooldown(true);
     setCd(8);
+  };
+
+  const runAdmin = () => {
+    const pwd = prompt("🔐 ADMIN PANEL\nEnter Password:");
+    if (!pwd) return;
+    const action = prompt("1. Reset Game\n2. Set Jackpot\n3. Add Time");
+    if (action === '1') socket.emit('adminAction', { password: pwd, action: 'RESET' });
+    else if (action === '2') socket.emit('adminAction', { password: pwd, action: 'SET_JACKPOT', value: prompt("Amount:") });
+    else if (action === '3') socket.emit('adminAction', { password: pwd, action: 'ADD_TIME', value: 299 });
   };
 
   if (!gameState) return (
@@ -487,7 +513,7 @@ function GameDashboard({ logout, user }) {
             <div className="restart-box">
                <div className="restart-label">NEW GAME IN</div>
                <div className="restart-timer">{restartCount}</div>
-               
+
                {new Set(gameState.history.map(b => b.user)).size === 1 ? (
                   <div className="winner-badge" style={{background:'#3b82f6'}}>
                     ♻️ REFUNDED: {gameState.history[0]?.user.slice(0,10)}...
@@ -553,6 +579,10 @@ function GameDashboard({ logout, user }) {
           </div>
           <div style={{fontSize:'10px', color:'#64748b', fontWeight:'600', letterSpacing:'2px'}}>PROVABLY FAIR • INSTANT PAYOUTS</div>
       </div>
+
+      {user?.email?.address?.toLowerCase() === MY_EMAIL && (
+        <button onClick={runAdmin} style={{marginTop:'10px', background:'none', border:'1px solid #ef4444', color:'#ef4444', padding:'5px 10px', fontSize:'10px'}}>ADMIN</button>
+      )}
     </div>
   );
 }
@@ -691,4 +721,4 @@ export default function App() {
       {authenticated ? <GameDashboard logout={logout} user={user} /> : <LandingPage login={login} />}
     </PrivyProvider>
   );
-}         
+}
