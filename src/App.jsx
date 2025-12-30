@@ -452,6 +452,11 @@ function GameDashboard({ logout, user }) {
             <button className="action-btn" onClick={handleWithdraw} style={{background:'#ef4444', color:'white', marginBottom:'20px'}}>
                REQUEST WITHDRAWAL
             </button>
+            
+            {/* MANUAL WITHDRAWAL WARNING */}
+            <p style={{fontSize:'10px', color:'#94a3b8', marginTop:'10px', textAlign:'center'}}>
+               ⚠️ Notice: Withdrawals are processed manually within 12 hours for security.
+            </p>
 
             <div style={{borderTop:'1px solid #334155', paddingTop:'15px', marginTop:'15px'}}>
                 <p style={{fontSize:'12px', color:'#94a3b8', fontWeight:'bold', marginBottom:'10px'}}>RECENT WITHDRAWALS</p>
@@ -567,6 +572,8 @@ function GameDashboard({ logout, user }) {
              <span style={{fontSize:'24px', fontWeight:'900', color:'white', letterSpacing:'1px'}}>BID<span style={{color:'#fbbf24'}}>BLAZE</span></span>
           </div>
           <div style={{fontSize:'10px', color:'#64748b', fontWeight:'600', letterSpacing:'2px'}}>PROVABLY FAIR • INSTANT PAYOUTS</div>
+          {/* SUPPORT LINK */}
+          <a href="https://t.me/Bidblaze" target="_blank" rel="noopener noreferrer" style={{color: '#3b82f6', textDecoration: 'none', fontSize: '12px', marginTop: '10px', fontWeight: 'bold'}}>💬 24/7 SUPPORT</a>
       </div>
     </div>
   );
