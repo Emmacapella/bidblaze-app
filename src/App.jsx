@@ -128,10 +128,14 @@ function GameDashboard({ logout, user }) {
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [withdrawHistory, setWithdrawHistory] = useState([]);
   
-  // 🆕 NEW: Deposit History State
+  // Deposit History State
   const [depositHistory, setDepositHistory] = useState([]);
 
+  // 🆕 NEW: Muted State
+  const [muted, setMuted] = useState(false);
+
   const playSound = (key) => {
+    if (muted) return; // 🔇 Check if muted before playing
     if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
     const audio = new Audio(ASSETS[key]);
     audio.volume = 0.5;
@@ -283,7 +287,7 @@ function GameDashboard({ logout, user }) {
     socket.on('withdrawalError', (msg) => { alert(`❌ Withdrawal Failed: ${msg}`); });
     socket.on('withdrawalHistory', (data) => { setWithdrawHistory(data); });
     
-    // 🆕 NEW: Listen for Deposit History
+    // Deposit History Listener
     socket.on('depositHistory', (data) => { setDepositHistory(data); });
 
     if(user?.email?.address) socket.emit('getUserBalance', user.email.address);
@@ -314,9 +318,9 @@ function GameDashboard({ logout, user }) {
       socket.off('gameState'); socket.off('balanceUpdate'); socket.off('bidError');
       socket.off('depositSuccess'); socket.off('depositError');
       socket.off('withdrawalSuccess'); socket.off('withdrawalError'); socket.off('withdrawalHistory');
-      socket.off('depositHistory'); // 🆕 NEW: Cleanup
+      socket.off('depositHistory');
     };
-  }, [user]);
+  }, [user, muted]); // Added muted dependency
 
   useEffect(() => {
     const timerInterval = setInterval(() => {
@@ -396,7 +400,7 @@ function GameDashboard({ logout, user }) {
               🚀 PAY NOW (Wallet)
             </button>
 
-            {/* 🆕 NEW: DEPOSIT HISTORY SECTION */}
+            {/* DEPOSIT HISTORY SECTION */}
             <div style={{marginTop:'15px', borderTop:'1px solid #334155', paddingTop:'15px'}}>
                 <p style={{fontSize:'12px', color:'#94a3b8', fontWeight:'bold', marginBottom:'10px'}}>RECENT DEPOSITS</p>
                 <div style={{maxHeight:'100px', overflowY:'auto'}}>
@@ -477,12 +481,16 @@ function GameDashboard({ logout, user }) {
            {gameState.connectedUsers || 1} LIVE
         </div>
         <div style={{display:'flex', gap:'8px'}}>
+           {/* 🆕 NEW: MUTE BUTTON */}
+           <button className="nav-btn" onClick={() => setMuted(!muted)} style={{fontSize:'18px'}}>
+              {muted ? '🔇' : '🔊'}
+           </button>
            <button className="nav-btn" onClick={() => setShowHelp(true)} style={{fontSize:'18px'}}>❓</button>
            <button className="nav-btn logout-btn" onClick={logout}>✕</button>
         </div>
       </nav>
 
-      {/* GAME STAGE */}
+           {/* GAME STAGE */}
       <div className="game-stage">
         <ReactorRing targetDate={gameState.endTime} status={gameState.status} />
         <div className="jackpot-core">
