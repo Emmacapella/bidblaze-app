@@ -131,11 +131,11 @@ function GameDashboard({ logout, user }) {
   // Deposit History State
   const [depositHistory, setDepositHistory] = useState([]);
 
-  // 🔊 Mute State (Restored)
+  // Mute State
   const [muted, setMuted] = useState(false);
 
   const playSound = (key) => {
-    if (muted) return; // 🔇 Check mute state
+    if (muted) return; 
     if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
     const audio = new Audio(ASSETS[key]);
     audio.volume = 0.5;
@@ -143,7 +143,7 @@ function GameDashboard({ logout, user }) {
     audio.play().catch(() => {});
   };
 
-  // --- SAFE DEPOSIT LOGIC (Bypasses Privy for Native Wallets) ---
+  // --- SAFE DEPOSIT LOGIC ---
   const handleDeposit = async () => {
     try {
       const amt = Number(depositAmount);
@@ -313,7 +313,7 @@ function GameDashboard({ logout, user }) {
       socket.off('withdrawalSuccess'); socket.off('withdrawalError'); socket.off('withdrawalHistory');
       socket.off('depositHistory');
     };
-  }, [user, muted]); // 🔊 Added muted to dependencies
+  }, [user, muted]);
 
   useEffect(() => {
     const timerInterval = setInterval(() => {
@@ -336,15 +336,6 @@ function GameDashboard({ logout, user }) {
     socket.emit('placeBid', user.email ? user.email.address : "User");
     setIsCooldown(true);
     setCd(8);
-  };
-
-  const runAdmin = () => {
-    const pwd = prompt("🔐 ADMIN PANEL\nEnter Password:");
-    if (!pwd) return;
-    const action = prompt("1. Reset Game\n2. Set Jackpot\n3. Add Time");
-    if (action === '1') socket.emit('adminAction', { password: pwd, action: 'RESET' });
-    else if (action === '2') socket.emit('adminAction', { password: pwd, action: 'SET_JACKPOT', value: prompt("Amount:") });
-    else if (action === '3') socket.emit('adminAction', { password: pwd, action: 'ADD_TIME', value: 299 });
   };
 
   if (!gameState) return (
@@ -474,7 +465,7 @@ function GameDashboard({ logout, user }) {
            {gameState.connectedUsers || 1} LIVE
         </div>
         <div style={{display:'flex', gap:'8px'}}>
-           {/* 🔊 MUTE BUTTON RESTORED */}
+           {/* MUTE BUTTON */}
            <button className="nav-btn" onClick={() => setMuted(!muted)} style={{fontSize:'18px'}}>
               {muted ? '🔇' : '🔊'}
            </button>
@@ -562,10 +553,6 @@ function GameDashboard({ logout, user }) {
           </div>
           <div style={{fontSize:'10px', color:'#64748b', fontWeight:'600', letterSpacing:'2px'}}>PROVABLY FAIR • INSTANT PAYOUTS</div>
       </div>
-
-      {user?.email?.address?.toLowerCase() === MY_EMAIL && (
-        <button onClick={runAdmin} style={{marginTop:'10px', background:'none', border:'1px solid #ef4444', color:'#ef4444', padding:'5px 10px', fontSize:'10px'}}>ADMIN</button>
-      )}
     </div>
   );
 }
@@ -704,4 +691,4 @@ export default function App() {
       {authenticated ? <GameDashboard logout={logout} user={user} /> : <LandingPage login={login} />}
     </PrivyProvider>
   );
-}
+}         
