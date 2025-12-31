@@ -7,7 +7,7 @@ import { parseEther } from 'viem';
 
 // --- CONFIGURATION ---
 const PRIVY_APP_ID = "cm4l3033r048epf1ln3q59956";
-const SERVER_URL = "https://bidblaze.xyz";
+const SERVER_URL = "https://bidblaze-server.onrender.com";
 
 export const socket = io(SERVER_URL, {
   transports: ['websocket', 'polling'],
