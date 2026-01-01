@@ -229,7 +229,7 @@ function GameDashboard({ logout, user }) {
 
       if (txHash) {
         socket.emit('verifyDeposit', {
-          email: user.email.address,
+          email: user.email.address.toLowerCase().trim(), // ⚠️ FIX: Lowercase email
           txHash,
           network: selectedNetwork
         });
@@ -257,7 +257,7 @@ function GameDashboard({ logout, user }) {
       if (credits < amt) return alert("Insufficient Balance");
 
       socket.emit('requestWithdrawal', {
-          email: user.email.address,
+          email: user.email.address.toLowerCase().trim(), // ⚠️ FIX: Lowercase email
           amount: amt,
           address: withdrawAddress,
           network: selectedNetwork
@@ -297,7 +297,10 @@ function GameDashboard({ logout, user }) {
 
     socket.on('depositHistory', (data) => { setDepositHistory(data); });
 
-    if(user?.email?.address) socket.emit('getUserBalance', user.email.address);
+    // ⚠️ FIX: Send lowercase email on connection
+    if(user?.email?.address) {
+        socket.emit('getUserBalance', user.email.address.toLowerCase().trim());
+    }
 
     socket.on('gameState', (data) => {
       setGameState(data);
@@ -310,8 +313,11 @@ function GameDashboard({ logout, user }) {
       }
       if (data.status === 'ENDED' && prevStatus.current === 'ACTIVE') {
         playSound('soundWin');
-        if (data.lastBidder === user?.email?.address) {
-            setTimeout(() => { socket.emit('getUserBalance', user.email.address); }, 1000);
+        // ⚠️ FIX: Check against lowercase email
+        if (data.lastBidder === user?.email?.address.toLowerCase().trim()) {
+            setTimeout(() => { 
+                socket.emit('getUserBalance', user.email.address.toLowerCase().trim()); 
+            }, 1000);
         }
       }
       prevStatus.current = data.status;
@@ -348,7 +354,11 @@ function GameDashboard({ logout, user }) {
     if (credits < 1.00) { setShowDeposit(true); return; }
     setFloatingBids(prev => [...prev, Date.now()]);
     playSound('soundPop');
-    socket.emit('placeBid', user.email ? user.email.address : "User");
+    
+    // ⚠️ FIX: Send lowercase email
+    const emailToSend = user.email ? user.email.address.toLowerCase().trim() : "User";
+    socket.emit('placeBid', emailToSend);
+    
     setIsCooldown(true);
     setCd(8);
   };
@@ -452,7 +462,7 @@ function GameDashboard({ logout, user }) {
             <button className="action-btn" onClick={handleWithdraw} style={{background:'#ef4444', color:'white', marginBottom:'20px'}}>
                REQUEST WITHDRAWAL
             </button>
-            
+
             {/* MANUAL WITHDRAWAL WARNING */}
             <p style={{fontSize:'10px', color:'#94a3b8', marginTop:'10px', textAlign:'center'}}>
                ⚠️ Notice: Withdrawals are processed manually within 24 hours.
@@ -507,7 +517,7 @@ function GameDashboard({ logout, user }) {
             <div className="restart-box">
                <div className="restart-label">NEW GAME IN</div>
                <div className="restart-timer">{restartCount}</div>
-               
+
                {new Set(gameState.history.map(b => b.user)).size === 1 ? (
                   <div className="winner-badge" style={{background:'#3b82f6'}}>
                     ♻️ REFUNDED: {gameState.history[0]?.user.slice(0,10)}...
@@ -629,18 +639,18 @@ const GlobalStyle = () => (
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&family=JetBrains+Mono:wght@500&display=swap');
     :root { --bg-dark: #020617; --glass: rgba(255, 255, 255, 0.05); --glass-border: rgba(255, 255, 255, 0.1); --gold: #fbbf24; --blue: #3b82f6; --red: #ef4444; }
     body { margin: 0; background: var(--bg-dark); color: white; font-family: 'Outfit', sans-serif; overflow-y: auto; }
-    
+
     /* 🌟 ANIMATED MESH BACKGROUND */
-    .app-container { 
-        min-height: 100vh; 
-        display: flex; 
-        flex-direction: column; 
-        align-items: center; 
-        padding: 20px; 
+    .app-container {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
         background-color: #0f172a;
-        background-image: 
-            radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
-            radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
+        background-image:
+            radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%),
+            radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%),
             radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
         background-size: 200% 200%;
         animation: gradientMove 15s ease infinite;
