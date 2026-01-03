@@ -714,7 +714,14 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
       if(!formData.email || !formData.password) return alert("Fill all fields");
       if(authMode === 'signup') {
           if(!formData.username) return alert("Enter a username");
-          // Validate Password Rules on Frontend too
+          
+          // Validate Username (Letters and Numbers Only)
+          const usernameRegex = /^[a-zA-Z0-9]+$/;
+          if (!usernameRegex.test(formData.username)) {
+              return alert('Username must contain only letters and numbers.');
+          }
+
+          // Validate Password Rules
           const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[\W_]).{8,}$/;
           if (!passwordRegex.test(formData.password)) {
               return alert('Password must be 8+ characters, with at least 1 uppercase, 1 lowercase, and 1 special character.');
