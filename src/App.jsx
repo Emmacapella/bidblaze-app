@@ -1151,18 +1151,21 @@ const GlobalStyle = () => (
 export default function App() {
   const { login, logout, user, authenticated, ready } = usePrivy();
   
-  // Custom State to track if user has logged in via our custom forms
-  const [customUser, setCustomUser] = useState(null);
+  // Initialize state from localStorage if available
+  const [customUser, setCustomUser] = useState(() => {
+      const saved = localStorage.getItem('bidblaze_user');
+      return saved ? JSON.parse(saved) : null;
+  });
 
   const handleLogout = async () => {
+      localStorage.removeItem('bidblaze_user');
       setCustomUser(null);
       await logout();
   };
 
   const handleAuthSuccess = (userData) => {
+      localStorage.setItem('bidblaze_user', JSON.stringify(userData));
       setCustomUser(userData);
-      // We also trigger Privy login silently if we want wallet features, 
-      // but for now we rely on the custom auth state to show dashboard
   };
 
   if (!ready) return null;
@@ -1190,3 +1193,4 @@ export default function App() {
     </PrivyProvider>
   );
 }
+
