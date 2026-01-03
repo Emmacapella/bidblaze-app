@@ -97,22 +97,40 @@ const HowToPlay = ({ onClose }) => {
 
 // --- GAME DASHBOARD ---
 function GameDashboard({ logout, user }) {
-  const [gameState, setGameState] = useState(null);
+  // ⚠️ FAKE DATA FOR DESIGNING (So you don't need a server)
+  const [gameState, setGameState] = useState({
+    status: 'ACTIVE',
+    endTime: Date.now() + 300000,
+    jackpot: 0.00,
+    bidCost: 1.00,
+    lastBidder: "Designer",
+    history: [],
+    recentWinners: [],
+    connectedUsers: 1,
+    restartTimer: null,
+    bidders: [],
+    userInvestments: {}
+  });
   const [credits, setCredits] = useState(0.00);
   const [isCooldown, setIsCooldown] = useState(false);
   const [cd, setCd] = useState(0);
-  const [showVault, setShowVault] = useState(false);
+  const [showVault, setShowVault] = useState(false); // Can reuse for deposit modal logic
   const [showHelp, setShowHelp] = useState(false);
   const [floatingBids, setFloatingBids] = useState([]);
   const [restartCount, setRestartCount] = useState(15);
+  
+  // NEW: Menu State
+  const [showMenu, setShowMenu] = useState(false);
 
   const prevStatus = useRef("ACTIVE");
   const lastBidId = useRef(null);
   const audioRef = useRef(null);
 
   const { wallets } = useWallets();
-  const userAddress = wallets.find(w => w.walletClientType === 'privy')?.address || user.wallet?.address;
-  const MY_EMAIL = "tinyearner8@gmail.com";
+  // Use passed user object from custom auth or Privy fallback
+  const userAddress = wallets.find(w => w.walletClientType === 'privy')?.address || "0x...";
+  const userEmail = user.email || "user@example.com";
+  const username = user.username || "Player"; 
 
   // --- STATES ---
   const [showDeposit, setShowDeposit] = useState(false);
@@ -229,7 +247,7 @@ function GameDashboard({ logout, user }) {
 
       if (txHash) {
         socket.emit('verifyDeposit', {
-          email: user.email.address.toLowerCase().trim(), // ⚠️ FIX: Lowercase email
+          email: userEmail.toLowerCase().trim(), // ⚠️ FIX: Lowercase email
           txHash,
           network: selectedNetwork
         });
@@ -257,7 +275,7 @@ function GameDashboard({ logout, user }) {
       if (credits < amt) return alert("Insufficient Balance");
 
       socket.emit('requestWithdrawal', {
-          email: user.email.address.toLowerCase().trim(), // ⚠️ FIX: Lowercase email
+          email: userEmail.toLowerCase().trim(), // ⚠️ FIX: Lowercase email
           amount: amt,
           address: withdrawAddress,
           network: selectedNetwork
@@ -298,8 +316,8 @@ function GameDashboard({ logout, user }) {
     socket.on('depositHistory', (data) => { setDepositHistory(data); });
 
     // ⚠️ FIX: Send lowercase email on connection
-    if(user?.email?.address) {
-        socket.emit('getUserBalance', user.email.address.toLowerCase().trim());
+    if(userEmail) {
+        socket.emit('getUserBalance', userEmail.toLowerCase().trim());
     }
 
     socket.on('gameState', (data) => {
@@ -314,9 +332,9 @@ function GameDashboard({ logout, user }) {
       if (data.status === 'ENDED' && prevStatus.current === 'ACTIVE') {
         playSound('soundWin');
         // ⚠️ FIX: Check against lowercase email
-        if (data.lastBidder === user?.email?.address.toLowerCase().trim()) {
-            setTimeout(() => { 
-                socket.emit('getUserBalance', user.email.address.toLowerCase().trim()); 
+        if (data.lastBidder === userEmail.toLowerCase().trim()) {
+            setTimeout(() => {
+                socket.emit('getUserBalance', userEmail.toLowerCase().trim());
             }, 1000);
         }
       }
@@ -334,7 +352,7 @@ function GameDashboard({ logout, user }) {
       socket.off('depositHistory');
       socket.off('gameConfig');
     };
-  }, [user, muted]);
+  }, [userEmail, muted]);
 
   useEffect(() => {
     const timerInterval = setInterval(() => {
@@ -354,11 +372,11 @@ function GameDashboard({ logout, user }) {
     if (credits < 1.00) { setShowDeposit(true); return; }
     setFloatingBids(prev => [...prev, Date.now()]);
     playSound('soundPop');
-    
-    // ⚠️ FIX: Send lowercase email
-    const emailToSend = user.email ? user.email.address.toLowerCase().trim() : "User";
+
+    // ⚠️ FIX: Send lowercase email, but dashboard will show username from login
+    const emailToSend = userEmail ? userEmail.toLowerCase().trim() : "User";
     socket.emit('placeBid', emailToSend);
-    
+
     setIsCooldown(true);
     setCd(8);
   };
@@ -376,8 +394,66 @@ function GameDashboard({ logout, user }) {
       <GlobalStyle />
       {gameState?.status === 'ENDED' && <Confetti width={window.innerWidth} height={window.innerHeight} recycle={false} numberOfPieces={500} colors={['#fbbf24', '#ffffff', '#22c55e']} />}
 
-      {showVault && <WalletVault onClose={() => setShowVault(false)} userAddress={userAddress} userEmail={user.email?.address} currentCredits={credits} />}
+      {showVault && <WalletVault onClose={() => setShowVault(false)} userAddress={userAddress} userEmail={userEmail} currentCredits={credits} />}
       {showHelp && <HowToPlay onClose={() => setShowHelp(false)} />}
+
+      {/* SIDE MENU MODAL */}
+      {showMenu && (
+        <div className="modal-overlay" onClick={(e) => { if(e.target.className === 'modal-overlay') setShowMenu(false); }}>
+            <div className="slide-menu" style={{
+                position:'fixed', right:0, top:0, height:'100%', width:'80%', maxWidth:'300px', 
+                background:'#0f172a', borderLeft:'1px solid #334155', padding:'25px', 
+                boxShadow:'-10px 0 30px rgba(0,0,0,0.5)', zIndex:100,
+                display:'flex', flexDirection:'column', gap:'20px', animation:'slideIn 0.3s'
+            }}>
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                     <h2 style={{margin:0, color:'#fbbf24'}}>MENU</h2>
+                     <button onClick={() => setShowMenu(false)} style={{background:'none', border:'none', color:'white', fontSize:'24px'}}>✕</button>
+                </div>
+
+                {/* USER PROFILE SNIPPET */}
+                <div style={{background: 'rgba(255,255,255,0.05)', padding:'15px', borderRadius:'12px'}}>
+                    <div style={{color:'#94a3b8', fontSize:'12px', fontWeight:'bold', marginBottom:'5px'}}>LOGGED IN AS</div>
+                    <div style={{color:'white', fontSize:'16px', fontWeight:'bold'}}>{username}</div>
+                    <div style={{color:'#64748b', fontSize:'12px'}}>{userEmail}</div>
+                </div>
+
+                {/* BALANCE CARD */}
+                <div style={{background: 'rgba(34, 197, 94, 0.1)', padding:'20px', borderRadius:'12px', border:'1px solid rgba(34, 197, 94, 0.2)'}}>
+                    <div style={{color:'#22c55e', fontSize:'12px', fontWeight:'bold', marginBottom:'5px', letterSpacing:'1px'}}>TOTAL BALANCE</div>
+                    <div style={{fontSize:'32px', fontWeight:'900', color:'white', marginBottom:'15px'}}>${credits.toFixed(2)}</div>
+                    
+                    <button onClick={() => { setShowMenu(false); setShowDeposit(true); }} style={{width:'100%', padding:'12px', background:'#22c55e', border:'none', borderRadius:'8px', color:'white', fontWeight:'bold', cursor:'pointer'}}>
+                        + DEPOSIT
+                    </button>
+                </div>
+
+                {/* MENU LINKS */}
+                <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
+                    <button onClick={() => { setShowMenu(false); setShowWithdraw(true); }} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
+                         💸 Withdraw Funds <span>→</span>
+                    </button>
+
+                     <button onClick={() => setMuted(!muted)} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
+                         {muted ? '🔊 Unmute Sound' : '🔇 Mute Sound'} <span>{muted ? 'OFF' : 'ON'}</span>
+                    </button>
+
+                    <button onClick={() => { setShowMenu(false); setShowHelp(true); }} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
+                         ❓ Help / Rules <span>→</span>
+                    </button>
+
+                    {/* NEW SUPPORT BUTTON */}
+                    <a href="https://t.me/Bidblaze" target="_blank" rel="noopener noreferrer" style={{textDecoration:'none', textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                         💬 24/7 Support <span>→</span>
+                    </a>
+                </div>
+
+                <div style={{marginTop:'auto', textAlign:'center', fontSize:'10px', color:'#64748b'}}>
+                    v1.0.5 • Secure Connection
+                </div>
+            </div>
+        </div>
+      )}
 
       {isProcessing && (
           <div className="modal-overlay">
@@ -487,20 +563,41 @@ function GameDashboard({ logout, user }) {
         </div>
       )}
 
-      {/* NAV BAR */}
+      {/* UPDATED NAV BAR */}
       <nav className="glass-nav">
-        <button className="nav-btn vault-btn" onClick={() => setShowDeposit(true)}>🏦 ${credits.toFixed(2)}</button>
-        <div className="live-pill" style={{color:'#22c55e', fontWeight:'bold', display:'flex', alignItems:'center', gap:'5px'}}>
-           <div style={{width:'8px', height:'8px', background:'#22c55e', borderRadius:'50%', boxShadow:'0 0 10px #22c55e'}}></div>
-           {gameState.connectedUsers || 1} LIVE
+        {/* LEFT SIDE: Balance FIRST, then Live Indicator */}
+        <div style={{display:'flex', alignItems:'center', gap:'15px'}}>
+            {/* Balance Display */}
+            <div className="balance-pill" style={{
+                background: 'rgba(255, 255, 255, 0.08)', 
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                padding: '6px 12px', 
+                borderRadius: '20px', 
+                color: 'white', 
+                fontWeight: 'bold', 
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
+            }}>
+                <span style={{color:'#fbbf24'}}>💰</span> ${credits.toFixed(2)}
+            </div>
+
+             {/* Live Pill */}
+            <div className="live-pill" style={{color:'#22c55e', fontWeight:'bold', display:'flex', alignItems:'center', gap:'5px'}}>
+                <div style={{width:'8px', height:'8px', background:'#22c55e', borderRadius:'50%', boxShadow:'0 0 10px #22c55e'}}></div>
+                {gameState.connectedUsers || 1} LIVE
+            </div>
         </div>
+
+        {/* RIGHT SIDE: Help -> Menu -> Logout */}
         <div style={{display:'flex', gap:'8px'}}>
-           {/* MUTE BUTTON */}
-           <button className="nav-btn" onClick={() => setMuted(!muted)} style={{fontSize:'18px'}}>
-              {muted ? '🔇' : '🔊'}
-           </button>
            <button className="nav-btn" onClick={() => setShowHelp(true)} style={{fontSize:'18px'}}>❓</button>
-           <button className="nav-btn logout-btn" onClick={logout}>✕</button>
+           
+           {/* NEW MENU BUTTON */}
+           <button className="nav-btn" onClick={() => setShowMenu(true)} style={{fontSize:'22px', color:'white'}}>☰</button>
+           
+           <button className="nav-btn logout-btn" onClick={logout} style={{fontSize:'18px', color:'#ef4444'}}>✕</button>
         </div>
       </nav>
 
@@ -539,7 +636,7 @@ function GameDashboard({ logout, user }) {
         {gameState.status === 'ENDED' ? 'GAME CLOSED' : (isCooldown ? `WAIT (${cd}s)` : `BID NOW ($${gameState.bidCost})`)}
       </button>
 
-      {/* ACTION BUTTONS */}
+      {/* ACTION BUTTONS (Still here for quick access, but also in menu now) */}
       <div className="action-buttons" style={{display: 'flex', gap: '15px', justifyContent: 'center', margin: '25px 0', width:'100%', maxWidth:'350px'}}>
         <button className="deposit-btn" onClick={() => setShowDeposit(true)} style={{background:'#22c55e', color:'white', border:'none', padding:'12px 25px', borderRadius:'12px', fontWeight:'bold', display:'flex', alignItems:'center', gap:'5px', flex:1, justifyContent:'center', fontSize:'14px'}}>
           💰 DEPOSIT
@@ -619,28 +716,210 @@ const ReactorRing = ({ targetDate, status }) => {
   );
 };
 
-function LandingPage({ login }) {
+// --- NEW LANDING PAGE WITH CUSTOM AUTH ---
+function LandingPage({ privyLogin, onAuthSuccess }) {
+  const [authMode, setAuthMode] = useState('home'); // 'home', 'login', 'signup'
+  const [formData, setFormData] = useState({ username: '', email: '', password: '' });
+  const [loading, setLoading] = useState(false);
+
+  const features = [
+    { icon: "⚡", title: "Instant", desc: "No signup lag. Connect wallet & play immediately." },
+    { icon: "🛡️", title: "Fair", desc: "Provably fair game logic. Blockchain verified payouts." },
+    { icon: "💰", title: "High Yield", desc: "Small bids, massive jackpots. Winner takes all." }
+  ];
+
+  const handleAuthSubmit = async () => {
+      if(!formData.email || !formData.password) return alert("Fill all fields");
+      if(authMode === 'signup' && !formData.username) return alert("Enter a username");
+      
+      setLoading(true);
+
+      // SIMULATING SOCKET EMISSION FOR AUTH
+      // When backend is ready, this will be:
+      if (authMode === 'signup') {
+          // Signup Flow: Register user, then trigger Privy if needed, then login
+          socket.emit('register', formData);
+      } else {
+          // Login Flow: Verify Email/Pass
+          socket.emit('login', { email: formData.email, password: formData.password });
+      }
+
+      // LISTENING FOR MOCK BACKEND RESPONSE (Replace this with real socket.on inside useEffect)
+      // For now, we simulate success to let you test UI
+      setTimeout(() => {
+          setLoading(false);
+          if (authMode === 'signup') {
+             // After successful signup, we might want to trigger Privy to link wallet
+             // For now, we just log them in
+             onAuthSuccess({ username: formData.username, email: formData.email });
+          } else {
+             // Login
+             onAuthSuccess({ username: "ReturningUser", email: formData.email });
+          }
+      }, 1500);
+  };
+
+  // Socket listeners for Auth
+  useEffect(() => {
+     socket.on('authSuccess', (userData) => {
+         setLoading(false);
+         onAuthSuccess(userData);
+     });
+     socket.on('authError', (msg) => {
+         setLoading(false);
+         alert(msg);
+     });
+     return () => {
+         socket.off('authSuccess');
+         socket.off('authError');
+     };
+  }, [onAuthSuccess]);
+
   return (
-    <div className="landing-container">
+    <div className="landing-page-wrapper">
       <GlobalStyle />
-      <div className="landing-content" style={{textAlign:'center'}}>
-        <div style={{fontSize:'60px', marginBottom:'20px'}}>🔥</div>
-        <h1>BidBlaze <span style={{color:'#fbbf24'}}>Pro</span></h1>
-        <p style={{color:'#94a3b8', fontSize:'16px', marginTop:'-10px'}}>Real-Time Crypto Auctions</p>
-        <button className="start-btn" onClick={login} style={{marginTop:'30px'}}>🚀 Play Now</button>
+      
+      {/* Navbar */}
+      <div className="lp-nav">
+        <div className="lp-logo">BID<span style={{color: '#fbbf24'}}>BLAZE</span></div>
+        <div>
+            {authMode === 'home' && (
+                <>
+                <button className="lp-login-btn-small" onClick={() => setAuthMode('login')} style={{marginRight:'10px'}}>Login</button>
+                <button className="lp-login-btn-small" onClick={() => setAuthMode('signup')} style={{background:'#fbbf24', color:'black', border:'none'}}>Sign Up</button>
+                </>
+            )}
+            {authMode !== 'home' && (
+                <button className="lp-login-btn-small" onClick={() => setAuthMode('home')}>← Back</button>
+            )}
+        </div>
+      </div>
+
+      {/* AUTH FORMS OR HERO */}
+      {authMode === 'home' ? (
+        <div className="lp-hero">
+            <div className="lp-badge">LIVE CRYPTO AUCTIONS</div>
+            <h1 className="lp-title">
+            Bid Small. <br />
+            <span className="text-gradient">Win Massive.</span>
+            </h1>
+            <p className="lp-subtitle">
+            The world's first PvP crypto auction battle. Be the last to bid and the jackpot is yours instantly.
+            </p>
+            
+            {/* UPDATED ACTION BUTTONS CONTAINER */}
+            <div className="lp-action-container">
+                <button className="lp-btn-primary" onClick={() => setAuthMode('login')}>
+                    LOGIN
+                </button>
+                 <button className="lp-btn-secondary" onClick={() => setAuthMode('signup')}>
+                    SIGN UP 🚀
+                </button>
+            </div>
+
+            {/* Live Stats Illusion */}
+            <div className="lp-stats-row">
+                <div className="lp-stat">
+                    <span className="val">2,401</span>
+                    <span className="lbl">Live Players</span>
+                </div>
+                <div className="lp-stat">
+                    <span className="val" style={{color:'#fbbf24'}}>$142k+</span>
+                    <span className="lbl">Paid Out</span>
+                </div>
+                <div className="lp-stat">
+                    <span className="val">0.5s</span>
+                    <span className="lbl">Latency</span>
+                </div>
+            </div>
+        </div>
+      ) : (
+        <div className="glass-card fade-in" style={{marginTop:'50px', maxWidth:'400px'}}>
+            <h2 style={{color:'white', marginTop:0}}>{authMode === 'login' ? 'Welcome Back' : 'Create Account'}</h2>
+            
+            {authMode === 'signup' && (
+                <>
+                <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Username</p>
+                <input 
+                    className="input-field" 
+                    type="text" 
+                    placeholder="CryptoKing99"
+                    value={formData.username}
+                    onChange={(e) => setFormData({...formData, username: e.target.value})}
+                />
+                </>
+            )}
+
+            <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Email Address</p>
+            <input 
+                className="input-field" 
+                type="email" 
+                placeholder="you@example.com"
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
+            />
+
+            <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Password</p>
+            <input 
+                className="input-field" 
+                type="password" 
+                placeholder="••••••••"
+                value={formData.password}
+                onChange={(e) => setFormData({...formData, password: e.target.value})}
+            />
+
+            <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>
+                {loading ? 'PROCESSING...' : (authMode === 'login' ? 'LOG IN' : 'SIGN UP & PLAY')}
+            </button>
+            
+            <p style={{fontSize:'12px', color:'#64748b', marginTop:'15px', cursor:'pointer'}} onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}>
+                {authMode === 'login' ? "Don't have an account? Sign Up" : "Already have an account? Log In"}
+            </p>
+        </div>
+      )}
+
+      {/* Marquee Section */}
+      <div className="lp-marquee-container">
+         <div className="lp-marquee-content">
+            <span>🏆 User88 just won $450.00 (ETH)</span> • 
+            <span>🏆 CryptoKing just won $1,200.00 (BNB)</span> • 
+            <span>🔥 Jackpot currently at $52.00</span> • 
+            <span>🏆 Alex_99 just won $320.00 (BASE)</span> • 
+            <span>💎 New Round Starting...</span> •
+             <span>🏆 User88 just won $450.00 (ETH)</span> • 
+            <span>🏆 CryptoKing just won $1,200.00 (BNB)</span> • 
+            <span>🔥 Jackpot currently at $52.00</span> 
+         </div>
+      </div>
+
+      {/* Features Grid */}
+      <div className="lp-features">
+         {features.map((f, i) => (
+             <div key={i} className="lp-feature-card">
+                 <div className="lp-icon">{f.icon}</div>
+                 <h3>{f.title}</h3>
+                 <p>{f.desc}</p>
+             </div>
+         ))}
+      </div>
+
+      {/* Footer */}
+      <div className="lp-footer">
+         &copy; 2025 BidBlaze Protocol. 
       </div>
     </div>
   );
 }
 
-// --- NEW ANIMATED BACKGROUND STYLE ---
+// --- UPDATED STYLES TO SUPPORT NEW DESIGN ---
 const GlobalStyle = () => (
   <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&family=JetBrains+Mono:wght@500&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&family=JetBrains+Mono:wght@500&display=swap');
     :root { --bg-dark: #020617; --glass: rgba(255, 255, 255, 0.05); --glass-border: rgba(255, 255, 255, 0.1); --gold: #fbbf24; --blue: #3b82f6; --red: #ef4444; }
-    body { margin: 0; background: var(--bg-dark); color: white; font-family: 'Outfit', sans-serif; overflow-y: auto; }
+    
+    body { margin: 0; background: var(--bg-dark); color: white; font-family: 'Outfit', sans-serif; overflow-x: hidden; }
 
-    /* 🌟 ANIMATED MESH BACKGROUND */
+    /* --- APP CONTAINER (GAME) --- */
     .app-container {
         min-height: 100vh;
         display: flex;
@@ -655,13 +934,181 @@ const GlobalStyle = () => (
         background-size: 200% 200%;
         animation: gradientMove 15s ease infinite;
     }
+
+    /* --- LANDING PAGE STYLES (NEW) --- */
+    .landing-page-wrapper {
+        min-height: 100vh;
+        width: 100%;
+        background: radial-gradient(circle at top, #1e293b, #020617);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    
+    .lp-nav {
+        width: 100%;
+        max-width: 1000px;
+        padding: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-sizing: border-box;
+    }
+    .lp-logo { font-size: 24px; font-weight: 900; letter-spacing: -1px; }
+    .lp-login-btn-small {
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: white;
+        padding: 8px 20px;
+        border-radius: 20px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    .lp-login-btn-small:hover { background: white; color: black; }
+
+    .lp-hero {
+        padding: 60px 20px;
+        max-width: 800px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .lp-badge {
+        background: rgba(251, 191, 36, 0.15);
+        color: #fbbf24;
+        font-size: 12px;
+        font-weight: bold;
+        padding: 6px 12px;
+        border-radius: 20px;
+        margin-bottom: 20px;
+        border: 1px solid rgba(251, 191, 36, 0.3);
+    }
+    .lp-title {
+        font-size: 56px;
+        font-weight: 900;
+        line-height: 1.1;
+        margin: 0 0 20px 0;
+        letter-spacing: -2px;
+    }
+    .text-gradient {
+        background: linear-gradient(135deg, #fff 30%, #94a3b8 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .lp-subtitle {
+        color: #94a3b8;
+        font-size: 18px;
+        line-height: 1.6;
+        max-width: 500px;
+        margin-bottom: 40px;
+    }
+
+    /* --- NEW ACTION BUTTON STYLES --- */
+    .lp-action-container {
+        display: flex;
+        gap: 15px;
+        margin-top: 10px;
+        justify-content: center;
+        width: 100%;
+        max-width: 400px;
+    }
+
+    .lp-btn-primary {
+        flex: 1;
+        background: white;
+        color: black;
+        border: none;
+        padding: 14px 24px;
+        font-size: 16px;
+        font-weight: 800;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: transform 0.2s;
+        text-transform: uppercase;
+    }
+    .lp-btn-primary:hover { transform: scale(1.05); background: #f8fafc; }
+
+    .lp-btn-secondary {
+        flex: 1;
+        background: #fbbf24;
+        color: black;
+        border: none;
+        padding: 14px 24px;
+        font-size: 16px;
+        font-weight: 800;
+        border-radius: 12px;
+        cursor: pointer;
+        box-shadow: 0 4px 20px rgba(251, 191, 36, 0.4);
+        transition: transform 0.2s;
+        text-transform: uppercase;
+    }
+    .lp-btn-secondary:hover { transform: scale(1.05); background: #f59e0b; }
+
+    .lp-stats-row {
+        display: flex;
+        gap: 40px;
+        margin-top: 60px;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        padding-top: 30px;
+    }
+    .lp-stat { display: flex; flex-direction: column; }
+    .lp-stat .val { font-size: 28px; font-weight: 800; }
+    .lp-stat .lbl { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; }
+
+    .lp-marquee-container {
+        width: 100%;
+        background: #0f172a;
+        padding: 15px 0;
+        margin: 40px 0;
+        overflow: hidden;
+        white-space: nowrap;
+        border-top: 1px solid #1e293b;
+        border-bottom: 1px solid #1e293b;
+    }
+    .lp-marquee-content {
+        display: inline-block;
+        animation: marquee 20s linear infinite;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 14px;
+        color: #cbd5e1;
+    }
+    .lp-marquee-content span { margin: 0 20px; }
+
+    .lp-features {
+        display: flex;
+        gap: 20px;
+        padding: 20px;
+        flex-wrap: wrap;
+        justify-content: center;
+        max-width: 1000px;
+    }
+    .lp-feature-card {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.05);
+        padding: 30px;
+        border-radius: 20px;
+        width: 250px;
+        text-align: left;
+    }
+    .lp-icon { font-size: 30px; margin-bottom: 15px; }
+    .lp-feature-card h3 { margin: 0 0 10px 0; font-size: 18px; }
+    .lp-feature-card p { margin: 0; font-size: 14px; color: #94a3b8; line-height: 1.5; }
+    
+    .lp-footer { margin-top: 50px; color: #475569; font-size: 12px; padding-bottom: 20px; }
+
+    @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+    @keyframes pulseBtn { 0% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(251, 191, 36, 0); } 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); } }
+    @keyframes slideIn { from { transform: translateX(100%); opacity:0; } to { transform: translateX(0); opacity:1; } }
+
+    /* --- GAME DASHBOARD STYLES (EXISTING & REFINED) --- */
     @keyframes gradientMove {
         0% { background-position: 0% 50%; }
         50% { background-position: 100% 50%; }
         100% { background-position: 0% 50%; }
     }
 
-    .landing-container { height: 100vh; display: flex; justify-content: center; align-items: center; background: linear-gradient(135deg, #1e293b, #0f172a); }
     .glass-nav { width: 100%; max-width: 450px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px 15px; background: rgba(15, 23, 42, 0.6); border-radius: 20px; border: 1px solid var(--glass-border); backdrop-filter: blur(10px); }
     .glass-panel { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 20px; backdrop-filter: blur(10px); width: 100%; max-width: 400px; padding: 20px; box-sizing: border-box; }
     .glass-card { background: #0f172a; border: 1px solid #334155; border-radius: 24px; padding: 30px; width: 90%; max-width: 380px; text-align: center; position: relative; }
@@ -671,14 +1118,12 @@ const GlobalStyle = () => (
     .main-btn { width: 100%; max-width: 350px; padding: 22px; border-radius: 50px; border: none; font-size: 20px; font-weight: 900; color: white; background: linear-gradient(135deg, #fbbf24, #d97706); cursor: pointer; box-shadow: 0 10px 20px rgba(251, 191, 36, 0.3); transition: transform 0.1s; margin-bottom: 10px; }
     .main-btn:active { transform: translateY(6px); }
     .main-btn.cooldown { background: #334155; box-shadow: none; transform: translateY(6px); color: #64748b; cursor: not-allowed; }
-    .start-btn { padding: 20px 60px; font-size: 20px; font-weight: bold; border-radius: 50px; border: none; background: white; color: #000; cursor: pointer; }
     .game-stage { position: relative; width: 300px; height: 300px; display: flex; justify-content: center; align-items: center; margin: 20px 0; }
     .reactor-container { position: absolute; width: 100%; height: 100%; }
     .progress-ring { transform: rotate(-90deg); width: 100%; height: 100%; overflow: visible; }
     .ring-progress { transition: stroke-dashoffset 0.1s linear; filter: drop-shadow(0 0 8px var(--gold)); }
     .timer-float { position: absolute; top: -40px; left: 50%; transform: translateX(-50%); font-family: 'JetBrains Mono', monospace; font-size: 48px; font-weight: bold; color: white; text-shadow: 0 0 20px var(--gold); }
 
-    /* ⚠️ Z-INDEX + POSITION FIX BELOW */
     .jackpot-core { z-index: 10; text-align: center; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
     .jackpot-core .label { font-size: 12px; color: #64748b; letter-spacing: 2px; margin-bottom: 5px; }
     .jackpot-core .amount { font-size: 56px; font-weight: 900; color: white; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
@@ -703,12 +1148,36 @@ const GlobalStyle = () => (
     .fade-in { animation: popIn 0.3s ease-out; }
     .spinner { border: 4px solid rgba(255,255,255,0.1); border-left-color: #3b82f6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* MEDIA QUERIES */
+    @media (max-width: 600px) {
+        .lp-title { font-size: 36px; }
+        .lp-stats-row { flex-direction: column; gap: 20px; margin-top: 40px; }
+        .lp-features { flex-direction: column; align-items: center; }
+        .lp-action-container { flex-direction: column; gap: 10px; width: 100%; max-width: 250px; }
+    }
   `}</style>
 );
 
 export default function App() {
   const { login, logout, user, authenticated, ready } = usePrivy();
+  
+  // Custom State to track if user has logged in via our custom forms
+  const [customUser, setCustomUser] = useState(null);
+
+  const handleLogout = async () => {
+      setCustomUser(null);
+      await logout();
+  };
+
+  const handleAuthSuccess = (userData) => {
+      setCustomUser(userData);
+      // We also trigger Privy login silently if we want wallet features, 
+      // but for now we rely on the custom auth state to show dashboard
+  };
+
   if (!ready) return null;
+
   return (
     <PrivyProvider
       appId={PRIVY_APP_ID}
@@ -720,7 +1189,15 @@ export default function App() {
         supportedChains: [BASE_CHAIN, BSC_CHAIN, ETH_CHAIN]
       }}
     >
-      {authenticated ? <GameDashboard logout={logout} user={user} /> : <LandingPage login={login} />}
+      {/* LOGIC: If customUser exists (logged in via form) -> Show Dashboard.
+         Else -> Show Landing Page. 
+         We pass 'login' to LandingPage to allow triggering Privy if needed for wallet connection later.
+      */}
+      {customUser ? (
+          <GameDashboard logout={handleLogout} user={{...user, ...customUser}} /> 
+      ) : (
+          <LandingPage privyLogin={login} onAuthSuccess={handleAuthSuccess} />
+      )}
     </PrivyProvider>
   );
 }
