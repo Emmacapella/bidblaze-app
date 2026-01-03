@@ -97,7 +97,6 @@ const HowToPlay = ({ onClose }) => {
 
 // --- GAME DASHBOARD ---
 function GameDashboard({ logout, user }) {
-  // ⚠️ FAKE DATA FOR DESIGNING (So you don't need a server)
   const [gameState, setGameState] = useState({
     status: 'ACTIVE',
     endTime: Date.now() + 300000,
@@ -114,12 +113,10 @@ function GameDashboard({ logout, user }) {
   const [credits, setCredits] = useState(0.00);
   const [isCooldown, setIsCooldown] = useState(false);
   const [cd, setCd] = useState(0);
-  const [showVault, setShowVault] = useState(false); // Can reuse for deposit modal logic
+  const [showVault, setShowVault] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [floatingBids, setFloatingBids] = useState([]);
   const [restartCount, setRestartCount] = useState(15);
-  
-  // NEW: Menu State
   const [showMenu, setShowMenu] = useState(false);
 
   const prevStatus = useRef("ACTIVE");
@@ -127,7 +124,6 @@ function GameDashboard({ logout, user }) {
   const audioRef = useRef(null);
 
   const { wallets } = useWallets();
-  // Use passed user object from custom auth or Privy fallback
   const userAddress = wallets.find(w => w.walletClientType === 'privy')?.address || "0x...";
   const userEmail = user.email || "user@example.com";
   const username = user.username || "Player"; 
@@ -143,14 +139,8 @@ function GameDashboard({ logout, user }) {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [withdrawHistory, setWithdrawHistory] = useState([]);
-
-  // Deposit History State
   const [depositHistory, setDepositHistory] = useState([]);
-
-  // 🛡️ SECURITY FIX: State to hold Admin Wallet
   const [adminWallet, setAdminWallet] = useState(null);
-
-  // Mute State
   const [muted, setMuted] = useState(false);
 
   const playSound = (key) => {
@@ -162,7 +152,6 @@ function GameDashboard({ logout, user }) {
     audio.play().catch(() => {});
   };
 
-  // --- SAFE DEPOSIT LOGIC ---
   const handleDeposit = async () => {
     try {
       const amt = Number(depositAmount);
@@ -171,14 +160,12 @@ function GameDashboard({ logout, user }) {
         return;
       }
 
-      // 🛡️ SECURITY CHECK: Ensure wallet address is loaded
       if (!adminWallet) {
           alert("Secure connection pending. Please wait 2 seconds and try again.");
-          socket.emit('getGameConfig'); // Retry fetch
+          socket.emit('getGameConfig'); 
           return;
       }
 
-      // 1. DIRECT WALLET DETECTION
       let provider = window.ethereum;
       let account = null;
 
@@ -200,7 +187,6 @@ function GameDashboard({ logout, user }) {
 
       if (!account) throw new Error("No account found");
 
-      // 3. SMART CHAIN SWITCHING
       const chainConfig = {
         'BSC': { hex: '0x38', rpc: 'https://bsc-dataseed1.binance.org' },
         'ETH': { hex: '0x1', rpc: 'https://cloudflare-eth.com' },
@@ -239,7 +225,7 @@ function GameDashboard({ logout, user }) {
         method: 'eth_sendTransaction',
         params: [{
           from: account,
-          to: adminWallet, // 🛡️ USING SECURE VARIABLE
+          to: adminWallet,
           value: hexValue,
           data: '0x'
         }]
@@ -247,7 +233,7 @@ function GameDashboard({ logout, user }) {
 
       if (txHash) {
         socket.emit('verifyDeposit', {
-          email: userEmail.toLowerCase().trim(), // ⚠️ FIX: Lowercase email
+          email: userEmail.toLowerCase().trim(),
           txHash,
           network: selectedNetwork
         });
@@ -275,7 +261,7 @@ function GameDashboard({ logout, user }) {
       if (credits < amt) return alert("Insufficient Balance");
 
       socket.emit('requestWithdrawal', {
-          email: userEmail.toLowerCase().trim(), // ⚠️ FIX: Lowercase email
+          email: userEmail.toLowerCase().trim(),
           amount: amt,
           address: withdrawAddress,
           network: selectedNetwork
@@ -287,7 +273,6 @@ function GameDashboard({ logout, user }) {
   useEffect(() => {
     if(!socket.connected) socket.connect();
 
-    // 🛡️ SECURITY FIX: Fetch Admin Wallet Securely
     socket.emit('getGameConfig');
     socket.on('gameConfig', (cfg) => {
         if(cfg && cfg.adminWallet) setAdminWallet(cfg.adminWallet);
@@ -312,10 +297,8 @@ function GameDashboard({ logout, user }) {
 
     socket.on('withdrawalError', (msg) => { alert(`❌ Withdrawal Failed: ${msg}`); });
     socket.on('withdrawalHistory', (data) => { setWithdrawHistory(data); });
-
     socket.on('depositHistory', (data) => { setDepositHistory(data); });
 
-    // ⚠️ FIX: Send lowercase email on connection
     if(userEmail) {
         socket.emit('getUserBalance', userEmail.toLowerCase().trim());
     }
@@ -331,7 +314,6 @@ function GameDashboard({ logout, user }) {
       }
       if (data.status === 'ENDED' && prevStatus.current === 'ACTIVE') {
         playSound('soundWin');
-        // ⚠️ FIX: Check against lowercase email
         if (data.lastBidder === userEmail.toLowerCase().trim()) {
             setTimeout(() => {
                 socket.emit('getUserBalance', userEmail.toLowerCase().trim());
@@ -373,7 +355,6 @@ function GameDashboard({ logout, user }) {
     setFloatingBids(prev => [...prev, Date.now()]);
     playSound('soundPop');
 
-    // ⚠️ FIX: Send lowercase email, but dashboard will show username from login
     const emailToSend = userEmail ? userEmail.toLowerCase().trim() : "User";
     socket.emit('placeBid', emailToSend);
 
@@ -729,49 +710,47 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
   ];
 
   const handleAuthSubmit = async () => {
+      // 1. Client-Side Validation (to save server hits)
       if(!formData.email || !formData.password) return alert("Fill all fields");
-      if(authMode === 'signup' && !formData.username) return alert("Enter a username");
-      
-      setLoading(true);
-
-      // SIMULATING SOCKET EMISSION FOR AUTH
-      // When backend is ready, this will be:
-      if (authMode === 'signup') {
-          // Signup Flow: Register user, then trigger Privy if needed, then login
-          socket.emit('register', formData);
-      } else {
-          // Login Flow: Verify Email/Pass
-          socket.emit('login', { email: formData.email, password: formData.password });
+      if(authMode === 'signup') {
+          if(!formData.username) return alert("Enter a username");
+          // Validate Password Rules on Frontend too
+          const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[\W_]).{8,}$/;
+          if (!passwordRegex.test(formData.password)) {
+              return alert('Password must be 8+ characters, with at least 1 uppercase, 1 lowercase, and 1 special character.');
+          }
       }
 
-      // LISTENING FOR MOCK BACKEND RESPONSE (Replace this with real socket.on inside useEffect)
-      // For now, we simulate success to let you test UI
-      setTimeout(() => {
-          setLoading(false);
-          if (authMode === 'signup') {
-             // After successful signup, we might want to trigger Privy to link wallet
-             // For now, we just log them in
-             onAuthSuccess({ username: formData.username, email: formData.email });
-          } else {
-             // Login
-             onAuthSuccess({ username: "ReturningUser", email: formData.email });
-          }
-      }, 1500);
+      setLoading(true);
+
+      // 2. Send Real Data to Backend
+      if (authMode === 'signup') {
+          socket.emit('register', formData);
+      } else {
+          socket.emit('login', { email: formData.email, password: formData.password });
+      }
   };
 
   // Socket listeners for Auth
   useEffect(() => {
-     socket.on('authSuccess', (userData) => {
+     // SUCCESS HANDLER
+     const handleSuccess = (userData) => {
          setLoading(false);
          onAuthSuccess(userData);
-     });
-     socket.on('authError', (msg) => {
+     };
+
+     // ERROR HANDLER
+     const handleError = (msg) => {
          setLoading(false);
-         alert(msg);
-     });
+         alert("❌ " + msg);
+     };
+
+     socket.on('authSuccess', handleSuccess);
+     socket.on('authError', handleError);
+
      return () => {
-         socket.off('authSuccess');
-         socket.off('authError');
+         socket.off('authSuccess', handleSuccess);
+         socket.off('authError', handleError);
      };
   }, [onAuthSuccess]);
 
