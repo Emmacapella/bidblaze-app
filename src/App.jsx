@@ -124,9 +124,11 @@ function GameDashboard({ logout, user }) {
   const audioRef = useRef(null);
 
   const { wallets } = useWallets();
+  
+  // ⚠️ CRITICAL FIX: Handle both Privy object emails and Custom string emails
   const userAddress = wallets.find(w => w.walletClientType === 'privy')?.address || "0x...";
-  const userEmail = user.email || "user@example.com";
-  const username = user.username || "Player"; 
+  const userEmail = user?.email?.address || user?.email || "user@example.com";
+  const username = user?.username || "Player"; 
 
   // --- STATES ---
   const [showDeposit, setShowDeposit] = useState(false);
@@ -299,6 +301,7 @@ function GameDashboard({ logout, user }) {
     socket.on('withdrawalHistory', (data) => { setWithdrawHistory(data); });
     socket.on('depositHistory', (data) => { setDepositHistory(data); });
 
+    // ⚠️ CRITICAL FIX: Ensure request is sent on mount with correct email format
     if(userEmail) {
         socket.emit('getUserBalance', userEmail.toLowerCase().trim());
     }
@@ -806,8 +809,8 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
             {/* Live Stats Illusion */}
             <div className="lp-stats-row">
                 <div className="lp-stat">
-                    <span className="val">2,401+</span>
-                    <span className="lbl">Players Signup</span>
+                    <span className="val">2,401</span>
+                    <span className="lbl">Live Players</span>
                 </div>
                 <div className="lp-stat">
                     <span className="val" style={{color:'#fbbf24'}}>$142k+</span>
