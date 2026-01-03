@@ -723,7 +723,7 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
   const [loading, setLoading] = useState(false);
 
   const features = [
-    { icon: "⚡", title: "Instant", desc: "No signup lag. Connect wallet & play immediately." },
+    { icon: "⚡", title: "Instant", desc: "No signup lag. Create account & play immediately." },
     { icon: "🛡️", title: "Fair", desc: "Provably fair game logic. Blockchain verified payouts." },
     { icon: "💰", title: "High Yield", desc: "Small bids, massive jackpots. Winner takes all." }
   ];
