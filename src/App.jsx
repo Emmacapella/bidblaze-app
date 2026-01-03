@@ -806,8 +806,8 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
             {/* Live Stats Illusion */}
             <div className="lp-stats-row">
                 <div className="lp-stat">
-                    <span className="val">2,401</span>
-                    <span className="lbl">Live Players</span>
+                    <span className="val">2,401+</span>
+                    <span className="lbl">Players Signup</span>
                 </div>
                 <div className="lp-stat">
                     <span className="val" style={{color:'#fbbf24'}}>$142k+</span>
