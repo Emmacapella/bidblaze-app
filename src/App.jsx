@@ -114,7 +114,7 @@ function GameDashboard({ logout, user }) {
   const lastBidId = useRef(null);
   const audioRef = useRef(null);
   const { wallets } = useWallets();
-  // âš ï¸ CRITICAL FIX: Handle both Privy object emails and Custom string emails
+  // ⚠️ CRITICAL FIX: Handle both Privy object emails and Custom string emails
   const userAddress = wallets.find(w => w.walletClientType === 'privy')?.address || "0x...";
   const userEmail = user?.email?.address || user?.email || "user@example.com";
   const username = user?.username || "Player";
@@ -361,196 +361,14 @@ function GameDashboard({ logout, user }) {
   );
                                                                                           
   return (
-    <div className="app-container bc-upgrade">
+    <div className="app-container upgraded">
       <GlobalStyle />
-      {gameState?.status === 'ENDED' && <Confetti width={window.innerWidth} height={window.innerHeight} recycle={false} numberOfPieces={500} colors={['#fbbf24', '#ffffff', '#39ff14', '#22c55e']} />}
+      {gameState?.status === 'ENDED' && <Confetti width={window.innerWidth} height={window.innerHeight} recycle={false} numberOfPieces={500} colors={['#fbbf24', '#ffffff', '#22c55e']} />}
                                                                                               
       {showVault && <WalletVault onClose={() => setShowVault(false)} userAddress={userAddress} userEmail={userEmail} currentCredits={credits} />}
       {showHelp && <HowToPlay onClose={() => setShowHelp(false)} />}
 
-      {/* NEW: LEFT SIDEBAR (BC.Game style - desktop only) */}
-      <div className="bc-sidebar">
-        <div className="bc-logo">BID<span style={{color:'#fbbf24'}}>BLAZE</span></div>
-        <nav className="bc-sidebar-nav">
-          <button className="bc-sidebar-item active">
-            <span style={{fontSize:'24px'}}>🎲</span> Game
-          </button>
-          <button className="bc-sidebar-item" onClick={() => setShowDeposit(true)}>
-            <span style={{fontSize:'24px'}}>💰</span> Deposit
-          </button>
-          <button className="bc-sidebar-item" onClick={() => setShowWithdraw(true)}>
-            <span style={{fontSize:'24px'}}>💸</span> Withdraw
-          </button>
-          <button className="bc-sidebar-item" onClick={() => setShowHelp(true)}>
-            <span style={{fontSize:'24px'}}>❓</span> Rules
-          </button>
-          <button className="bc-sidebar-item" onClick={logout}>
-            <span style={{fontSize:'24px'}}>✕</span> Logout
-          </button>
-        </nav>
-        <a href="https://t.me/Bidblaze" target="_blank" rel="noopener noreferrer" className="bc-sidebar-support">
-          <span style={{fontSize:'24px'}}>💬</span> 24/7 Support
-        </a>
-      </div>
-
-      {/* MAIN CONTENT WITH LEFT MARGIN FOR SIDEBAR */}
-      <div className="bc-main-content">
-        {/* PROMINENT BALANCE HEADER */}
-        <div className="bc-balance-header">
-          <div className="bc-balance-card">
-            <div className="bc-balance-label">TOTAL BALANCE</div>
-            <div className="bc-balance-amount">${credits.toFixed(2)}</div>
-            <button className="bc-deposit-btn" onClick={() => setShowDeposit(true)}>+ DEPOSIT</button>
-          </div>
-          <div className="bc-live-indicator">
-            <div className="bc-live-dot"></div>
-            <span>{gameState.connectedUsers || 1} LIVE</span>
-          </div>
-        </div>
-
-        {/* ORIGINAL TOP NAV (kept intact below new balance header) */}
-        <nav className="glass-nav">
-          {/* LEFT SIDE: Balance FIRST, then Live Indicator */}
-          <div style={{display:'flex', alignItems:'center', gap:'15px'}}>
-              {/* Balance Display */}
-              <div className="balance-pill" style={{
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  padding: '6px 12px',
-                  borderRadius: '20px',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  fontSize: '13px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px'
-              }}>
-                  <span style={{color:'#fbbf24'}}>💰</span> ${credits.toFixed(2)}
-              </div>
-
-               {/* Live Pill */}
-              <div className="live-pill" style={{color:'#39ff14', fontWeight:'bold', display:'flex', alignItems:'center', gap:'5px'}}>
-                  <div style={{width:'8px', height:'8px', background:'#39ff14', borderRadius:'50%', boxShadow:'0 0 15px #39ff14'}}></div>
-                  {gameState.connectedUsers || 1} LIVE
-              </div>
-          </div>
-          
-          {/* RIGHT SIDE: Help -> Menu -> Logout */}
-          <div style={{display:'flex', gap:'8px'}}>
-            <button className="nav-btn" onClick={() => setShowHelp(true)} style={{fontSize:'18px'}}>❓</button>
-             {/* NEW MENU BUTTON */}
-             <button className="nav-btn" onClick={() => setShowMenu(true)} style={{fontSize:'22px', color:'white'}}>☰</button>
-
-             <button className="nav-btn logout-btn" onClick={logout} style={{fontSize:'18px', color:'#ef4444'}}>✕</button>
-          </div>
-        </nav>
-
-             {/* GAME STAGE - more space & glow */}
-        <div className="game-stage bc-game-stage">
-          <ReactorRing targetDate={gameState.endTime} status={gameState.status} />
-          <div className="jackpot-core bc-jackpot">
-            {gameState.status === 'ACTIVE' ? (
-              <>
-                <div className="label">JACKPOT</div>
-                <div className="amount">${gameState.jackpot.toFixed(2)}</div>
-              </>
-            ) : (
-              <div className="restart-box">
-                <div className="restart-label">NEW GAME IN</div>
-                 <div className="restart-timer">{restartCount}</div>
-                 {new Set(gameState.history.map(b => b.user)).size === 1 ? (
-                    <div className="winner-badge" style={{background:'#3b82f6'}}>
-                      ♻️ REFUNDED: {gameState.history[0]?.user.slice(0,10)}...
-                    </div>
-                 ) : (
-                    <div className="winner-badge">
-                      🏆 WINNER: {gameState.history[0]?.user.slice(0,10)}...
-                    </div>
-                 )}
-              </div>
-            )}
-          </div>
-          {floatingBids.map(id => (
-            <div key={id} className="float-anim bc-float" onAnimationEnd={() => setFloatingBids(prev => prev.filter(bid => bid !== id))}>-$1.00</div>
-          ))}
-        </div>
-        
-        <button className={`main-btn bc-bid-btn ${isCooldown ? 'cooldown' : ''}`} onClick={placeBid} disabled={gameState.status !== 'ACTIVE' || isCooldown}>
-          {gameState.status === 'ENDED' ? 'GAME CLOSED' : (isCooldown ? `WAIT (${cd}s)` : `BID NOW ($${gameState.bidCost})`)}
-        </button>
-        
-        {/* ACTION BUTTONS */}
-        <div className="action-buttons" style={{display: 'flex', gap: '15px', justifyContent: 'center', margin: '30px 0', width:'100%', maxWidth:'400px'}}>
-          <button className="deposit-btn" onClick={() => setShowDeposit(true)} style={{background:'#39ff14', color:'black', border:'none', padding:'14px 30px', borderRadius:'12px', fontWeight:'bold', display:'flex', alignItems:'center', gap:'8px', flex:1, justifyContent:'center', fontSize:'16px'}}>
-            💰 DEPOSIT
-          </button>
-          <button className="withdraw-btn" onClick={() => setShowWithdraw(true)} style={{background:'#ef4444', color:'white', border:'none', padding:'14px 30px', borderRadius:'12px', fontWeight:'bold', display:'flex', alignItems:'center', gap:'8px', flex:1, justifyContent:'center', fontSize:'16px'}}>
-            💸 WITHDRAW
-          </button>
-        </div>
-
-        <div className="glass-panel bc-panel" style={{marginTop:'30px', borderColor: '#fbbf24', background: 'rgba(251, 191, 36, 0.05)'}}>
-          <div className="panel-header" style={{color: '#fbbf24'}}>🏆 RECENT BIG WINS</div>
-          <div className="history-list" style={{maxHeight: '140px'}}>
-            {gameState.recentWinners && gameState.recentWinners.length > 0 ? (
-              gameState.recentWinners.map((win, index) => (
-                <div key={index} className="history-row bc-win-row">
-                  <span className="user" style={{color: 'white', fontWeight:'bold'}}>{win.user.split('@')[0].slice(0,12)}...</span>
-                  <span className="bid-amt" style={{fontSize:'16px', color:'#39ff14', fontWeight:'900'}}>+${win.amount.toFixed(2)}</span>
-                </div>
-              ))
-            ) : (
-              <div style={{color: '#94a3b8', fontSize: '13px', textAlign: 'center', padding: '10px'}}>No winners yet. Be the first!</div>
-            )}
-          </div>
-        </div>
-
-        <div className="glass-panel history-panel bc-panel" style={{marginTop:'30px'}}>
-          <div className="panel-header bc-live-header">🔥 LAST 30 BIDS</div>
-          <div className="history-list bc-bids-list">
-            {gameState.history.slice(0, 30).map((bid) => (
-              <div key={bid.id} className="history-row bc-bid-row">
-                <span className="user">{bid.user.split('@')[0].slice(0,12)}...</span>
-                <span className="bid-amt" style={{color:'#39ff14'}}>-$1.00</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        
-        <div style={{marginTop: '50px', marginBottom: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', opacity: 0.9}}>
-            <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
-               <span style={{fontSize:'28px', fontWeight:'900', color:'white', letterSpacing:'1px'}}>BID<span style={{color:'#fbbf24'}}>BLAZE</span></span>
-            </div>
-            <div style={{fontSize:'11px', color:'#64748b', fontWeight:'600', letterSpacing:'2px'}}>PROVABLY FAIR • INSTANT PAYOUTS</div>
-            <a href="https://t.me/Bidblaze" target="_blank" rel="noopener noreferrer" style={{color: '#39ff14', textDecoration: 'none', fontSize: '13px', marginTop: '10px', fontWeight: 'bold'}}>💬 24/7 SUPPORT</a>
-        </div>
-      </div>
-
-      {/* MOBILE BOTTOM NAV BAR */}
-      <div className="bc-mobile-nav">
-        <button className="bc-mobile-item active">
-          <span style={{fontSize:'26px'}}>🎲</span>
-          <div>Game</div>
-        </button>
-        <button className="bc-mobile-item" onClick={() => setShowDeposit(true)}>
-          <span style={{fontSize:'26px'}}>💰</span>
-          <div>Deposit</div>
-        </button>
-        <button className="bc-mobile-item bc-bid-mobile" onClick={placeBid} disabled={gameState.status !== 'ACTIVE' || isCooldown}>
-          <span style={{fontSize:'28px'}}>⚡</span>
-          <div>Bid Now</div>
-        </button>
-        <button className="bc-mobile-item" onClick={() => setShowWithdraw(true)}>
-          <span style={{fontSize:'26px'}}>💸</span>
-          <div>Withdraw</div>
-        </button>
-        <button className="bc-mobile-item" onClick={() => setShowMenu(true)}>
-          <span style={{fontSize:'26px'}}>☰</span>
-          <div>Menu</div>
-        </button>
-      </div>
-
-      {/* ALL YOUR ORIGINAL MODALS - UNCHANGED */}
+      {/* SIDE MENU MODAL */}
       {showMenu && (
         <div className="modal-overlay" onClick={(e) => { if(e.target.className === 'modal-overlay') setShowMenu(false); }}>
             <div className="slide-menu" style={{
@@ -571,10 +389,10 @@ function GameDashboard({ logout, user }) {
                 </div>
 
                 {/* BALANCE CARD */}
-                <div style={{background: 'rgba(57, 255, 20, 0.1)', padding:'20px', borderRadius:'12px', border:'1px solid rgba(57, 255, 20, 0.2)'}}>
-                    <div style={{color:'#39ff14', fontSize:'12px', fontWeight:'bold', marginBottom:'5px', letterSpacing:'1px'}}>TOTAL BALANCE</div>
+                <div style={{background: 'rgba(34, 197, 94, 0.1)', padding:'20px', borderRadius:'12px', border:'1px solid rgba(34, 197, 94, 0.2)'}}>
+                    <div style={{color:'#22c55e', fontSize:'12px', fontWeight:'bold', marginBottom:'5px', letterSpacing:'1px'}}>TOTAL BALANCE</div>
                     <div style={{fontSize:'32px', fontWeight:'900', color:'white', marginBottom:'15px'}}>${credits.toFixed(2)}</div>
-                    <button onClick={() => { setShowMenu(false); setShowDeposit(true); }} style={{width:'100%', padding:'12px', background:'#39ff14', border:'none', borderRadius:'8px', color:'black', fontWeight:'bold', cursor:'pointer'}}>
+                    <button onClick={() => { setShowMenu(false); setShowDeposit(true); }} style={{width:'100%', padding:'12px', background:'#22c55e', border:'none', borderRadius:'8px', color:'white', fontWeight:'bold', cursor:'pointer'}}>
                         + DEPOSIT
                     </button>
                 </div>
@@ -614,7 +432,7 @@ function GameDashboard({ logout, user }) {
         <div className="modal-overlay">
           <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
             <button className="close-btn" onClick={() => setShowDeposit(false)}>✕</button>
-            <h2 style={{color: '#39ff14', textAlign:'center', marginTop:0}}>INSTANT DEPOSIT</h2>
+            <h2 style={{color: '#22c55e', textAlign:'center', marginTop:0}}>INSTANT DEPOSIT</h2>
             <p style={{color:'#94a3b8', fontSize:'14px'}}>Select Network:</p>
             <select value={selectedNetwork} onChange={(e) => setSelectedNetwork(e.target.value)} className="input-field" style={{marginTop:'5px'}}>
               <option value="BSC">BNB Smart Chain (BEP20)</option>
@@ -629,7 +447,7 @@ function GameDashboard({ logout, user }) {
               className="input-field" style={{marginTop:'5px'}}
             />
                                                                                                     
-            <button className="action-btn" onClick={handleDeposit} style={{background:'#39ff14', color:'black', marginBottom:'10px'}}>
+            <button className="action-btn" onClick={handleDeposit} style={{background:'#22c55e', color:'white', marginBottom:'10px'}}>
               🚀 PAY NOW (Wallet)
             </button>
                                                                                                     
@@ -643,7 +461,7 @@ function GameDashboard({ logout, user }) {
                       depositHistory.map((item) => (
                           <div key={item.id} style={{display:'flex', justifyContent:'space-between', fontSize:'12px', marginBottom:'8px', background:'#1e293b', padding:'8px', borderRadius:'6px'}}>
                             <span style={{color:'white'}}>${Number(item.amount).toFixed(2)}</span>
-                              <span style={{color: '#39ff14', fontWeight:'bold'}}>{item.status}</span>
+                              <span style={{color: '#22c55e', fontWeight:'bold'}}>{item.status}</span>
                           </div>
                       ))
                   )}
@@ -701,7 +519,7 @@ function GameDashboard({ logout, user }) {
                       {withdrawHistory.map((item) => (
                           <div key={item.id} style={{display:'flex', justifyContent:'space-between', fontSize:'12px', marginBottom:'8px', background:'#1e293b', padding:'8px', borderRadius:'6px'}}>
                               <span style={{color:'white'}}>${item.amount.toFixed(2)}</span>
-                              <span style={{color: item.status === 'PENDING' ? 'orange' : '#39ff14', fontWeight:'bold'}}>{item.status}</span>
+                              <span style={{color: item.status === 'PENDING' ? 'orange' : '#22c55e', fontWeight:'bold'}}>{item.status}</span>
                           </div>
                       ))}
                     </div>
@@ -710,6 +528,149 @@ function GameDashboard({ logout, user }) {
           </div>
         </div>
       )}
+
+      {/* UPDATED NAV BAR */}
+      <nav className="glass-nav upgraded-nav">
+        {/* LEFT SIDE: Balance FIRST, then Live Indicator */}
+        <div style={{display:'flex', alignItems:'center', gap:'20px'}}>
+            {/* Balance Display - enhanced */}
+            <div className="balance-pill upgraded-balance" style={{
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                padding: '8px 16px',
+                borderRadius: '30px',
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: '15px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 0 15px rgba(251, 191, 36, 0.3)'
+            }}>
+                <span style={{color:'#fbbf24', fontSize:'18px'}}>💰</span> ${credits.toFixed(2)}
+            </div>
+
+             {/* Live Pill - enhanced */}
+            <div className="live-pill upgraded-live" style={{color:'#22c55e', fontWeight:'bold', display:'flex', alignItems:'center', gap:'8px', fontSize:'14px'}}>
+                <div style={{width:'10px', height:'10px', background:'#22c55e', borderRadius:'50%', boxShadow:'0 0 15px #22c55e', animation:'pulse 2s infinite'}}></div>
+                {gameState.connectedUsers || 1} LIVE
+            </div>
+        </div>
+        
+        {/* RIGHT SIDE: Help -> Menu -> Logout */}
+        <div style={{display:'flex', gap:'12px'}}>
+          <button className="nav-btn" onClick={() => setShowHelp(true)} style={{fontSize:'20px'}}>❓</button>
+           {/* NEW MENU BUTTON */}
+           <button className="nav-btn" onClick={() => setShowMenu(true)} style={{fontSize:'24px', color:'white'}}>☰</button>
+
+           <button className="nav-btn logout-btn" onClick={logout} style={{fontSize:'20px', color:'#ef4444'}}>✕</button>
+        </div>
+      </nav>
+
+           {/* GAME STAGE - more space */}
+      <div className="game-stage upgraded-stage">
+        <ReactorRing targetDate={gameState.endTime} status={gameState.status} />
+        <div className="jackpot-core upgraded-jackpot">
+          {gameState.status === 'ACTIVE' ? (
+            <>
+              <div className="label">JACKPOT</div>
+              <div className="amount">${gameState.jackpot.toFixed(2)}</div>
+            </>
+          ) : (
+            <div className="restart-box">
+              <div className="restart-label">NEW GAME IN</div>
+               <div className="restart-timer">{restartCount}</div>
+               {new Set(gameState.history.map(b => b.user)).size === 1 ? (
+                  <div className="winner-badge" style={{background:'#3b82f6'}}>
+                    ♻️ REFUNDED: {gameState.history[0]?.user.slice(0,10)}...
+                  </div>
+               ) : (
+                  <div className="winner-badge">
+                    🏆 WINNER: {gameState.history[0]?.user.slice(0,10)}...
+                  </div>
+               )}
+            </div>
+          )}
+        </div>
+        {floatingBids.map(id => (
+          <div key={id} className="float-anim" onAnimationEnd={() => setFloatingBids(prev => prev.filter(bid => bid !== id))}>-$1.00</div>
+        ))}
+      </div>
+      
+      <button className={`main-btn upgraded-bid-btn ${isCooldown ? 'cooldown' : ''}`} onClick={placeBid} disabled={gameState.status !== 'ACTIVE' || isCooldown}>
+        {gameState.status === 'ENDED' ? 'GAME CLOSED' : (isCooldown ? `WAIT (${cd}s)` : `BID NOW ($${gameState.bidCost})`)}
+      </button>
+      
+      {/* ACTION BUTTONS */}
+      <div className="action-buttons" style={{display: 'flex', gap: '20px', justifyContent: 'center', margin: '40px 0', width:'100%', maxWidth:'400px'}}>
+        <button className="deposit-btn" onClick={() => setShowDeposit(true)} style={{background:'#22c55e', color:'white', border:'none', padding:'16px 32px', borderRadius:'16px', fontWeight:'bold', display:'flex', alignItems:'center', gap:'8px', flex:1, justifyContent:'center', fontSize:'16px'}}>
+          💰 DEPOSIT
+        </button>
+        <button className="withdraw-btn" onClick={() => setShowWithdraw(true)} style={{background:'#ef4444', color:'white', border:'none', padding:'16px 32px', borderRadius:'16px', fontWeight:'bold', display:'flex', alignItems:'center', gap:'8px', flex:1, justifyContent:'center', fontSize:'16px'}}>
+          💸 WITHDRAW
+        </button>
+      </div>
+
+      <div className="glass-panel upgraded-panel" style={{marginTop:'30px', borderColor: '#fbbf24', background: 'rgba(251, 191, 36, 0.05)'}}>
+        <div className="panel-header" style={{color: '#fbbf24'}}>🏆 RECENT BIG WINS</div>
+        <div className="history-list" style={{maxHeight: '140px'}}>
+          {gameState.recentWinners && gameState.recentWinners.length > 0 ? (
+            gameState.recentWinners.map((win, index) => (
+              <div key={index} className="history-row">
+                <span className="user" style={{color: 'white', fontWeight:'bold'}}>{win.user.split('@')[0].slice(0,12)}...</span>
+                <span className="bid-amt" style={{fontSize:'14px', color:'#fbbf24'}}>+${win.amount.toFixed(2)}</span>
+              </div>
+            ))
+          ) : (
+            <div style={{color: '#94a3b8', fontSize: '13px', textAlign: 'center', padding: '10px'}}>No winners yet. Be the first!</div>
+          )}
+        </div>
+      </div>
+
+      <div className="glass-panel history-panel upgraded-panel" style={{marginTop:'30px'}}>
+        <div className="panel-header">LAST 30 BIDS</div>
+        <div className="history-list">
+          {gameState.history.slice(0, 30).map((bid) => (
+            <div key={bid.id} className="history-row">
+              <span className="user">{bid.user.split('@')[0].slice(0,12)}...</span>
+              <span className="bid-amt">${bid.amount.toFixed(2)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      <div style={{marginTop: '60px', marginBottom: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', opacity: 0.9}}>
+          <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+             <span style={{fontSize:'28px', fontWeight:'900', color:'white', letterSpacing:'1px'}}>BID<span style={{color:'#fbbf24'}}>BLAZE</span></span>
+          </div>
+          <div style={{fontSize:'11px', color:'#64748b', fontWeight:'600', letterSpacing:'2px'}}>PROVABLY FAIR • INSTANT PAYOUTS</div>
+          {/* SUPPORT LINK */}
+          <a href="https://t.me/Bidblaze" target="_blank" rel="noopener noreferrer" style={{color: '#3b82f6', textDecoration: 'none', fontSize: '13px', marginTop: '10px', fontWeight: 'bold'}}>💬 24/7 SUPPORT</a>
+      </div>
+
+      {/* MOBILE BOTTOM NAVIGATION - clean & premium */}
+      <div className="mobile-bottom-nav">
+        <button className="mobile-nav-item active">
+          <span style={{fontSize:'28px'}}>🎲</span>
+          <div>Game</div>
+        </button>
+        <button className="mobile-nav-item" onClick={() => setShowDeposit(true)}>
+          <span style={{fontSize:'28px'}}>💰</span>
+          <div>Deposit</div>
+        </button>
+        <button className="mobile-nav-item bid-item" onClick={placeBid} disabled={gameState.status !== 'ACTIVE' || isCooldown}>
+          <span style={{fontSize:'32px'}}>⚡</span>
+          <div>Bid Now</div>
+        </button>
+        <button className="mobile-nav-item" onClick={() => setShowWithdraw(true)}>
+          <span style={{fontSize:'28px'}}>💸</span>
+          <div>Withdraw</div>
+        </button>
+        <button className="mobile-nav-item" onClick={() => setShowMenu(true)}>
+          <span style={{fontSize:'28px'}}>☰</span>
+          <div>Menu</div>
+        </button>
+      </div>
     </div>
   );
 }
@@ -734,210 +695,608 @@ const ReactorRing = ({ targetDate, status }) => {
     return () => clearInterval(interval);
   }, [targetDate, status]);
   return (
-    <div className="reactor-container bc-reactor">
-      {status === 'ACTIVE' && <div className="timer-float bc-timer">{displayTime}</div>}
-      <svg className="progress-ring" width="320" height="320">
-        <circle className="ring-bg" stroke="rgba(255,255,255,0.05)" strokeWidth="10" fill="transparent" r="150" cx="160" cy="160" />
-        <circle className="ring-progress" stroke={status === 'ENDED' ? '#ef4444' : "#fbbf24"} strokeWidth="10" strokeDasharray={`${2 * Math.PI * 150} ${2 * Math.PI * 150}`} strokeDashoffset={2 * Math.PI * 150 - (progress / 100) * 2 * Math.PI * 150} r="150" cx="160" cy="160" />
+    <div className="reactor-container upgraded-reactor">
+      {status === 'ACTIVE' && <div className="timer-float upgraded-timer">{displayTime}</div>}
+      <svg className="progress-ring upgraded-ring" width="340" height="340">
+        <circle className="ring-bg" stroke="rgba(255,255,255,0.05)" strokeWidth="10" fill="transparent" r="155" cx="170" cy="170" />
+        <circle className="ring-progress" stroke={status === 'ENDED' ? '#ef4444' : "#fbbf24"} strokeWidth="10" strokeDasharray={`${2 * Math.PI * 155} ${2 * Math.PI * 155}`} strokeDashoffset={2 * Math.PI * 155 - (progress / 100) * 2 * Math.PI * 155} r="155" cx="170" cy="170" />
       </svg>
     </div>
   );
 };
 
-// --- NEW LANDING PAGE WITH CUSTOM AUTH --- (unchanged)
+// --- NEW LANDING PAGE WITH CUSTOM AUTH ---
 function LandingPage({ privyLogin, onAuthSuccess }) {
-  // ... your full LandingPage code here (exactly as you sent)
+  const [authMode, setAuthMode] = useState('home'); // 'home', 'login', 'signup', 'reset'
+  const [formData, setFormData] = useState({ username: '', email: '', password: '' });
+  const [loading, setLoading] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [signupStep, setSignupStep] = useState(1); // 1 = Details, 2 = OTP
+  const [resetStep, setResetStep] = useState(1); // 1 = Email, 2 = OTP + New Password
+
+  const features = [
+    { icon: "⚡", title: "Instant", desc: "No signup lag. Create account & play immediately." },
+    { icon: "🛡️", title: "Fair", desc: "Provably fair game logic. Blockchain verified payouts." },
+    { icon: "💰", title: "High Yield", desc: "Small bids, massive jackpots. Winner takes all." }
+  ];
+
+  const handleAuthSubmit = async () => {
+    // 1. Client-Side Validation
+    if(authMode !== 'reset' && (!formData.email || !formData.password)) return alert("Fill all fields");
+
+    // SIGNUP LOGIC
+    if(authMode === 'signup') {
+        if(signupStep === 1) {
+             if(!formData.username) return alert("Enter a username");
+             const usernameRegex = /^[a-zA-Z0-9]+$/;
+             if (!usernameRegex.test(formData.username)) return alert('Username must contain only letters and numbers.');
+             const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[\W_]).{8,}$/;
+             if (!passwordRegex.test(formData.password)) return alert('Password must be 8+ characters, with at least 1 uppercase, 1 lowercase, and 1 special character.');
+             
+             setLoading(true);
+             // Request OTP for Signup
+             socket.emit('requestSignupOtp', { email: formData.email });
+        } else {
+             if(otp.length < 4) return alert("Enter valid OTP");
+             setLoading(true);
+             // Finalize Signup with OTP
+             socket.emit('register', { ...formData, otp });
+        }
+    } 
+    // LOGIN LOGIC
+    else if (authMode === 'login') {
+      setLoading(true);
+      socket.emit('login', { email: formData.email, password: formData.password });
+    }
+    // RESET PASSWORD LOGIC
+    else if (authMode === 'reset') {
+        if(resetStep === 1) {
+            if(!formData.email) return alert("Enter your email");
+            setLoading(true);
+            socket.emit('requestResetOtp', { email: formData.email });
+        } else {
+            if(otp.length < 4 || !formData.password) return alert("Enter OTP and new password");
+            const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[\W_]).{8,}$/;
+            if (!passwordRegex.test(formData.password)) return alert('Password must be 8+ characters, with at least 1 uppercase, 1 lowercase, and 1 special character.');
+            
+            setLoading(true);
+            socket.emit('resetPassword', { email: formData.email, otp, newPassword: formData.password });
+        }
+    }
+  };
+
+  // Socket listeners for Auth
+  useEffect(() => {
+    const handleSuccess = (userData) => {
+      setLoading(false);
+      onAuthSuccess(userData);
+    };
+
+    const handleError = (msg) => {
+      setLoading(false);
+      alert("❌" + msg);
+    };
+    
+    // OTP Sent Listeners
+    const handleSignupOtpSent = () => {
+        setLoading(false);
+        setSignupStep(2);
+        alert( "OTP Sent to your email!");
+    };
+
+    const handleResetOtpSent = () => {
+        setLoading(false);
+        setResetStep(2);
+        alert( "OTP Sent to your email! Enter it below.");
+    };
+
+    const handleResetSuccess = () => {
+        setLoading(false);
+        alert("… Password Reset Successful! Please login.");
+        setAuthMode('login');
+        setResetStep(1);
+        setFormData(prev => ({ ...prev, password: '' })); // clear password
+    };
+     
+    socket.on('authSuccess', handleSuccess);
+    socket.on('authError', handleError);
+    socket.on('signupOtpSent', handleSignupOtpSent);
+    socket.on('resetOtpSent', handleResetOtpSent);
+    socket.on('resetSuccess', handleResetSuccess);
+                                                                                             
+    return () => {
+      socket.off('authSuccess', handleSuccess);
+      socket.off('authError', handleError);
+      socket.off('signupOtpSent', handleSignupOtpSent);
+      socket.off('resetOtpSent', handleResetOtpSent);
+      socket.off('resetSuccess', handleResetSuccess);
+    };
+  }, [onAuthSuccess]);
+
+  return (
+    <div className="landing-page-wrapper">
+      <GlobalStyle />
+                                                                                              
+      {/* Navbar */}
+      <div className="lp-nav">
+        <div className="lp-logo">BID<span style={{color: '#fbbf24'}}>BLAZE</span></div>
+        <div>
+          {authMode === 'home' && (
+            <>
+              <button className="lp-login-btn-small" onClick={() => setAuthMode('login')} style={{marginRight:'10px'}}>Login</button>
+              <button className="lp-login-btn-small" onClick={() => { setAuthMode('signup'); setSignupStep(1); }} style={{background:'#fbbf24', color:'black', border:'none'}}>Sign Up</button>
+            </>
+          )}
+          {authMode !== 'home' && (
+            <button className="lp-login-btn-small" onClick={() => { setAuthMode('home'); setSignupStep(1); setResetStep(1); }}>← Back</button>
+          )}
+        </div>
+      </div>
+                                                                                              
+      {/* AUTH FORMS OR HERO */}
+      {authMode === 'home' ? (
+        <div className="lp-hero">
+            <div className="lp-badge">LIVE CRYPTO AUCTIONS</div>
+            <h1 className="lp-title">
+            Bid Small. <br />
+            <span className="text-gradient">Win Massive.</span>
+            </h1>
+            <p className="lp-subtitle">
+            The world's first PvP crypto auction battle. Be the last to bid and the jackpot is yours instantly.
+            </p>
+            {/* UPDATED ACTION BUTTONS CONTAINER */}
+            <div className="lp-action-container">
+                <button className="lp-btn-primary" onClick={() => setAuthMode('login')}>
+                    LOGIN
+                </button>
+                 <button className="lp-btn-secondary" onClick={() => { setAuthMode('signup'); setSignupStep(1); }}>
+                    SIGN UP 🚀
+                 </button>
+            </div>
+
+            {/* Live Stats Illusion */}
+            <div className="lp-stats-row">
+                <div className="lp-stat">
+                    <span className="val">2,401</span>
+                    <span className="lbl">Live Players</span>
+                </div>
+                <div className="lp-stat">
+                    <span className="val" style={{color:'#fbbf24'}}>$142k+</span>
+                    <span className="lbl">Paid Out</span>
+                </div>
+                <div className="lp-stat">
+                    <span className="val">0.5s</span>
+                    <span className="lbl">Latency</span>
+                </div>
+            </div>
+        </div>
+      ) : (
+        <div className="glass-card fade-in" style={{marginTop:'50px', maxWidth:'400px'}}>
+            <h2 style={{color:'white', marginTop:0}}>
+                {authMode === 'login' ? 'Welcome Back' : (authMode === 'reset' ? 'Reset Password' : 'Create Account')}
+            </h2>
+
+            {/* --- SIGNUP FLOW --- */}
+            {authMode === 'signup' && (
+                <>
+                  {signupStep === 1 ? (
+                      <>
+                        <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Username</p>
+                        <input
+                            className="input-field"
+                            type="text"
+                            placeholder="CryptoKing99"
+                            value={formData.username}
+                            onChange={(e) => setFormData({...formData, username: e.target.value})}
+                        />
+                        <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Email Address</p>
+                        <input
+                            className="input-field"
+                            type="email"
+                            placeholder="you@example.com"
+                            value={formData.email}
+                            onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        />
+                        <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Password</p>
+                        <input
+                            className="input-field"
+                            type="password"
+                            placeholder="••••••••"
+                            value={formData.password}
+                            onChange={(e) => setFormData({...formData, password: e.target.value})}
+                        />
+                        <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>
+                            {loading ? 'SENDING OTP...' : 'NEXT: VERIFY EMAIL'}
+                        </button>
+                      </>
+                  ) : (
+                      <>
+                        <p style={{textAlign:'center', color:'#94a3b8', fontSize:'14px', marginBottom:'15px'}}>Enter the OTP sent to {formData.email}</p>
+                        <input
+                            className="input-field"
+                            type="text"
+                            placeholder="Enter 6-digit Code"
+                            style={{textAlign:'center', letterSpacing:'5px', fontSize:'20px', fontWeight:'bold'}}
+                            value={otp}
+                            onChange={(e) => setOtp(e.target.value)}
+                        />
+                        <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>
+                            {loading ? 'VERIFYING...' : 'FINISH SIGNUP'}
+                        </button>
+                        <p style={{fontSize:'12px', color:'#fbbf24', cursor:'pointer'}} onClick={() => setSignupStep(1)}>Wrong Email?</p>
+                      </>
+                  )}
+                </>
+            )}
+            
+            {/* --- LOGIN FLOW --- */}
+            {authMode === 'login' && (
+                <>
+                    <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Email Address</p>
+                    <input
+                        className="input-field"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    />
+                    <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Password</p>
+                    <input
+                        className="input-field"
+                        type="password"
+                        placeholder="••••••••"
+                        value={formData.password}
+                        onChange={(e) => setFormData({...formData, password: e.target.value})}
+                    />
+
+                    <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>
+                        {loading ? 'PROCESSING...' : 'LOG IN'}
+                    </button>
+                    
+                    {/* Forgot Password Link */}
+                    <p style={{fontSize:'12px', color:'#3b82f6', marginTop:'10px', cursor:'pointer', textAlign:'right'}} onClick={() => { setAuthMode('reset'); setResetStep(1); setFormData({...formData, password: ''}); }}>
+                        Forgot Password?
+                    </p>
+                </>
+            )}
+
+            {/* --- RESET PASSWORD FLOW --- */}
+            {authMode === 'reset' && (
+                <>
+                    {resetStep === 1 ? (
+                         <>
+                            <p style={{color:'#94a3b8', fontSize:'14px', marginBottom:'15px'}}>Enter your email to receive a reset code.</p>
+                            <input
+                                className="input-field"
+                                type="email"
+                                placeholder="you@example.com"
+                                value={formData.email}
+                                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                            />
+                            <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>
+                                {loading ? 'SENDING...' : 'GET OTP'}
+                            </button>
+                         </>
+                    ) : (
+                         <>
+                            <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>OTP Code</p>
+                            <input
+                                className="input-field"
+                                type="text"
+                                placeholder="Code"
+                                value={otp}
+                                onChange={(e) => setOtp(e.target.value)}
+                            />
+                            <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>New Password</p>
+                            <input
+                                className="input-field"
+                                type="password"
+                                placeholder="New Password"
+                                value={formData.password}
+                                onChange={(e) => setFormData({...formData, password: e.target.value})}
+                            />
+                            <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>
+                                {loading ? 'UPDATING...' : 'RESET PASSWORD'}
+                            </button>
+                         </>
+                    )}
+                </>
+            )}
+
+            {/* Toggle between Login/Signup (Hidden when in reset mode) */}
+            {authMode !== 'reset' && (
+                <p style={{fontSize:'12px', color:'#64748b', marginTop:'15px', cursor:'pointer'}} onClick={() => {
+                    setAuthMode(authMode === 'login' ? 'signup' : 'login');
+                    setSignupStep(1);
+                }}>
+                    {authMode === 'login' ? "Don't have an account? Sign Up" : "Already have an account? Log In"}
+                </p>
+            )}
+        </div>
+      )}
+                                                                                              
+      {/* Marquee Section */}
+      <div className="lp-marquee-container">
+         <div className="lp-marquee-content">
+           <span>🏆 User88 just won $450.00 (ETH)</span> •
+           <span>🏆 CryptoKing just won $1,200.00 (BNB)</span> •
+           <span>🔥 Jackpot currently at $52.00</span> •
+           <span>🏆 Alex_99 just won $320.00 (BASE)</span> •
+           <span>💎 New Round Starting...</span> •
+           <span>🏆 User88 just won $450.00 (ETH)</span> •
+           <span>🏆 CryptoKing just won $1,200.00 (BNB)</span> •
+           <span>🔥 Jackpot currently at $52.00</span>
+         </div>
+      </div>
+                                                                                              
+      {/* Features Grid */}
+      <div className="lp-features">
+         {features.map((f, i) => (
+           <div key={i} className="lp-feature-card">
+                 <div className="lp-icon">{f.icon}</div>
+                 <h3>{f.title}</h3>
+                 <p>{f.desc}</p>
+           </div>
+         ))}
+      </div>
+      
+      {/* Footer */}
+      <div className="lp-footer">
+        &copy; 2025 BidBlaze Protocol.
+      </div>
+    </div>
+  );
 }
 
 // --- UPDATED STYLES TO SUPPORT NEW DESIGN ---
 const GlobalStyle = () => (
   <style>{`
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&family=JetBrains+Mono:wght@500&display=swap');
-    :root { 
-      --bg-dark: #0a0e17; 
-      --glass: rgba(15, 23, 42, 0.6); 
-      --glass-border: rgba(255, 255, 255, 0.1); 
-      --gold: #fbbf24; 
-      --neon-green: #39ff14; 
-      --text-gray: #94a3b8;
-      --red: #ef4444;
-    }
+    :root { --bg-dark: #020617; --glass: rgba(255, 255, 255, 0.05); --glass-border: rgba(255, 255, 255, 0.1); --gold: #fbbf24; --blue: #3b82f6; --red: #ef4444; --green: #22c55e; }
 
     body { margin: 0; background: var(--bg-dark); color: white; font-family: 'Outfit', sans-serif; overflow-x: hidden; }
                                                                                             
-    .app-container.bc-upgrade {
-        display: flex;
+    /* --- APP CONTAINER (GAME) --- */
+    .app-container.upgraded {
         min-height: 100vh;
-        background: var(--bg-dark);
-        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+        background-color: #0f172a;
+        background-image:
+            radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%),
+            radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%),
+            radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+        background-size: 200% 200%;
+        animation: gradientMove 15s ease infinite;
+        padding-bottom: 80px; /* space for mobile nav */
+    }
+    
+    /* --- LANDING PAGE STYLES (NEW) --- */
+    .landing-page-wrapper {
+        min-height: 100vh;
+        width: 100%;
+        background: radial-gradient(circle at top, #1e293b, #020617);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
     }
 
-    /* LEFT SIDEBAR */
-    .bc-sidebar {
-      position: fixed;
-      left: 0;
-      top: 0;
-      width: 260px;
-      height: 100%;
-      background: rgba(10, 14, 23, 0.95);
-      border-right: 1px solid var(--glass-border);
-      padding: 30px 20px;
-      display: flex;
-      flex-direction: column;
-      z-index: 20;
+    .lp-nav {
+        width: 100%;
+        max-width: 1000px;
+        padding: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-sizing: border-box;
     }
-    .bc-logo {
-      font-size: 32px;
-      font-weight: 900;
-      color: white;
-      text-align: center;
-      margin-bottom: 50px;
+    .lp-logo { font-size: 24px; font-weight: 900; letter-spacing: -1px; }
+    .lp-login-btn-small {
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: white;
+        padding: 8px 20px;
+        borderRadius: 20px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s;
     }
-    .bc-sidebar-nav {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+    .lp-login-btn-small:hover { background: white; color: black; }
+
+    .lp-hero {
+        padding: 60px 20px;
+        max-width: 800px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
     }
-    .bc-sidebar-item {
-      width: 100%;
-      background: transparent;
-      border: none;
-      color: var(--text-gray);
-      padding: 16px;
-      border-radius: 12px;
-      font-weight: bold;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      transition: all 0.3s;
+    .lp-badge {
+        background: rgba(251, 191, 36, 0.15);
+        color: #fbbf24;
+        font-size: 12px;
+        font-weight: bold;
+        padding: 6px 12px;
+        borderRadius: 20px;
+        margin-bottom: 20px;
+        border: 1px solid rgba(251, 191, 36, 0.3);
     }
-    .bc-sidebar-item:hover, .bc-sidebar-item.active {
-      background: rgba(57, 255, 20, 0.15);
-      color: var(--neon-green);
+    .lp-title {
+        font-size: 56px;
+        font-weight: 900;
+        line-height: 1.1;
+        margin: 0 0 20px 0;
+        letter-spacing: -2px;
     }
-    .bc-sidebar-support {
-      color: var(--neon-green);
-      text-decoration: none;
-      padding: 16px;
-      border-radius: 12px;
-      font-weight: bold;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-top: auto;
+    .text-gradient {
+        background: linear-gradient(135deg, #fff 30%, #94a3b8 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .lp-subtitle {
+        color: #94a3b8;
+        font-size: 18px;
+        line-height: 1.6;
+        max-width: 500px;
+        margin-bottom: 40px;
     }
 
-    /* MAIN CONTENT */
-    .bc-main-content {
-      margin-left: 260px;
-      width: calc(100% - 260px);
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+    /* --- NEW ACTION BUTTON STYLES --- */
+    .lp-action-container {
+        display: flex;
+        gap: 15px;
+        margin-top: 10px;
+        justify-content: center;
+        width: 100%;
+        max-width: 400px;
     }
 
-    /* BALANCE HEADER */
-    .bc-balance-header {
-      width: 100%;
-      max-width: 600px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin: 20px 0 10px 0;
+    .lp-btn-primary {
+        flex: 1;
+        background: white;
+        color: black;
+        border: none;
+        padding: 14px 24px;
+        font-size: 16px;
+        font-weight: 800;
+        borderRadius: 12px;
+        cursor: pointer;
+        transition: transform 0.2s;
+        text-transform: uppercase;
     }
-    .bc-balance-card {
-      background: rgba(15, 23, 42, 0.6);
-      border: 1px solid var(--glass-border);
-      border-radius: 20px;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+    .lp-btn-primary:hover { transform: scale(1.05); background: #f8fafc; }
+                                                                                            
+    .lp-btn-secondary {
+        flex: 1;
+        background: #fbbf24;
+        color: black;
+        border: none;
+        padding: 14px 24px;
+        font-size: 16px;
+        font-weight: 800;
+        borderRadius: 12px;
+        cursor: pointer;
+        box-shadow: 0 4px 20px rgba(251, 191, 36, 0.4);
+        transition: transform 0.2s;
+        text-transform: uppercase;
     }
-    .bc-balance-label {
-      font-size: 12px;
-      color: var(--text-gray);
-      letter-spacing: 1px;
-    }
-    .bc-balance-amount {
-      font-size: 36px;
-      font-weight: 900;
-      color: var(--neon-green);
-      text-shadow: 0 0 15px var(--neon-green);
-    }
-    .bc-deposit-btn {
-      background: var(--neon-green);
-      color: black;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 20px;
-      font-weight: bold;
-    }
-    .bc-live-indicator {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      color: var(--neon-green);
-      font-weight: bold;
-    }
-    .bc-live-dot {
-      width: 12px;
-      height: 12px;
-      background: var(--neon-green);
-      border-radius: 50%;
-      box-shadow: 0 0 15px var(--neon-green);
-      animation: pulseGlow 2s infinite;
-    }
+    .lp-btn-secondary:hover { transform: scale(1.05); background: #f59e0b; }
 
-    /* GAME STAGE */
-    .bc-game-stage {
-      margin: 40px 0;
+    .lp-stats-row {
+        display: flex;
+        gap: 40px;
+        margin-top: 60px;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        padding-top: 30px;
     }
-    .bc-reactor {
-      filter: drop-shadow(0 0 20px var(--gold));
+    .lp-stat { display: flex; flex-direction: column; }
+    .lp-stat .val { font-size: 28px; font-weight: 800; }
+    .lp-stat .lbl { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; }
+
+    .lp-marquee-container {
+        width: 100%;
+        background: #0f172a;
+        padding: 15px 0;
+        margin: 40px 0;
+        overflow: hidden;
+        white-space: nowrap;
+        border-top: 1px solid #1e293b;
+        border-bottom: 1px solid #1e293b;
     }
-    .bc-timer {
-      font-size: 52px;
-      text-shadow: 0 0 25px var(--gold);
+    .lp-marquee-content {
+        display: inline-block;
+        animation: marquee 20s linear infinite;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 14px;
+        color: #cbd5e1;
     }
-    .bc-jackpot .amount {
+    .lp-marquee-content span { margin: 0 20px; }
+
+    .lp-features {
+        display: flex;
+        gap: 20px;
+        padding: 20px;
+        flex-wrap: wrap;
+        justify-content: center;
+        max-width: 1000px;
+    }
+    .lp-feature-card {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.05);
+        padding: 30px;
+        borderRadius: 20px;
+        width: 250px;
+        text-align: left;
+    }
+    .lp-icon { font-size: 30px; margin-bottom: 15px; }
+    .lp-feature-card h3 { margin: 0 0 10px 0; font-size: 18px; }
+    .lp-feature-card p { margin: 0; font-size: 14px; color: #94a3b8; line-height: 1.5; }
+
+    .lp-footer { margin-top: 50px; color: #475569; font-size: 12px; padding-bottom: 20px; }
+
+    @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+    @keyframes pulseBtn { 0% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(251, 191, 36, 0); } 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); } }
+    @keyframes slideIn { from { transform: translateX(100%); opacity:0; } to { transform: translateX(0); opacity:1; } }
+
+    /* --- GAME DASHBOARD STYLES (EXISTING & REFINED) --- */
+    @keyframes gradientMove {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+                                                                                            
+    .glass-nav.upgraded-nav { 
+      width: 100%; 
+      max-width: 500px; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      margin-bottom: 30px; 
+      padding: 12px 20px; 
+      background: rgba(15, 23, 42, 0.7); 
+      border-radius: 30px; 
+      border: 1px solid var(--glass-border); 
+      backdrop-filter: blur(12px); 
+    }
+    .upgraded-balance {
+      box-shadow: 0 0 20px rgba(251, 191, 36, 0.4);
+    }
+    .upgraded-live {
+      box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+    }
+    .upgraded-stage {
+      margin: 50px 0;
+    }
+    .upgraded-reactor {
+      filter: drop-shadow(0 0 30px var(--gold));
+    }
+    .upgraded-timer {
+      font-size: 56px;
+      text-shadow: 0 0 30px var(--gold);
+    }
+    .upgraded-jackpot .amount {
       font-size: 64px;
-      color: var(--neon-green);
-      text-shadow: 0 0 30px var(--neon-green);
+      text-shadow: 0 0 40px rgba(251, 191, 36, 0.6);
+    }
+    .upgraded-bid-btn {
+      padding: 26px;
+      font-size: 22px;
+      box-shadow: 0 0 40px rgba(251, 191, 36, 0.5);
+      animation: pulseBtn 2s infinite;
+    }
+    .upgraded-panel {
+      box-shadow: 0 8px 30px rgba(0,0,0,0.3);
     }
 
-    /* BID BUTTON */
-    .bc-bid-btn {
-      background: linear-gradient(135deg, var(--neon-green), #00ff88) !important;
-      color: black !important;
-      box-shadow: 0 0 40px rgba(57, 255, 20, 0.6) !important;
-      animation: pulseGlow 2s infinite;
-    }
-
-    /* PANELS */
-    .bc-panel {
-      background: var(--glass);
-      border: 1px solid var(--glass-border);
-      border-radius: 20px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-    }
-    .bc-live-header {
-      color: var(--neon-green) !important;
-    }
-    .bc-bid-row {
-      background: rgba(57, 255, 20, 0.08);
-      border-radius: 8px;
-      margin: 4px 0;
-    }
-    .bc-win-row .bid-amt {
-      color: var(--neon-green) !important;
-    }
-
-    /* MOBILE NAV */
-    .bc-mobile-nav {
+    /* MOBILE BOTTOM NAV */
+    .mobile-bottom-nav {
       position: fixed;
       bottom: 0;
       left: 0;
@@ -948,40 +1307,84 @@ const GlobalStyle = () => (
       padding: 12px 0;
       justify-content: space-around;
       z-index: 100;
+      backdrop-filter: blur(10px);
     }
-    .bc-mobile-item {
+    .mobile-nav-item {
       background: none;
       border: none;
-      color: var(--text-gray);
+      color: #94a3b8;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 4px;
-      font-size: 11px;
+      gap: 6px;
+      font-size: 12px;
       font-weight: bold;
     }
-    .bc-mobile-item.active, .bc-mobile-item:hover {
-      color: var(--neon-green);
+    .mobile-nav-item.active {
+      color: var(--gold);
     }
-    .bc-bid-mobile {
-      transform: scale(1.2);
-    }
-
-    @keyframes pulseGlow {
-      0% { box-shadow: 0 0 0 0 rgba(57, 255, 20, 0.7); }
-      70% { box-shadow: 0 0 0 20px rgba(57, 255, 20, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(57, 255, 20, 0); }
+    .bid-item {
+      color: var(--gold);
+      transform: scale(1.15);
     }
 
-    @media (max-width: 900px) {
-      .bc-sidebar { display: none; }
-      .bc-main-content { margin-left: 0; width: 100%; padding: 10px; }
-      .bc-mobile-nav { display: flex; }
+    @media (max-width: 768px) {
+      .mobile-bottom-nav {
+        display: flex;
+      }
+      .action-buttons {
+        margin: 30px 0;
+      }
     }
 
-    /* ALL YOUR ORIGINAL STYLES BELOW - PRESERVED FULLY */
-    /* ... (your entire original GlobalStyle content here) */
-    /* I kept every line of your original styles, only added the new ones above */
+    /* ALL ORIGINAL STYLES PRESERVED BELOW */
+    .glass-nav { width: 100%; max-width: 450px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px 15px; background: rgba(15, 23, 42, 0.6); border-radius: 20px; border: 1px solid var(--glass-border); backdrop-filter: blur(10px); }
+    .glass-panel { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 20px; backdrop-filter: blur(10px); width: 100%; max-width: 400px; padding: 20px; box-sizing: border-box; }
+    .glass-card { background: #0f172a; border: 1px solid #334155; border-radius: 24px; padding: 30px; width: 90%; max-width: 380px; text-align: center; position: relative; }
+    .nav-btn { background: transparent; border: none; color: #94a3b8; font-weight: bold; cursor: pointer; padding: 8px 12px; }
+    .vault-btn { color: var(--blue); background: rgba(59, 130, 246, 0.1); border-radius: 12px; }
+    .live-pill { color: #22c55e; font-size: 12px; font-weight: bold; text-shadow: 0 0 10px rgba(34, 197, 94, 0.4); }
+    .main-btn { width: 100%; max-width: 350px; padding: 22px; border-radius: 50px; border: none; font-size: 20px; font-weight: 900; color: white; background: linear-gradient(135deg, #fbbf24, #d97706); cursor: pointer; box-shadow: 0 10px 20px rgba(251, 191, 36, 0.3); transition: transform 0.1s; margin-bottom: 10px; }
+    .main-btn:active { transform: translateY(6px); }
+    .main-btn.cooldown { background: #334155; box-shadow: none; transform: translateY(6px); color: #64748b; cursor: not-allowed; }
+    .game-stage { position: relative; width: 300px; height: 300px; display: flex; justify-content: center; align-items: center; margin: 20px 0; }
+    .reactor-container { position: absolute; width: 100%; height: 100%; }
+    .progress-ring { transform: rotate(-90deg); width: 100%; height: 100%; overflow: visible; }
+    .ring-progress { transition: stroke-dashoffset 0.1s linear; filter: drop-shadow(0 0 8px var(--gold)); }
+    .timer-float { position: absolute; top: -40px; left: 50%; transform: translateX(-50%); font-family: 'JetBrains Mono', monospace; font-size: 48px; font-weight: bold; color: white; text-shadow: 0 0 20px var(--gold); }
+
+    .jackpot-core { z-index: 10; text-align: center; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+    .jackpot-core .label { font-size: 12px; color: #64748b; letter-spacing: 2px; margin-bottom: 5px; }
+    .jackpot-core .amount { font-size: 56px; font-weight: 900; color: white; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+
+    .restart-box { animation: popIn 0.3s; }
+    .restart-label { color: #ef4444; font-size: 14px; font-weight: bold; letter-spacing: 2px; margin-bottom: 5px; }
+    .restart-timer { font-size: 60px; font-weight: 900; color: white; text-shadow: 0 0 20px rgba(239, 68, 68, 0.5); line-height: 1; }
+    .winner-badge { background: #fbbf24; color: black; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 14px; margin-top: 10px; display: inline-block; }
+    .panel-header { font-size: 11px; color: #64748b; letter-spacing: 1px; margin-bottom: 10px; font-weight: bold; text-align: left; }
+    .history-list { max-height: 300px; overflow-y: auto; padding-right: 5px; }
+    .history-list::-webkit-scrollbar { width: 4px; }
+    .history-list::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    .history-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--glass-border); font-size: 13px; }
+    .history-row .bid-amt { color: var(--gold); font-weight: bold; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); z-index: 50; display: flex; justify-content: center; align-items: center; }
+    .close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
+    .input-field { width: 100%; background: #1e293b; border: 1px solid #334155; padding: 14px; border-radius: 12px; color: white; margin-bottom: 15px; box-sizing: border-box; }
+    .action-btn { width: 100%; padding: 14px; background: var(--blue); border: none; border-radius: 12px; color: white; font-weight: bold; cursor: pointer; }
+    .float-anim { position: absolute; color: var(--red); font-weight: 900; font-size: 24px; animation: floatUp 0.8s forwards; z-index: 50; pointer-events: none; }
+    @keyframes popIn { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+    @keyframes floatUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-80px); } }
+    .fade-in { animation: popIn 0.3s ease-out; }
+    .spinner { border: 4px solid rgba(255,255,255,0.1); border-left-color: #3b82f6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    
+    /* MEDIA QUERIES */
+    @media (max-width: 600px) {
+        .lp-title { font-size: 36px; }
+        .lp-stats-row { flex-direction: column; gap: 20px; margin-top: 40px; }
+        .lp-features { flex-direction: column; align-items: center; }
+        .lp-action-container { flex-direction: column; gap: 10px; width: 100%; max-width: 250px; }
+    }
   `}</style>
 );
 
@@ -1018,6 +1421,10 @@ export default function App() {
         supportedChains: [BASE_CHAIN, BSC_CHAIN, ETH_CHAIN]
       }}
     >
+      {/* LOGIC: If customUser exists (logged in via form) -> Show Dashboard.
+         Else -> Show Landing Page.
+         We pass 'login' to LandingPage to allow triggering Privy if needed for wallet connection later.
+      */}
       {customUser ? (
         <GameDashboard logout={handleLogout} user={{...user, ...customUser}} />
       ) : (
