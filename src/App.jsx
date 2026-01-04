@@ -62,7 +62,7 @@ const HowToPlay = ({ onClose }) => {
     <div className="modal-overlay">
       <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
         <button className="close-btn" onClick={onClose}>✕</button>
-        <h2 style={{color: '#fbbf24', textAlign:'center', marginBottom:'20px'}}>How to Win ðŸ†</h2>
+        <h2 style={{color: '#fbbf24', textAlign:'center', marginBottom:'20px'}}>How to Win 🏆</h2>
         
         <div style={{display:'flex', gap:'15px', marginBottom:'15px'}}>
           <div style={{background:'#3b82f6', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold'}}>1</div>
@@ -477,7 +477,7 @@ function GameDashboard({ logout, user }) {
       {showWithdraw && (
         <div className="modal-overlay">
           <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
-            <button className="close-btn" onClick={() => setShowWithdraw(false)}>âœ•</button>
+            <button className="close-btn" onClick={() => setShowWithdraw(false)}>✕</button>
             <h2 style={{color: '#ef4444', textAlign:'center', marginTop:0}}>WITHDRAW</h2>
             
             <p style={{color:'#94a3b8', fontSize:'14px'}}>Select Network:</p>
@@ -993,14 +993,14 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
       {/* Marquee Section */}
       <div className="lp-marquee-container">
          <div className="lp-marquee-content">
-           <span>ðŸ† User88 just won $450.00 (ETH)</span> â€¢
-           <span>ðŸ† CryptoKing just won $1,200.00 (BNB)</span> â€¢
-           <span>ðŸ”¥ Jackpot currently at $52.00</span> â€¢
-           <span>ðŸ† Alex_99 just won $320.00 (BASE)</span> â€¢
-           <span>ðŸ’Ž New Round Starting...</span> â€¢
-           <span>ðŸ† User88 just won $450.00 (ETH)</span> â€¢
-           <span>ðŸ† CryptoKing just won $1,200.00 (BNB)</span> â€¢
-           <span>ðŸ”¥ Jackpot currently at $52.00</span>
+           <span>🏆 User88 just won $450.00 (ETH)</span> â€¢
+           <span>🏆 CryptoKing just won $1,200.00 (BNB)</span> â€¢
+           <span>🔥 Jackpot currently at $52.00</span> â€¢
+           <span>🏆 Alex_99 just won $320.00 (BASE)</span> â€¢
+           <span>💎 New Round Starting...</span> â€¢
+           <span>🏆 User88 just won $450.00 (ETH)</span> â€¢
+           <span>🏆 CryptoKing just won $1,200.00 (BNB)</span> â€¢
+           <span>🔥 Jackpot currently at $52.00</span>
          </div>
       </div>
                                                                                               
