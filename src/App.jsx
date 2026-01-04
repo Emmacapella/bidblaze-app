@@ -546,7 +546,7 @@ function GameDashboard({ logout, user }) {
                 alignItems: 'center',
                 gap: '5px'
             }}>
-                <span style={{color:'#fbbf24'}}>ðŸ’°</span> ${credits.toFixed(2)}
+                <span style={{color:'#fbbf24'}}>💰</span> ${credits.toFixed(2)}
             </div>
 
              {/* Live Pill */}
@@ -558,7 +558,7 @@ function GameDashboard({ logout, user }) {
         
         {/* RIGHT SIDE: Help -> Menu -> Logout */}
         <div style={{display:'flex', gap:'8px'}}>
-          <button className="nav-btn" onClick={() => setShowHelp(true)} style={{fontSize:'18px'}}>â“</button>
+          <button className="nav-btn" onClick={() => setShowHelp(true)} style={{fontSize:'18px'}}>❓</button>
            {/* NEW MENU BUTTON */}
            <button className="nav-btn" onClick={() => setShowMenu(true)} style={{fontSize:'22px', color:'white'}}>â˜°</button>
 
@@ -581,11 +581,11 @@ function GameDashboard({ logout, user }) {
                <div className="restart-timer">{restartCount}</div>
                {new Set(gameState.history.map(b => b.user)).size === 1 ? (
                   <div className="winner-badge" style={{background:'#3b82f6'}}>
-                    â™»ï¸ REFUNDED: {gameState.history[0]?.user.slice(0,10)}...
+                    ♻️ REFUNDED: {gameState.history[0]?.user.slice(0,10)}...
                   </div>
                ) : (
                   <div className="winner-badge">
-                    ðŸ† WINNER: {gameState.history[0]?.user.slice(0,10)}...
+                    🏆 WINNER: {gameState.history[0]?.user.slice(0,10)}...
                   </div>
                )}
             </div>
@@ -603,10 +603,10 @@ function GameDashboard({ logout, user }) {
       {/* ACTION BUTTONS (Still here for quick access, but also in menu now) */}
       <div className="action-buttons" style={{display: 'flex', gap: '15px', justifyContent: 'center', margin: '25px 0', width:'100%', maxWidth:'350px'}}>
         <button className="deposit-btn" onClick={() => setShowDeposit(true)} style={{background:'#22c55e', color:'white', border:'none', padding:'12px 25px', borderRadius:'12px', fontWeight:'bold', display:'flex', alignItems:'center', gap:'5px', flex:1, justifyContent:'center', fontSize:'14px'}}>
-          ðŸ’° DEPOSIT
+          💰 DEPOSIT
         </button>
         <button className="withdraw-btn" onClick={() => setShowWithdraw(true)} style={{background:'#ef4444', color:'white', border:'none', padding:'12px 25px', borderRadius:'12px', fontWeight:'bold', display:'flex', alignItems:'center', gap:'5px', flex:1, justifyContent:'center', fontSize:'14px'}}>
-          ðŸ’¸ WITHDRAW
+          💸 WITHDRAW
         </button>
       </div>
 
