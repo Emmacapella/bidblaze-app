@@ -61,7 +61,7 @@ const HowToPlay = ({ onClose }) => {
   return (
     <div className="modal-overlay">
       <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
-        <button className="close-btn" onClick={onClose}>âœ•</button>
+        <button className="close-btn" onClick={onClose}>✕</button>
         <h2 style={{color: '#fbbf24', textAlign:'center', marginBottom:'20px'}}>How to Win ðŸ†</h2>
         
         <div style={{display:'flex', gap:'15px', marginBottom:'15px'}}>
@@ -379,7 +379,7 @@ function GameDashboard({ logout, user }) {
             }}>
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
                      <h2 style={{margin:0, color:'#fbbf24'}}>MENU</h2>
-                     <button onClick={() => setShowMenu(false)} style={{background:'none', border:'none', color:'white', fontSize:'24px'}}>âœ•</button>
+                     <button onClick={() => setShowMenu(false)} style={{background:'none', border:'none', color:'white', fontSize:'24px'}}>✕</button>
                 </div>
                 {/* USER PROFILE SNIPPET */}
                 <div style={{background: 'rgba(255,255,255,0.05)', padding:'15px', borderRadius:'12px'}}>
@@ -400,23 +400,23 @@ function GameDashboard({ logout, user }) {
                 {/* MENU LINKS */}
                 <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
                     <button onClick={() => { setShowMenu(false); setShowWithdraw(true); }} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
-                         ðŸ’¸ Withdraw Funds <span>â†’</span>
+                         💸 Withdraw Funds <span>→</span>
                     </button>
 
                      <button onClick={() => setMuted(!muted)} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
-                         {muted ? 'ðŸ”Š Unmute Sound' : 'ðŸ”‡ Mute Sound'} <span>{muted ? 'OFF' : 'ON'}</span>
+                         {muted ? '🔊 Unmute Sound' : '🔇 Mute Sound'} <span>{muted ? 'OFF' : 'ON'}</span>
                     </button>
                     <button onClick={() => { setShowMenu(false); setShowHelp(true); }} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
-                         â“ Help / Rules <span>â†’</span>
+                         ❓ Help / Rules <span>â†’</span>
                     </button>
                     {/* NEW SUPPORT BUTTON */}
                     <a href="https://t.me/Bidblaze" target="_blank" rel="noopener noreferrer" style={{textDecoration:'none', textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                         ðŸ’¬ 24/7 Support <span>â†’</span>
+                         💬 24/7 Support <span>→</span>
                     </a>
                 </div>
 
                 <div style={{marginTop:'auto', textAlign:'center', fontSize:'10px', color:'#64748b'}}>
-                    v1.0.5 â€¢ Secure Connection
+                    v1.0.5 • Secure Connection
                 </div>
             </div>
         </div>
@@ -431,7 +431,7 @@ function GameDashboard({ logout, user }) {
       {showDeposit && (
         <div className="modal-overlay">
           <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
-            <button className="close-btn" onClick={() => setShowDeposit(false)}>âœ•</button>
+            <button className="close-btn" onClick={() => setShowDeposit(false)}>✕</button>
             <h2 style={{color: '#22c55e', textAlign:'center', marginTop:0}}>INSTANT DEPOSIT</h2>
             <p style={{color:'#94a3b8', fontSize:'14px'}}>Select Network:</p>
             <select value={selectedNetwork} onChange={(e) => setSelectedNetwork(e.target.value)} className="input-field" style={{marginTop:'5px'}}>
@@ -448,7 +448,7 @@ function GameDashboard({ logout, user }) {
             />
                                                                                                     
             <button className="action-btn" onClick={handleDeposit} style={{background:'#22c55e', color:'white', marginBottom:'10px'}}>
-              ðŸš€ PAY NOW (Wallet)
+              🚀 PAY NOW (Wallet)
             </button>
                                                                                                     
             {/* DEPOSIT HISTORY SECTION */}
@@ -507,7 +507,7 @@ function GameDashboard({ logout, user }) {
             
             {/* MANUAL WITHDRAWAL WARNING */}
             <p style={{fontSize:'10px', color:'#94a3b8', marginTop:'10px', textAlign:'center'}}>
-              âš ï¸ Notice: Withdrawals are processed manually within 24 hours.
+              ⚠️ Notice: Withdrawals are processed manually within 24 hours.
             </p>
 
             <div style={{borderTop:'1px solid #334155', paddingTop:'15px', marginTop:'15px'}}>
