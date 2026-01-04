@@ -560,9 +560,9 @@ function GameDashboard({ logout, user }) {
         <div style={{display:'flex', gap:'8px'}}>
           <button className="nav-btn" onClick={() => setShowHelp(true)} style={{fontSize:'18px'}}>❓</button>
            {/* NEW MENU BUTTON */}
-           <button className="nav-btn" onClick={() => setShowMenu(true)} style={{fontSize:'22px', color:'white'}}>â˜°</button>
+           <button className="nav-btn" onClick={() => setShowMenu(true)} style={{fontSize:'22px', color:'white'}}>☰</button>
 
-           <button className="nav-btn logout-btn" onClick={logout} style={{fontSize:'18px', color:'#ef4444'}}>âœ•</button>
+           <button className="nav-btn logout-btn" onClick={logout} style={{fontSize:'18px', color:'#ef4444'}}>✕</button>
         </div>
       </nav>
 
