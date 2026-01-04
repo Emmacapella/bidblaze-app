@@ -114,7 +114,7 @@ function GameDashboard({ logout, user }) {
   const lastBidId = useRef(null);
   const audioRef = useRef(null);
   const { wallets } = useWallets();
-  // ⚠️ CRITICAL FIX: Handle both Privy object emails and Custom string emails
+  // âš ï¸ CRITICAL FIX: Handle both Privy object emails and Custom string emails
   const userAddress = wallets.find(w => w.walletClientType === 'privy')?.address || "0x...";
   const userEmail = user?.email?.address || user?.email || "user@example.com";
   const username = user?.username || "Player";
@@ -361,7 +361,7 @@ function GameDashboard({ logout, user }) {
   );
                                                                                           
   return (
-    <div className="app-container upgraded">
+    <div className="app-container">
       <GlobalStyle />
       {gameState?.status === 'ENDED' && <Confetti width={window.innerWidth} height={window.innerHeight} recycle={false} numberOfPieces={500} colors={['#fbbf24', '#ffffff', '#22c55e']} />}
                                                                                               
@@ -530,47 +530,46 @@ function GameDashboard({ logout, user }) {
       )}
 
       {/* UPDATED NAV BAR */}
-      <nav className="glass-nav upgraded-nav">
+      <nav className="glass-nav">
         {/* LEFT SIDE: Balance FIRST, then Live Indicator */}
-        <div style={{display:'flex', alignItems:'center', gap:'20px'}}>
-            {/* Balance Display - enhanced */}
-            <div className="balance-pill upgraded-balance" style={{
+        <div style={{display:'flex', alignItems:'center', gap:'15px'}}>
+            {/* Balance Display */}
+            <div className="balance-pill" style={{
                 background: 'rgba(255, 255, 255, 0.08)',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
-                padding: '8px 16px',
-                borderRadius: '30px',
+                padding: '6px 12px',
+                borderRadius: '20px',
                 color: 'white',
                 fontWeight: 'bold',
-                fontSize: '15px',
+                fontSize: '13px',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
-                boxShadow: '0 0 15px rgba(251, 191, 36, 0.3)'
+                gap: '5px'
             }}>
-                <span style={{color:'#fbbf24', fontSize:'18px'}}>💰</span> ${credits.toFixed(2)}
+                <span style={{color:'#fbbf24'}}>💰</span> ${credits.toFixed(2)}
             </div>
 
-             {/* Live Pill - enhanced */}
-            <div className="live-pill upgraded-live" style={{color:'#22c55e', fontWeight:'bold', display:'flex', alignItems:'center', gap:'8px', fontSize:'14px'}}>
-                <div style={{width:'10px', height:'10px', background:'#22c55e', borderRadius:'50%', boxShadow:'0 0 15px #22c55e', animation:'pulse 2s infinite'}}></div>
+             {/* Live Pill */}
+            <div className="live-pill" style={{color:'#22c55e', fontWeight:'bold', display:'flex', alignItems:'center', gap:'5px'}}>
+                <div style={{width:'8px', height:'8px', background:'#22c55e', borderRadius:'50%', boxShadow:'0 0 10px #22c55e'}}></div>
                 {gameState.connectedUsers || 1} LIVE
             </div>
         </div>
         
         {/* RIGHT SIDE: Help -> Menu -> Logout */}
-        <div style={{display:'flex', gap:'12px'}}>
-          <button className="nav-btn" onClick={() => setShowHelp(true)} style={{fontSize:'20px'}}>❓</button>
+        <div style={{display:'flex', gap:'8px'}}>
+          <button className="nav-btn" onClick={() => setShowHelp(true)} style={{fontSize:'18px'}}>❓</button>
            {/* NEW MENU BUTTON */}
-           <button className="nav-btn" onClick={() => setShowMenu(true)} style={{fontSize:'24px', color:'white'}}>☰</button>
+           <button className="nav-btn" onClick={() => setShowMenu(true)} style={{fontSize:'22px', color:'white'}}>☰</button>
 
-           <button className="nav-btn logout-btn" onClick={logout} style={{fontSize:'20px', color:'#ef4444'}}>✕</button>
+           <button className="nav-btn logout-btn" onClick={logout} style={{fontSize:'18px', color:'#ef4444'}}>✕</button>
         </div>
       </nav>
 
-           {/* GAME STAGE - more space */}
-      <div className="game-stage upgraded-stage">
+           {/* GAME STAGE */}
+      <div className="game-stage">
         <ReactorRing targetDate={gameState.endTime} status={gameState.status} />
-        <div className="jackpot-core upgraded-jackpot">
+        <div className="jackpot-core">
           {gameState.status === 'ACTIVE' ? (
             <>
               <div className="label">JACKPOT</div>
@@ -597,23 +596,23 @@ function GameDashboard({ logout, user }) {
         ))}
       </div>
       
-      <button className={`main-btn upgraded-bid-btn ${isCooldown ? 'cooldown' : ''}`} onClick={placeBid} disabled={gameState.status !== 'ACTIVE' || isCooldown}>
+      <button className={`main-btn ${isCooldown ? 'cooldown' : ''}`} onClick={placeBid} disabled={gameState.status !== 'ACTIVE' || isCooldown}>
         {gameState.status === 'ENDED' ? 'GAME CLOSED' : (isCooldown ? `WAIT (${cd}s)` : `BID NOW ($${gameState.bidCost})`)}
       </button>
       
-      {/* ACTION BUTTONS */}
-      <div className="action-buttons" style={{display: 'flex', gap: '20px', justifyContent: 'center', margin: '40px 0', width:'100%', maxWidth:'400px'}}>
-        <button className="deposit-btn" onClick={() => setShowDeposit(true)} style={{background:'#22c55e', color:'white', border:'none', padding:'16px 32px', borderRadius:'16px', fontWeight:'bold', display:'flex', alignItems:'center', gap:'8px', flex:1, justifyContent:'center', fontSize:'16px'}}>
+      {/* ACTION BUTTONS (Still here for quick access, but also in menu now) */}
+      <div className="action-buttons" style={{display: 'flex', gap: '15px', justifyContent: 'center', margin: '25px 0', width:'100%', maxWidth:'350px'}}>
+        <button className="deposit-btn" onClick={() => setShowDeposit(true)} style={{background:'#22c55e', color:'white', border:'none', padding:'12px 25px', borderRadius:'12px', fontWeight:'bold', display:'flex', alignItems:'center', gap:'5px', flex:1, justifyContent:'center', fontSize:'14px'}}>
           💰 DEPOSIT
         </button>
-        <button className="withdraw-btn" onClick={() => setShowWithdraw(true)} style={{background:'#ef4444', color:'white', border:'none', padding:'16px 32px', borderRadius:'16px', fontWeight:'bold', display:'flex', alignItems:'center', gap:'8px', flex:1, justifyContent:'center', fontSize:'16px'}}>
+        <button className="withdraw-btn" onClick={() => setShowWithdraw(true)} style={{background:'#ef4444', color:'white', border:'none', padding:'12px 25px', borderRadius:'12px', fontWeight:'bold', display:'flex', alignItems:'center', gap:'5px', flex:1, justifyContent:'center', fontSize:'14px'}}>
           💸 WITHDRAW
         </button>
       </div>
 
-      <div className="glass-panel upgraded-panel" style={{marginTop:'30px', borderColor: '#fbbf24', background: 'rgba(251, 191, 36, 0.05)'}}>
+      <div className="glass-panel" style={{marginTop:'20px', borderColor: '#fbbf24', background: 'rgba(251, 191, 36, 0.05)'}}>
         <div className="panel-header" style={{color: '#fbbf24'}}>🏆 RECENT BIG WINS</div>
-        <div className="history-list" style={{maxHeight: '140px'}}>
+        <div className="history-list" style={{maxHeight: '120px'}}>
           {gameState.recentWinners && gameState.recentWinners.length > 0 ? (
             gameState.recentWinners.map((win, index) => (
               <div key={index} className="history-row">
@@ -627,7 +626,7 @@ function GameDashboard({ logout, user }) {
         </div>
       </div>
 
-      <div className="glass-panel history-panel upgraded-panel" style={{marginTop:'30px'}}>
+      <div className="glass-panel history-panel" style={{marginTop:'15px'}}>
         <div className="panel-header">LAST 30 BIDS</div>
         <div className="history-list">
           {gameState.history.slice(0, 30).map((bid) => (
@@ -639,37 +638,13 @@ function GameDashboard({ logout, user }) {
         </div>
       </div>
       
-      <div style={{marginTop: '60px', marginBottom: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', opacity: 0.9}}>
+      <div style={{marginTop: '40px', marginBottom: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', opacity: 0.8}}>
           <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
-             <span style={{fontSize:'28px', fontWeight:'900', color:'white', letterSpacing:'1px'}}>BID<span style={{color:'#fbbf24'}}>BLAZE</span></span>
+             <span style={{fontSize:'24px', fontWeight:'900', color:'white', letterSpacing:'1px'}}>BID<span style={{color:'#fbbf24'}}>BLAZE</span></span>
           </div>
-          <div style={{fontSize:'11px', color:'#64748b', fontWeight:'600', letterSpacing:'2px'}}>PROVABLY FAIR • INSTANT PAYOUTS</div>
+          <div style={{fontSize:'10px', color:'#64748b', fontWeight:'600', letterSpacing:'2px'}}>PROVABLY FAIR • INSTANT PAYOUTS</div>
           {/* SUPPORT LINK */}
-          <a href="https://t.me/Bidblaze" target="_blank" rel="noopener noreferrer" style={{color: '#3b82f6', textDecoration: 'none', fontSize: '13px', marginTop: '10px', fontWeight: 'bold'}}>💬 24/7 SUPPORT</a>
-      </div>
-
-      {/* MOBILE BOTTOM NAVIGATION - clean & premium */}
-      <div className="mobile-bottom-nav">
-        <button className="mobile-nav-item active">
-          <span style={{fontSize:'28px'}}>🎲</span>
-          <div>Game</div>
-        </button>
-        <button className="mobile-nav-item" onClick={() => setShowDeposit(true)}>
-          <span style={{fontSize:'28px'}}>💰</span>
-          <div>Deposit</div>
-        </button>
-        <button className="mobile-nav-item bid-item" onClick={placeBid} disabled={gameState.status !== 'ACTIVE' || isCooldown}>
-          <span style={{fontSize:'32px'}}>⚡</span>
-          <div>Bid Now</div>
-        </button>
-        <button className="mobile-nav-item" onClick={() => setShowWithdraw(true)}>
-          <span style={{fontSize:'28px'}}>💸</span>
-          <div>Withdraw</div>
-        </button>
-        <button className="mobile-nav-item" onClick={() => setShowMenu(true)}>
-          <span style={{fontSize:'28px'}}>☰</span>
-          <div>Menu</div>
-        </button>
+          <a href="https://t.me/Bidblaze" target="_blank" rel="noopener noreferrer" style={{color: '#3b82f6', textDecoration: 'none', fontSize: '12px', marginTop: '10px', fontWeight: 'bold'}}>💬 24/7 SUPPORT</a>
       </div>
     </div>
   );
@@ -695,11 +670,11 @@ const ReactorRing = ({ targetDate, status }) => {
     return () => clearInterval(interval);
   }, [targetDate, status]);
   return (
-    <div className="reactor-container upgraded-reactor">
-      {status === 'ACTIVE' && <div className="timer-float upgraded-timer">{displayTime}</div>}
-      <svg className="progress-ring upgraded-ring" width="340" height="340">
-        <circle className="ring-bg" stroke="rgba(255,255,255,0.05)" strokeWidth="10" fill="transparent" r="155" cx="170" cy="170" />
-        <circle className="ring-progress" stroke={status === 'ENDED' ? '#ef4444' : "#fbbf24"} strokeWidth="10" strokeDasharray={`${2 * Math.PI * 155} ${2 * Math.PI * 155}`} strokeDashoffset={2 * Math.PI * 155 - (progress / 100) * 2 * Math.PI * 155} r="155" cx="170" cy="170" />
+    <div className="reactor-container">
+      {status === 'ACTIVE' && <div className="timer-float">{displayTime}</div>}
+      <svg className="progress-ring" width="280" height="280">
+        <circle className="ring-bg" stroke="rgba(255,255,255,0.05)" strokeWidth="8" fill="transparent" r="130" cx="140" cy="140" />
+        <circle className="ring-progress" stroke={status === 'ENDED' ? '#ef4444' : "#fbbf24"} strokeWidth="8" strokeDasharray={`${2 * Math.PI * 130} ${2 * Math.PI * 130}`} strokeDashoffset={2 * Math.PI * 130 - (progress / 100) * 2 * Math.PI * 130} r="130" cx="140" cy="140" />
       </svg>
     </div>
   );
@@ -1052,12 +1027,12 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
 const GlobalStyle = () => (
   <style>{`
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&family=JetBrains+Mono:wght@500&display=swap');
-    :root { --bg-dark: #020617; --glass: rgba(255, 255, 255, 0.05); --glass-border: rgba(255, 255, 255, 0.1); --gold: #fbbf24; --blue: #3b82f6; --red: #ef4444; --green: #22c55e; }
+    :root { --bg-dark: #020617; --glass: rgba(255, 255, 255, 0.05); --glass-border: rgba(255, 255, 255, 0.1); --gold: #fbbf24; --blue: #3b82f6; --red: #ef4444; }
 
     body { margin: 0; background: var(--bg-dark); color: white; font-family: 'Outfit', sans-serif; overflow-x: hidden; }
                                                                                             
     /* --- APP CONTAINER (GAME) --- */
-    .app-container.upgraded {
+    .app-container {
         min-height: 100vh;
         display: flex;
         flex-direction: column;
@@ -1070,7 +1045,6 @@ const GlobalStyle = () => (
             radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
         background-size: 200% 200%;
         animation: gradientMove 15s ease infinite;
-        padding-bottom: 80px; /* space for mobile nav */
     }
     
     /* --- LANDING PAGE STYLES (NEW) --- */
@@ -1099,7 +1073,7 @@ const GlobalStyle = () => (
         border: 1px solid rgba(255,255,255,0.2);
         color: white;
         padding: 8px 20px;
-        borderRadius: 20px;
+        border-radius: 20px;
         cursor: pointer;
         font-weight: 600;
         transition: all 0.2s;
@@ -1119,7 +1093,7 @@ const GlobalStyle = () => (
         font-size: 12px;
         font-weight: bold;
         padding: 6px 12px;
-        borderRadius: 20px;
+        border-radius: 20px;
         margin-bottom: 20px;
         border: 1px solid rgba(251, 191, 36, 0.3);
     }
@@ -1161,7 +1135,7 @@ const GlobalStyle = () => (
         padding: 14px 24px;
         font-size: 16px;
         font-weight: 800;
-        borderRadius: 12px;
+        border-radius: 12px;
         cursor: pointer;
         transition: transform 0.2s;
         text-transform: uppercase;
@@ -1176,7 +1150,7 @@ const GlobalStyle = () => (
         padding: 14px 24px;
         font-size: 16px;
         font-weight: 800;
-        borderRadius: 12px;
+        border-radius: 12px;
         cursor: pointer;
         box-shadow: 0 4px 20px rgba(251, 191, 36, 0.4);
         transition: transform 0.2s;
@@ -1226,7 +1200,7 @@ const GlobalStyle = () => (
         background: rgba(255,255,255,0.03);
         border: 1px solid rgba(255,255,255,0.05);
         padding: 30px;
-        borderRadius: 20px;
+        border-radius: 20px;
         width: 250px;
         text-align: left;
     }
@@ -1247,97 +1221,6 @@ const GlobalStyle = () => (
         100% { background-position: 0% 50%; }
     }
                                                                                             
-    .glass-nav.upgraded-nav { 
-      width: 100%; 
-      max-width: 500px; 
-      display: flex; 
-      justify-content: space-between; 
-      align-items: center; 
-      margin-bottom: 30px; 
-      padding: 12px 20px; 
-      background: rgba(15, 23, 42, 0.7); 
-      border-radius: 30px; 
-      border: 1px solid var(--glass-border); 
-      backdrop-filter: blur(12px); 
-    }
-    .upgraded-balance {
-      box-shadow: 0 0 20px rgba(251, 191, 36, 0.4);
-    }
-    .upgraded-live {
-      box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
-    }
-    @keyframes pulse {
-      0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
-      70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
-    }
-    .upgraded-stage {
-      margin: 50px 0;
-    }
-    .upgraded-reactor {
-      filter: drop-shadow(0 0 30px var(--gold));
-    }
-    .upgraded-timer {
-      font-size: 56px;
-      text-shadow: 0 0 30px var(--gold);
-    }
-    .upgraded-jackpot .amount {
-      font-size: 64px;
-      text-shadow: 0 0 40px rgba(251, 191, 36, 0.6);
-    }
-    .upgraded-bid-btn {
-      padding: 26px;
-      font-size: 22px;
-      box-shadow: 0 0 40px rgba(251, 191, 36, 0.5);
-      animation: pulseBtn 2s infinite;
-    }
-    .upgraded-panel {
-      box-shadow: 0 8px 30px rgba(0,0,0,0.3);
-    }
-
-    /* MOBILE BOTTOM NAV */
-    .mobile-bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      background: rgba(10, 14, 23, 0.95);
-      border-top: 1px solid var(--glass-border);
-      display: none;
-      padding: 12px 0;
-      justify-content: space-around;
-      z-index: 100;
-      backdrop-filter: blur(10px);
-    }
-    .mobile-nav-item {
-      background: none;
-      border: none;
-      color: #94a3b8;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      font-size: 12px;
-      font-weight: bold;
-    }
-    .mobile-nav-item.active {
-      color: var(--gold);
-    }
-    .bid-item {
-      color: var(--gold);
-      transform: scale(1.15);
-    }
-
-    @media (max-width: 768px) {
-      .mobile-bottom-nav {
-        display: flex;
-      }
-      .action-buttons {
-        margin: 30px 0;
-      }
-    }
-
-    /* ALL ORIGINAL STYLES PRESERVED BELOW */
     .glass-nav { width: 100%; max-width: 450px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px 15px; background: rgba(15, 23, 42, 0.6); border-radius: 20px; border: 1px solid var(--glass-border); backdrop-filter: blur(10px); }
     .glass-panel { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 20px; backdrop-filter: blur(10px); width: 100%; max-width: 400px; padding: 20px; box-sizing: border-box; }
     .glass-card { background: #0f172a; border: 1px solid #334155; border-radius: 24px; padding: 30px; width: 90%; max-width: 380px; text-align: center; position: relative; }
