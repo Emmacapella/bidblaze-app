@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import io from 'socket.io-client';
 import WalletVault from './WalletVault';
 import Confetti from 'react-confetti';
@@ -115,7 +114,7 @@ function GameDashboard({ logout, user }) {
   const lastBidId = useRef(null);
   const audioRef = useRef(null);
   const { wallets } = useWallets();
-  // ⚠️ CRITICAL FIX: Handle both Privy object emails and Custom string emails
+  // âš ï¸ CRITICAL FIX: Handle both Privy object emails and Custom string emails
   const userAddress = wallets.find(w => w.walletClientType === 'privy')?.address || "0x...";
   const userEmail = user?.email?.address || user?.email || "user@example.com";
   const username = user?.username || "Player";
@@ -683,7 +682,6 @@ const ReactorRing = ({ targetDate, status }) => {
 
 // --- NEW LANDING PAGE WITH CUSTOM AUTH ---
 function LandingPage({ privyLogin, onAuthSuccess }) {
-  const navigate = useNavigate();
   const [authMode, setAuthMode] = useState('home'); // 'home', 'login', 'signup', 'reset'
   const [formData, setFormData] = useState({ username: '', email: '', password: '' });
   const [loading, setLoading] = useState(false);
@@ -747,7 +745,6 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
     const handleSuccess = (userData) => {
       setLoading(false);
       onAuthSuccess(userData);
-      navigate('/game');
     };
 
     const handleError = (msg) => {
@@ -789,7 +786,7 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
       socket.off('resetOtpSent', handleResetOtpSent);
       socket.off('resetSuccess', handleResetSuccess);
     };
-  }, [onAuthSuccess, navigate]);
+  }, [onAuthSuccess]);
 
   return (
     <div className="landing-page-wrapper">
@@ -1274,10 +1271,10 @@ const GlobalStyle = () => (
   `}</style>
 );
 
-// Main App with Routing
-function MainApp() {
+export default function App() {
   const { login, logout, user, authenticated, ready } = usePrivy();
   
+  // Initialize state from localStorage if available
   const [customUser, setCustomUser] = useState(() => {
       const saved = localStorage.getItem('bidblaze_user');
       return saved ? JSON.parse(saved) : null;
@@ -1307,18 +1304,15 @@ function MainApp() {
         supportedChains: [BASE_CHAIN, BSC_CHAIN, ETH_CHAIN]
       }}
     >
-      <Routes>
-        <Route path="/" element={<LandingPage privyLogin={login} onAuthSuccess={handleAuthSuccess} />} />
-        <Route path="/game" element={customUser ? <GameDashboard logout={handleLogout} user={{...user, ...customUser}} /> : <LandingPage privyLogin={login} onAuthSuccess={handleAuthSuccess} />} />
-      </Routes>
+      {/* LOGIC: If customUser exists (logged in via form) -> Show Dashboard.
+         Else -> Show Landing Page.
+         We pass 'login' to LandingPage to allow triggering Privy if needed for wallet connection later.
+      */}
+      {customUser ? (
+        <GameDashboard logout={handleLogout} user={{...user, ...customUser}} />
+      ) : (
+        <LandingPage privyLogin={login} onAuthSuccess={handleAuthSuccess} />
+      )}
     </PrivyProvider>
-  );
-}
-
-export default function App() {
-  return (
-    <BrowserRouter>
-      <MainApp />
-    </BrowserRouter>
   );
 }
