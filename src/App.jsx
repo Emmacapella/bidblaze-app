@@ -1,16 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import io from 'socket.io-client';
 import WalletVault from './WalletVault';
 import Confetti from 'react-confetti';
-import { PrivyProvider, useWallets } from '@privy-io/react-auth';
+import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
 import { parseEther } from 'viem';
-
-/* ================= CONFIG ================= */
+// --- CONFIGURATION ---
 const PRIVY_APP_ID = "cm4l3033r048epf1ln3q59956";
 const SERVER_URL = "https://bidblaze-server.onrender.com";
 
-/* ================= SOCKET ================= */
 export const socket = io(SERVER_URL, {
   transports: ['websocket', 'polling'],
   autoConnect: true,
@@ -18,76 +16,6 @@ export const socket = io(SERVER_URL, {
   reconnectionAttempts: 10,
   reconnectionDelay: 2000
 });
-
-/* ================= APP ROOT ================= */
-export default function App() {
-  const [user, setUser] = useState(null);
-
-  return (
-    <PrivyProvider appId={PRIVY_APP_ID}>
-      <BrowserRouter>
-        <Routes>
-          {/* Landing */}
-          <Route path="/" element={<LandingWrapper setUser={setUser} />} />
-
-          {/* Auth page (login/signup/reset live here) */}
-          <Route path="/login" element={<LandingWrapper setUser={setUser} />} />
-
-          {/* Game */}
-          <Route
-            path="/game"
-            element={
-              user ? (
-                <GameDashboard
-                  user={user}
-                  logout={() => {
-                    setUser(null);
-                    window.location.href = "/";
-                  }}
-                />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </PrivyProvider>
-  );
-}
-
-/* ================= LANDING WRAPPER ================= */
-function LandingWrapper({ setUser }) {
-  const navigate = useNavigate();
-
-  return (
-    <LandingPage
-      onAuthSuccess={(userData) => {
-        setUser(userData);
-        navigate("/game");
-      }}
-      navigate={navigate}
-    />
-  );
-}
-
-/* ===================================================================== */
-/* ===================== EVERYTHING BELOW IS YOUR CODE ================== */
-/* ===================== NOTHING REMOVED / SHORTENED ==================== */
-/* ===================================================================== */
-
-/* 🔥 YOUR GameDashboard, LandingPage, ReactorRing, GlobalStyle, etc.
-   🔥 ARE UNCHANGED BELOW THIS LINE
-   🔥 I DID NOT REMOVE A SINGLE FEATURE
-*/
-
-/* --- KEEP YOUR EXISTING CODE EXACTLY AS YOU SENT IT --- */
-/* --- STARTING FROM ASSETS, CHAINS, GameDashboard, LandingPage, STYLES --- */
-
-/* ⬇️ ⬇️ ⬇️  YOUR ORIGINAL CODE CONTINUES HERE ⬇️ ⬇️ ⬇️ */
 const ASSETS = {
   soundBid: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3',
   soundWin: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3',
@@ -187,7 +115,7 @@ function GameDashboard({ logout, user }) {
   const lastBidId = useRef(null);
   const audioRef = useRef(null);
   const { wallets } = useWallets();
-  // âš ï¸ CRITICAL FIX: Handle both Privy object emails and Custom string emails
+  // ⚠️ CRITICAL FIX: Handle both Privy object emails and Custom string emails
   const userAddress = wallets.find(w => w.walletClientType === 'privy')?.address || "0x...";
   const userEmail = user?.email?.address || user?.email || "user@example.com";
   const username = user?.username || "Player";
@@ -755,6 +683,7 @@ const ReactorRing = ({ targetDate, status }) => {
 
 // --- NEW LANDING PAGE WITH CUSTOM AUTH ---
 function LandingPage({ privyLogin, onAuthSuccess }) {
+  const navigate = useNavigate();
   const [authMode, setAuthMode] = useState('home'); // 'home', 'login', 'signup', 'reset'
   const [formData, setFormData] = useState({ username: '', email: '', password: '' });
   const [loading, setLoading] = useState(false);
@@ -818,6 +747,7 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
     const handleSuccess = (userData) => {
       setLoading(false);
       onAuthSuccess(userData);
+      navigate('/game');
     };
 
     const handleError = (msg) => {
@@ -859,7 +789,7 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
       socket.off('resetOtpSent', handleResetOtpSent);
       socket.off('resetSuccess', handleResetSuccess);
     };
-  }, [onAuthSuccess]);
+  }, [onAuthSuccess, navigate]);
 
   return (
     <div className="landing-page-wrapper">
@@ -1344,9 +1274,10 @@ const GlobalStyle = () => (
   `}</style>
 );
 
+// Main App with Routing
+function MainApp() {
   const { login, logout, user, authenticated, ready } = usePrivy();
   
-  // Initialize state from localStorage if available
   const [customUser, setCustomUser] = useState(() => {
       const saved = localStorage.getItem('bidblaze_user');
       return saved ? JSON.parse(saved) : null;
@@ -1376,15 +1307,18 @@ const GlobalStyle = () => (
         supportedChains: [BASE_CHAIN, BSC_CHAIN, ETH_CHAIN]
       }}
     >
-      {/* LOGIC: If customUser exists (logged in via form) -> Show Dashboard.
-         Else -> Show Landing Page.
-         We pass 'login' to LandingPage to allow triggering Privy if needed for wallet connection later.
-      */}
-      {customUser ? (
-        <GameDashboard logout={handleLogout} user={{...user, ...customUser}} />
-      ) : (
-        <LandingPage privyLogin={login} onAuthSuccess={handleAuthSuccess} />
-      )}
+      <Routes>
+        <Route path="/" element={<LandingPage privyLogin={login} onAuthSuccess={handleAuthSuccess} />} />
+        <Route path="/game" element={customUser ? <GameDashboard logout={handleLogout} user={{...user, ...customUser}} /> : <LandingPage privyLogin={login} onAuthSuccess={handleAuthSuccess} />} />
+      </Routes>
     </PrivyProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <MainApp />
+    </BrowserRouter>
   );
 }
