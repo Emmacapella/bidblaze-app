@@ -228,7 +228,7 @@ function GameDashboard({ logout, user }) {
           txHash,
           network: selectedNetwork
         });
-        alert("âœ… Transaction Sent! Check your wallet activities.");
+        alert("… Transaction Sent! Check your wallet activities.");
       }
 
     } catch (err) {
@@ -236,7 +236,7 @@ function GameDashboard({ logout, user }) {
       setIsProcessing(false);
 
       if (err.message && err.message.includes("insufficient funds")) {
-          alert("âŒ INSUFFICIENT FUNDS: Your wallet is empty. You need a small amount of ETH/BNB to pay for gas fees.");
+          alert("INSUFFICIENT FUNDS: Your wallet is empty. You need a small amount of ETH/BNB to pay for gas fees.");
       } else if (err.code === 4001 || err.message?.includes("rejected")) {
           alert("Transaction was cancelled.");
       } else {
@@ -272,24 +272,24 @@ function GameDashboard({ logout, user }) {
       setCredits(newBalance);
       setDepositAmount('');
       setIsProcessing(false);
-      alert(`âœ… SUCCESS! Deposit Verified.`);
+      alert(`… SUCCESS! Deposit Verified.`);
     });
     
     socket.on('depositError', (msg) => {
-      alert(`âŒ Error: ${msg}`);
+      alert(`Error: ${msg}`);
       setIsProcessing(false);
     });
 
     socket.on('withdrawalSuccess', (newBalance) => {
         setCredits(newBalance);
-        alert("âœ… Withdrawal Request Sent!");
+        alert("… Withdrawal Request Sent!");
     });
 
-    socket.on('withdrawalError', (msg) => { alert(`âŒ Withdrawal Failed: ${msg}`); });
+    socket.on('withdrawalError', (msg) => { alert(`Withdrawal Failed: ${msg}`); });
     socket.on('withdrawalHistory', (data) => { setWithdrawHistory(data); });
     socket.on('depositHistory', (data) => { setDepositHistory(data); });
                                                                                             
-    // âš ï¸ CRITICAL FIX: Ensure request is sent on mount with correct email format
+    // CRITICAL FIX: Ensure request is sent on mount with correct email format
     if(userEmail) {
       socket.emit('getUserBalance', userEmail.toLowerCase().trim());
     }
