@@ -1344,7 +1344,6 @@ const GlobalStyle = () => (
   `}</style>
 );
 
-export default function App() {
   const { login, logout, user, authenticated, ready } = usePrivy();
   
   // Initialize state from localStorage if available
