@@ -756,13 +756,13 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
     const handleSignupOtpSent = () => {
         setLoading(false);
         setSignupStep(2);
-        alert( OTP Sent to your email!");
+        alert( "OTP Sent to your email!");
     };
 
     const handleResetOtpSent = () => {
         setLoading(false);
         setResetStep(2);
-        alert( OTP Sent to your email! Enter it below.");
+        alert( "OTP Sent to your email! Enter it below.");
     };
 
     const handleResetSuccess = () => {
