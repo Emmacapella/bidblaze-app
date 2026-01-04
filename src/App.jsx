@@ -611,7 +611,7 @@ function GameDashboard({ logout, user }) {
       </div>
 
       <div className="glass-panel" style={{marginTop:'20px', borderColor: '#fbbf24', background: 'rgba(251, 191, 36, 0.05)'}}>
-        <div className="panel-header" style={{color: '#fbbf24'}}>ðŸ† RECENT BIG WINS</div>
+        <div className="panel-header" style={{color: '#fbbf24'}}>🏆 RECENT BIG WINS</div>
         <div className="history-list" style={{maxHeight: '120px'}}>
           {gameState.recentWinners && gameState.recentWinners.length > 0 ? (
             gameState.recentWinners.map((win, index) => (
@@ -642,9 +642,9 @@ function GameDashboard({ logout, user }) {
           <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
              <span style={{fontSize:'24px', fontWeight:'900', color:'white', letterSpacing:'1px'}}>BID<span style={{color:'#fbbf24'}}>BLAZE</span></span>
           </div>
-          <div style={{fontSize:'10px', color:'#64748b', fontWeight:'600', letterSpacing:'2px'}}>PROVABLY FAIR â€¢ INSTANT PAYOUTS</div>
+          <div style={{fontSize:'10px', color:'#64748b', fontWeight:'600', letterSpacing:'2px'}}>PROVABLY FAIR • INSTANT PAYOUTS</div>
           {/* SUPPORT LINK */}
-          <a href="https://t.me/Bidblaze" target="_blank" rel="noopener noreferrer" style={{color: '#3b82f6', textDecoration: 'none', fontSize: '12px', marginTop: '10px', fontWeight: 'bold'}}>ðŸ’¬ 24/7 SUPPORT</a>
+          <a href="https://t.me/Bidblaze" target="_blank" rel="noopener noreferrer" style={{color: '#3b82f6', textDecoration: 'none', fontSize: '12px', marginTop: '10px', fontWeight: 'bold'}}>💬 24/7 SUPPORT</a>
       </div>
     </div>
   );
@@ -690,9 +690,9 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
   const [resetStep, setResetStep] = useState(1); // 1 = Email, 2 = OTP + New Password
 
   const features = [
-    { icon: "âš¡", title: "Instant", desc: "No signup lag. Create account & play immediately." },
-    { icon: "ðŸ›¡ï¸", title: "Fair", desc: "Provably fair game logic. Blockchain verified payouts." },
-    { icon: "ðŸ’°", title: "High Yield", desc: "Small bids, massive jackpots. Winner takes all." }
+    { icon: "⚡", title: "Instant", desc: "No signup lag. Create account & play immediately." },
+    { icon: "🛡️", title: "Fair", desc: "Provably fair game logic. Blockchain verified payouts." },
+    { icon: "💰", title: "High Yield", desc: "Small bids, massive jackpots. Winner takes all." }
   ];
 
   const handleAuthSubmit = async () => {
@@ -749,25 +749,25 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
 
     const handleError = (msg) => {
       setLoading(false);
-      alert("âŒ " + msg);
+      alert("❌" + msg);
     };
     
     // OTP Sent Listeners
     const handleSignupOtpSent = () => {
         setLoading(false);
         setSignupStep(2);
-        alert("âœ‰ï¸ OTP Sent to your email!");
+        alert( OTP Sent to your email!");
     };
 
     const handleResetOtpSent = () => {
         setLoading(false);
         setResetStep(2);
-        alert("âœ‰ï¸ OTP Sent to your email! Enter it below.");
+        alert( OTP Sent to your email! Enter it below.");
     };
 
     const handleResetSuccess = () => {
         setLoading(false);
-        alert("âœ… Password Reset Successful! Please login.");
+        alert("… Password Reset Successful! Please login.");
         setAuthMode('login');
         setResetStep(1);
         setFormData(prev => ({ ...prev, password: '' })); // clear password
@@ -825,7 +825,7 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
                     LOGIN
                 </button>
                  <button className="lp-btn-secondary" onClick={() => { setAuthMode('signup'); setSignupStep(1); }}>
-                    SIGN UP ðŸš€
+                    SIGN UP 🚀
                  </button>
             </div>
 
@@ -876,7 +876,7 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
                         <input
                             className="input-field"
                             type="password"
-                            placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                            placeholder="••••••••"
                             value={formData.password}
                             onChange={(e) => setFormData({...formData, password: e.target.value})}
                         />
