@@ -993,13 +993,13 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
       {/* Marquee Section */}
       <div className="lp-marquee-container">
          <div className="lp-marquee-content">
-           <span>🏆 User88 just won $450.00 (ETH)</span> â€¢
-           <span>🏆 CryptoKing just won $1,200.00 (BNB)</span> â€¢
-           <span>🔥 Jackpot currently at $52.00</span> â€¢
-           <span>🏆 Alex_99 just won $320.00 (BASE)</span> â€¢
-           <span>💎 New Round Starting...</span> â€¢
-           <span>🏆 User88 just won $450.00 (ETH)</span> â€¢
-           <span>🏆 CryptoKing just won $1,200.00 (BNB)</span> â€¢
+           <span>🏆 User88 just won $450.00 (ETH)</span> •
+           <span>🏆 CryptoKing just won $1,200.00 (BNB)</span> •
+           <span>🔥 Jackpot currently at $52.00</span> •
+           <span>🏆 Alex_99 just won $320.00 (BASE)</span> •
+           <span>💎 New Round Starting...</span> •
+           <span>🏆 User88 just won $450.00 (ETH)</span> •
+           <span>🏆 CryptoKing just won $1,200.00 (BNB)</span> •
            <span>🔥 Jackpot currently at $52.00</span>
          </div>
       </div>
