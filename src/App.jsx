@@ -803,7 +803,7 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
             </>
           )}
           {authMode !== 'home' && (
-            <button className="lp-login-btn-small" onClick={() => { setAuthMode('home'); setSignupStep(1); setResetStep(1); }}>â† Back</button>
+            <button className="lp-login-btn-small" onClick={() => { setAuthMode('home'); setSignupStep(1); setResetStep(1); }}>← Back</button>
           )}
         </div>
       </div>
@@ -919,7 +919,7 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
                     <input
                         className="input-field"
                         type="password"
-                        placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                        placeholder="••••••••"
                         value={formData.password}
                         onChange={(e) => setFormData({...formData, password: e.target.value})}
                     />
