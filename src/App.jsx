@@ -87,20 +87,98 @@ const HowToPlay = ({ onClose }) => {
   );
 };
 
-// --- FAQ MODAL (EMPTY STRUCTURE) ---
+// --- FAQ MODAL ---
 const FaqModal = ({ onClose }) => {
   return (
     <div className="modal-overlay">
-      <div className="glass-card modal-content fade-in" style={{textAlign:'left', maxHeight:'80vh', overflowY:'auto'}}>
+      <div className="glass-card modal-content fade-in" style={{textAlign:'left', maxHeight:'80vh', overflowY:'auto', padding: '30px'}}>
         <button className="close-btn" onClick={onClose}>✕</button>
-        <h2 style={{color: '#fbbf24', textAlign:'center', marginBottom:'20px'}}>FAQ</h2>
+        <h2 style={{color: '#fbbf24', textAlign:'center', marginBottom:'20px'}}>BidBlaze FAQ</h2>
         
-        {/* THIS IS WHERE YOU WILL ADD YOUR TEXT LATER */}
-        <div style={{color:'#cbd5e1', fontSize:'14px', lineHeight:'1.6', minHeight:'100px'}}>
-             {/* Content will go here */}
+        <div style={{color:'#cbd5e1', fontSize:'14px', lineHeight:'1.6'}}>
+             
+             <h3 style={{color:'white', marginTop:'20px', marginBottom:'5px'}}>What is BidBlaze?</h3>
+             <p style={{marginTop:0}}>BidBlaze is a fast-paced, real-time crypto auction game where players battle for a growing jackpot. Each bid costs exactly $1.00 from your balance and adds time to the countdown. The last player to bid when the timer expires wins the entire pot instantly! Everything is transparent, with blockchain verification for all deposits and fair game mechanics.</p>
+
+             <h3 style={{color:'white', marginTop:'20px', marginBottom:'5px'}}>How do I play and win?</h3>
+             <ul style={{marginTop:0, paddingLeft:'20px'}}>
+                <li>Deposit crypto to fund your balance.</li>
+                <li>Bid $1.00 – this extends the timer and keeps you in the game.</li>
+                <li>Survive longer than others by bidding strategically.</li>
+                <li>Claim the jackpot – if you're the final bidder, the full amount is added to your balance right away.</li>
+                <li><strong>No Competition Rule:</strong> If no one else bids against you in a round, it's automatically canceled for fairness, and you receive a 100% refund on all your bids.</li>
+             </ul>
+
+             <h3 style={{color:'white', marginTop:'20px', marginBottom:'5px'}}>Why do solo rounds get refunded?</h3>
+             <p style={{marginTop:0}}>We want every game to be exciting and competitive. Unchallenged rounds don't qualify as real auctions, so we void them and return your bids in full – zero risk for starting a new game!</p>
+
+             <h3 style={{color:'white', marginTop:'20px', marginBottom:'5px'}}>How much are bids?</h3>
+             <p style={{marginTop:0}}>Fixed at $1.00 USD equivalent per bid – no surprises, deducted straight from your balance.</p>
+
+             <h3 style={{color:'white', marginTop:'20px', marginBottom:'5px'}}>How do I deposit funds?</h3>
+             <ol style={{marginTop:0, paddingLeft:'20px'}}>
+                 <li>Open the Deposit section.</li>
+                 <li>Select a network (BNB Chain, Ethereum, or Base).</li>
+                 <li>Enter the desired amount and deposit (use your wallet app like MetaMask or Trust Wallet).</li>
+                 <li>Confirmation is automatic on-chain – credits appear in seconds.</li>
+             </ol>
+             <p style={{color:'#ef4444', fontSize:'12px'}}><strong>Important Warning:</strong> Always verify the address and network match exactly. Sending to the wrong one could result in permanent loss of funds – we can't recover them.</p>
+
+             <h3 style={{color:'white', marginTop:'20px', marginBottom:'5px'}}>How do withdrawals work?</h3>
+             <ol style={{marginTop:0, paddingLeft:'20px'}}>
+                 <li>Go to Withdraw.</li>
+                 <li>Choose your network, enter an amount (minimum $10.00), and your external wallet address.</li>
+                 <li>Submit the request.</li>
+             </ol>
+             <p style={{marginTop:0}}>Requests are processed manually for security and anti-fraud checks, usually within 24 hours. You'll be notified when it's sent on-chain.</p>
+
+             <h3 style={{color:'white', marginTop:'20px', marginBottom:'5px'}}>What if my deposit doesn't show up?</h3>
+             <ul style={{marginTop:0, paddingLeft:'20px'}}>
+                 <li>Double-check the transaction on a blockchain explorer (like BscScan, Etherscan, or Basescan).</li>
+                 <li>Ensure you used the correct address and network.</li>
+                 <li>If everything matches but it's delayed (network congestion), wait a bit longer.</li>
+                 <li>Contact support with your tx hash for assistance.</li>
+             </ul>
+
+             <h3 style={{color:'white', marginTop:'20px', marginBottom:'5px'}}>Supported networks and tips</h3>
+             <ul style={{marginTop:0, paddingLeft:'20px'}}>
+                 <li>BNB Smart Chain – lowest fees, fastest.</li>
+                 <li>Base – great for low-cost Layer 2 transactions.</li>
+                 <li>Ethereum – reliable but higher gas during peaks.</li>
+             </ul>
+             <p style={{marginTop:0, fontStyle:'italic', color:'#fbbf24'}}>Tip: Use low-fee networks for smaller deposits to save on gas.</p>
+
+             <h3 style={{color:'white', marginTop:'20px', marginBottom:'5px'}}>Is my account and funds safe?</h3>
+             <p style={{marginTop:0}}>Yes – we prioritize security:</p>
+             <ul style={{marginTop:0, paddingLeft:'20px'}}>
+                 <li>Deposits verified directly on-chain.</li>
+                 <li>Manual withdrawal reviews to prevent unauthorized access.</li>
+                 <li>Strong login options.</li>
+                 <li>No storage of private keys.</li>
+                 <li>Always enable 2FA if available and use a secure wallet.</li>
+             </ul>
+
+             <h3 style={{color:'white', marginTop:'20px', marginBottom:'5px'}}>Common bidding issues</h3>
+             <ul style={{marginTop:0, paddingLeft:'20px'}}>
+                 <li>Insufficient balance: Deposit more.</li>
+                 <li>Cooldown: Wait ~8 seconds after a bid.</li>
+                 <li>Round ended: New game starts shortly.</li>
+                 <li>Network problems: Refresh or check connection.</li>
+             </ul>
+
+             <h3 style={{color:'white', marginTop:'20px', marginBottom:'5px'}}>Lost access to my account?</h3>
+             <p style={{marginTop:0}}>Use Forgot Password on login to get a reset code via email. If that fails or you need more help, reach our support team.</p>
+
+             <h3 style={{color:'white', marginTop:'20px', marginBottom:'5px'}}>Contact and support</h3>
+             <p style={{marginTop:0}}>We're here 24/7 via Telegram: <strong>t.me/Bidblaze</strong>. Message us for any issue – deposits, withdrawals, technical problems, or questions. Fast responses guaranteed!</p>
+
+             <h3 style={{color:'white', marginTop:'20px', marginBottom:'5px'}}>Mobile play</h3>
+             <p style={{marginTop:0}}>Fully responsive on phones and tablets. Add to home screen for app-like experience, or play in wallet browsers for seamless deposits.</p>
+
+             <p style={{textAlign:'center', marginTop:'30px', fontWeight:'bold', color:'#fbbf24'}}>Good luck out there – may you snipe some massive pots! 🚀</p>
         </div>
         
-        <button className="action-btn" onClick={onClose} style={{marginTop:'20px'}}>Close</button>
+        <button className="action-btn" onClick={onClose} style={{marginTop:'20px'}}>Close FAQ</button>
       </div>
     </div>
   );
@@ -126,7 +204,7 @@ function GameDashboard({ logout, user }) {
   const [cd, setCd] = useState(0);
   const [showVault, setShowVault] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  const [showFaq, setShowFaq] = useState(false); // NEW STATE FOR FAQ
+  const [showFaq, setShowFaq] = useState(false); 
   const [floatingBids, setFloatingBids] = useState([]);
   const [restartCount, setRestartCount] = useState(15);
   const [showMenu, setShowMenu] = useState(false);
@@ -440,6 +518,10 @@ function GameDashboard({ logout, user }) {
                     {/* NEW FAQ BUTTON */}
                     <button onClick={() => { setShowMenu(false); setShowFaq(true); }} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
                          📚 FAQ <span>→</span>
+                    </button>
+                    {/* NEW TERMS BUTTON */}
+                    <button onClick={() => alert("Terms & Conditions updated soon.")} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
+                         📜 Terms & Conditions <span>→</span>
                     </button>
                     {/* NEW SUPPORT BUTTON */}
                     <a href="https://t.me/Bidblaze" target="_blank" rel="noopener noreferrer" style={{textDecoration:'none', textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
