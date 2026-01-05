@@ -209,6 +209,10 @@ function GameDashboard({ logout, user }) {
   const [restartCount, setRestartCount] = useState(15);
   const [showMenu, setShowMenu] = useState(false);
 
+  // --- NEW STATES FOR HISTORY MODALS ---
+  const [showTransactions, setShowTransactions] = useState(false);
+  const [showUserBids, setShowUserBids] = useState(false);
+
   const prevStatus = useRef("ACTIVE");
   const lastBidId = useRef(null);
   const audioRef = useRef(null);
@@ -472,7 +476,56 @@ function GameDashboard({ logout, user }) {
                                                                                               
       {showVault && <WalletVault onClose={() => setShowVault(false)} userAddress={userAddress} userEmail={userEmail} currentCredits={credits} />}
       {showHelp && <HowToPlay onClose={() => setShowHelp(false)} />}
-      {showFaq && <FaqModal onClose={() => setShowFaq(false)} />} {/* RENDER FAQ MODAL */}
+      {showFaq && <FaqModal onClose={() => setShowFaq(false)} />} 
+
+      {/* --- NEW TRANSACTIONS MODAL --- */}
+      {showTransactions && (
+        <div className="modal-overlay">
+          <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
+            <button className="close-btn" onClick={() => setShowTransactions(false)}>✕</button>
+            <h2 style={{color: '#fbbf24', textAlign:'center', marginTop:0}}>HISTORY</h2>
+            <div style={{maxHeight:'300px', overflowY:'auto'}}>
+              {[...depositHistory.map(d => ({...d, type: 'DEPOSIT', color: '#22c55e'})), ...withdrawHistory.map(w => ({...w, type: 'WITHDRAW', color: '#ef4444'}))]
+               .sort((a,b) => new Date(b.created_at) - new Date(a.created_at))
+               .map((item, i) => (
+                  <div key={i} style={{background:'rgba(255,255,255,0.05)', padding:'10px', marginBottom:'8px', borderRadius:'8px', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                      <div>
+                          <div style={{fontWeight:'bold', color: item.color, fontSize:'12px'}}>{item.type}</div>
+                          <div style={{fontSize:'10px', color:'#94a3b8'}}>{new Date(item.created_at).toLocaleString()}</div>
+                      </div>
+                      <div style={{textAlign:'right'}}>
+                           <div style={{fontWeight:'bold', color:'white'}}>${Number(item.amount).toFixed(2)}</div>
+                           <div style={{fontSize:'10px', color: item.status === 'PENDING' ? 'orange' : '#22c55e'}}>{item.status}</div>
+                      </div>
+                  </div>
+               ))}
+               {depositHistory.length === 0 && withdrawHistory.length === 0 && <p style={{textAlign:'center', color:'#64748b'}}>No transactions found.</p>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- NEW USER BIDS MODAL --- */}
+      {showUserBids && (
+        <div className="modal-overlay">
+          <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
+            <button className="close-btn" onClick={() => setShowUserBids(false)}>✕</button>
+            <h2 style={{color: '#3b82f6', textAlign:'center', marginTop:0}}>MY BIDDINGS</h2>
+            <div style={{maxHeight:'300px', overflowY:'auto'}}>
+              {gameState.history.filter(bid => bid.user.toLowerCase() === userEmail.toLowerCase()).length === 0 ? (
+                  <p style={{textAlign:'center', color:'#64748b'}}>You haven't placed any bids yet.</p>
+              ) : (
+                  gameState.history.filter(bid => bid.user.toLowerCase() === userEmail.toLowerCase()).map((bid, i) => (
+                      <div key={i} style={{background:'rgba(59, 130, 246, 0.1)', padding:'10px', marginBottom:'8px', borderRadius:'8px', display:'flex', justifyContent:'space-between'}}>
+                           <span style={{color:'#94a3b8', fontSize:'12px'}}>Bid #{bid.id.toString().slice(-4)}</span>
+                           <span style={{color:'white', fontWeight:'bold'}}>-${bid.amount.toFixed(2)}</span>
+                      </div>
+                  ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* SIDE MENU MODAL */}
       {showMenu && (
@@ -494,20 +547,35 @@ function GameDashboard({ logout, user }) {
                     <div style={{color:'#64748b', fontSize:'12px'}}>{userEmail}</div>
                 </div>
 
-                {/* BALANCE CARD */}
+                {/* UPDATED BALANCE CARD WITH NEW BUTTONS */}
                 <div style={{background: 'rgba(34, 197, 94, 0.1)', padding:'20px', borderRadius:'12px', border:'1px solid rgba(34, 197, 94, 0.2)'}}>
                     <div style={{color:'#22c55e', fontSize:'12px', fontWeight:'bold', marginBottom:'5px', letterSpacing:'1px'}}>TOTAL BALANCE</div>
                     <div style={{fontSize:'32px', fontWeight:'900', color:'white', marginBottom:'15px'}}>${credits.toFixed(2)}</div>
-                    <button onClick={() => { setShowMenu(false); setShowDeposit(true); }} style={{width:'100%', padding:'12px', background:'#22c55e', border:'none', borderRadius:'8px', color:'white', fontWeight:'bold', cursor:'pointer'}}>
-                        + DEPOSIT
-                    </button>
+                    
+                    {/* ROW 1: Deposit & Withdraw */}
+                    <div style={{display:'flex', gap:'10px', marginBottom:'10px'}}>
+                        <button onClick={() => { setShowMenu(false); setShowDeposit(true); }} style={{flex:1, padding:'10px', background:'#22c55e', border:'none', borderRadius:'8px', color:'white', fontWeight:'bold', cursor:'pointer', fontSize:'12px'}}>
+                            + DEPOSIT
+                        </button>
+                        <button onClick={() => { setShowMenu(false); setShowWithdraw(true); }} style={{flex:1, padding:'10px', background:'#ef4444', border:'none', borderRadius:'8px', color:'white', fontWeight:'bold', cursor:'pointer', fontSize:'12px'}}>
+                            - WITHDRAW
+                        </button>
+                    </div>
+
+                    {/* ROW 2: Transactions & Biddings */}
+                    <div style={{display:'flex', gap:'10px'}}>
+                        <button onClick={() => { setShowMenu(false); setShowTransactions(true); }} style={{flex:1, padding:'10px', background:'#334155', border:'none', borderRadius:'8px', color:'white', fontWeight:'bold', cursor:'pointer', fontSize:'12px'}}>
+                            🕒 HISTORY
+                        </button>
+                        <button onClick={() => { setShowMenu(false); setShowUserBids(true); }} style={{flex:1, padding:'10px', background:'#3b82f6', border:'none', borderRadius:'8px', color:'white', fontWeight:'bold', cursor:'pointer', fontSize:'12px'}}>
+                            ✋ MY BIDS
+                        </button>
+                    </div>
                 </div>
 
                 {/* MENU LINKS */}
                 <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
-                    <button onClick={() => { setShowMenu(false); setShowWithdraw(true); }} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
-                         💸 Withdraw Funds <span>→</span>
-                    </button>
+                    {/* Withdraw removed from here as it is now in the card above */}
 
                      <button onClick={() => setMuted(!muted)} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
                          {muted ? '🔊 Unmute Sound' : '🔇 Mute Sound'} <span>{muted ? 'OFF' : 'ON'}</span>
@@ -515,15 +583,12 @@ function GameDashboard({ logout, user }) {
                     <button onClick={() => { setShowMenu(false); setShowHelp(true); }} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
                          ❓ Help / Rules <span>→</span>
                     </button>
-                    {/* NEW FAQ BUTTON */}
                     <button onClick={() => { setShowMenu(false); setShowFaq(true); }} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
                          📚 FAQ <span>→</span>
                     </button>
-                    {/* NEW TERMS BUTTON */}
                     <button onClick={() => alert("Terms & Conditions updated soon.")} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
                          📜 Terms & Conditions <span>→</span>
                     </button>
-                    {/* NEW SUPPORT BUTTON */}
                     <a href="https://t.me/Bidblaze" target="_blank" rel="noopener noreferrer" style={{textDecoration:'none', textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
                          💬 24/7 Support <span>→</span>
                     </a>
