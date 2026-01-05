@@ -86,6 +86,26 @@ const HowToPlay = ({ onClose }) => {
     </div>
   );
 };
+
+// --- FAQ MODAL (EMPTY STRUCTURE) ---
+const FaqModal = ({ onClose }) => {
+  return (
+    <div className="modal-overlay">
+      <div className="glass-card modal-content fade-in" style={{textAlign:'left', maxHeight:'80vh', overflowY:'auto'}}>
+        <button className="close-btn" onClick={onClose}>✕</button>
+        <h2 style={{color: '#fbbf24', textAlign:'center', marginBottom:'20px'}}>FAQ</h2>
+        
+        {/* THIS IS WHERE YOU WILL ADD YOUR TEXT LATER */}
+        <div style={{color:'#cbd5e1', fontSize:'14px', lineHeight:'1.6', minHeight:'100px'}}>
+             {/* Content will go here */}
+        </div>
+        
+        <button className="action-btn" onClick={onClose} style={{marginTop:'20px'}}>Close</button>
+      </div>
+    </div>
+  );
+};
+
 // --- GAME DASHBOARD ---
 function GameDashboard({ logout, user }) {
   const [gameState, setGameState] = useState({
@@ -106,6 +126,7 @@ function GameDashboard({ logout, user }) {
   const [cd, setCd] = useState(0);
   const [showVault, setShowVault] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showFaq, setShowFaq] = useState(false); // NEW STATE FOR FAQ
   const [floatingBids, setFloatingBids] = useState([]);
   const [restartCount, setRestartCount] = useState(15);
   const [showMenu, setShowMenu] = useState(false);
@@ -373,6 +394,7 @@ function GameDashboard({ logout, user }) {
                                                                                               
       {showVault && <WalletVault onClose={() => setShowVault(false)} userAddress={userAddress} userEmail={userEmail} currentCredits={credits} />}
       {showHelp && <HowToPlay onClose={() => setShowHelp(false)} />}
+      {showFaq && <FaqModal onClose={() => setShowFaq(false)} />} {/* RENDER FAQ MODAL */}
 
       {/* SIDE MENU MODAL */}
       {showMenu && (
@@ -414,6 +436,10 @@ function GameDashboard({ logout, user }) {
                     </button>
                     <button onClick={() => { setShowMenu(false); setShowHelp(true); }} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
                          ❓ Help / Rules <span>→</span>
+                    </button>
+                    {/* NEW FAQ BUTTON */}
+                    <button onClick={() => { setShowMenu(false); setShowFaq(true); }} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
+                         📚 FAQ <span>→</span>
                     </button>
                     {/* NEW SUPPORT BUTTON */}
                     <a href="https://t.me/Bidblaze" target="_blank" rel="noopener noreferrer" style={{textDecoration:'none', textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
