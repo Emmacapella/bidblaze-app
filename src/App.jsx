@@ -134,6 +134,12 @@ function GameDashboard({ logout, user }) {
   const [adminWallet, setAdminWallet] = useState(null);
   const [muted, setMuted] = useState(false);
 
+  // --- NEW: URL UPDATE FOR GAME DASHBOARD ---
+  useEffect(() => {
+    // When the dashboard loads, update URL to /play
+    window.history.pushState(null, "", "/play");
+  }, []);
+
   const playSound = (key) => {
     if (muted) return;
     if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
@@ -694,6 +700,27 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
     { icon: "🛡️", title: "Fair", desc: "Provably fair game logic. Blockchain verified payouts." },
     { icon: "💰", title: "High Yield", desc: "Small bids, massive jackpots. Winner takes all." }
   ];
+
+  // --- NEW: URL ROUTING FOR LANDING PAGE ---
+  useEffect(() => {
+      // Logic to update URL based on state
+      let path = "/";
+      if(authMode === 'login') path = "/login";
+      if(authMode === 'signup') path = "/signup";
+      if(authMode === 'reset') path = "/reset-password";
+      
+      // Update browser URL
+      window.history.pushState(null, "", path);
+
+      // Handle browser BACK button behavior
+      const handlePopState = () => {
+        // If user hits back, default to home
+        setAuthMode('home');
+      };
+      
+      window.addEventListener('popstate', handlePopState);
+      return () => window.removeEventListener('popstate', handlePopState);
+  }, [authMode]);
 
   const handleAuthSubmit = async () => {
     // 1. Client-Side Validation
