@@ -227,7 +227,7 @@ function GameDashboard({ logout, user }) {
   const toggleAutoBid = () => {
       const newState = !autoBidActive;
       setAutoBidActive(newState);
-      socket.emit('toggleAutoBid', { email: userEmail, active: newState, maxBid: 50 }); // Default max 50 bids
+      socket.emit('toggleAutoBid', { email: userEmail, active: newState }); 
   };
 
   // --- HANDLE USERNAME UPDATE ---
@@ -412,6 +412,14 @@ function GameDashboard({ logout, user }) {
         if(u.username && u.username !== 'Player') setUsername(u.username);
     });
 
+    // 🆕 LISTENER: AUTO-BID STATUS SYNC
+    socket.on('autoBidStatus', (status) => {
+        if(!status.active) {
+            setAutoBidActive(false);
+            if(status.reason) alert("Auto-Bidder Stopped: " + status.reason);
+        }
+    });
+
     socket.on('gameState', (data) => {
       setGameState(data);
       if (data.status === 'ACTIVE' && data.history.length > 0) {
@@ -443,6 +451,7 @@ function GameDashboard({ logout, user }) {
       socket.off('depositHistory');
       socket.off('gameConfig');
       socket.off('chatMessage'); socket.off('chatHistory'); socket.off('userData'); socket.off('leaderboardUpdate');
+      socket.off('autoBidStatus');
     };
   }, [userEmail, muted, showChat]);
 
@@ -725,6 +734,11 @@ function GameDashboard({ logout, user }) {
                          💬 24/7 Support <span>➤</span>
                     </a>
                 </div>
+                
+                {/* 🆕 EASY LOGOUT BUTTON IN MENU */}
+                <button onClick={logout} style={{width:'100%', padding:'15px', background:'#ef4444', color:'white', border:'none', borderRadius:'10px', fontWeight:'bold', cursor:'pointer', marginTop:'10px', fontSize:'16px'}}>
+                    LOGOUT
+                </button>
 
                 <div style={{marginTop:'auto', textAlign:'center', fontSize:'10px', color:'#64748b'}}>
                     v2.0.0 • Secure Connection
