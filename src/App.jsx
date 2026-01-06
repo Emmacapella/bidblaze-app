@@ -921,19 +921,24 @@ function GameDashboard({ logout, user }) {
         ))}
       </div>
 
-      <div style={{display:'flex', justifyContent:'center', marginBottom:'10px', alignItems:'center', gap:'10px'}}>
-           <span style={{color: autoBidActive ? '#22c55e' : '#64748b', fontSize:'12px', fontWeight:'bold', letterSpacing:'1px'}}>AUTO-BIDDER: {autoBidActive ? 'ON' : 'OFF'}</span>
-           <div 
-             onClick={toggleAutoBid} 
-             style={{
-               width:'40px', height:'20px', background: autoBidActive ? '#22c55e' : '#334155', 
-               borderRadius:'20px', position:'relative', cursor:'pointer', transition:'0.2s'
-             }}>
-             <div style={{
-               width:'16px', height:'16px', background:'white', borderRadius:'50%', position:'absolute', 
-               top:'2px', left: autoBidActive ? '22px' : '2px', transition:'0.2s'
-             }}></div>
-           </div>
+      <div style={{display:'flex', flexDirection:'column', alignItems:'center', marginBottom:'15px'}}>
+          <div style={{display:'flex', justifyContent:'center', alignItems:'center', gap:'10px'}}>
+               <span style={{color: autoBidActive ? '#22c55e' : '#64748b', fontSize:'12px', fontWeight:'bold', letterSpacing:'1px'}}>AUTO-BIDDER: {autoBidActive ? 'ON' : 'OFF'}</span>
+               <div 
+                 onClick={toggleAutoBid} 
+                 style={{
+                   width:'40px', height:'20px', background: autoBidActive ? '#22c55e' : '#334155', 
+                   borderRadius:'20px', position:'relative', cursor:'pointer', transition:'0.2s'
+                 }}>
+                 <div style={{
+                   width:'16px', height:'16px', background:'white', borderRadius:'50%', position:'absolute', 
+                   top:'2px', left: autoBidActive ? '22px' : '2px', transition:'0.2s'
+                 }}></div>
+               </div>
+          </div>
+          <p style={{fontSize:'10px', color:'#64748b', marginTop:'5px', fontStyle:'italic'}}>
+              Bids automatically every 20s. Pauses if you are winning to save funds.
+          </p>
       </div>
 
       <button className={`main-btn ${isCooldown ? 'cooldown' : ''}`} onClick={placeBid} disabled={gameState.status !== 'ACTIVE' || isCooldown}>
