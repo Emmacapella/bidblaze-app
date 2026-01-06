@@ -937,7 +937,7 @@ function GameDashboard({ logout, user }) {
                </div>
           </div>
           <p style={{fontSize:'10px', color:'#64748b', marginTop:'5px', fontStyle:'italic'}}>
-              Bids automatically every 20s. Pauses if you are winning to save funds.
+              Bids automatically every 20s. Pauses if you are winning.
           </p>
       </div>
 
