@@ -63,7 +63,7 @@ const HowToPlay = ({ onClose }) => {
       <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
         <button className="close-btn" onClick={onClose}>✕</button>
         <h2 style={{color: '#fbbf24', textAlign:'center', marginBottom:'20px'}}>How to Win 🏆</h2>
-        
+
         <div style={{display:'flex', gap:'15px', marginBottom:'15px'}}>
           <div style={{background:'#3b82f6', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold'}}>1</div>
           <div><div style={{fontWeight:'bold', color:'white'}}>Deposit Crypto</div><div style={{fontSize:'12px', color:'#94a3b8'}}>Connect Wallet & Pay (BSC/ETH/Base).</div></div>
@@ -80,7 +80,7 @@ const HowToPlay = ({ onClose }) => {
           <div style={{background:'#a855f7', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold'}}>4</div>
           <div><div style={{fontWeight:'bold', color:'white'}}>Only Bidder?</div><div style={{fontSize:'12px', color:'#94a3b8'}}>If no one challenges you, the game voids and you get a <span style={{color:'#fbbf24'}}>FULL REFUND</span>.</div></div>
         </div>
-        
+
         <button className="action-btn" onClick={onClose}>Got it! Let's Play</button>
       </div>
     </div>
@@ -94,9 +94,9 @@ const FaqModal = ({ onClose }) => {
       <div className="glass-card modal-content fade-in" style={{textAlign:'left', maxHeight:'80vh', overflowY:'auto', padding: '30px'}}>
         <button className="close-btn" onClick={onClose}>✕</button>
         <h2 style={{color: '#fbbf24', textAlign:'center', marginBottom:'20px'}}>BidBlaze FAQ</h2>
-        
+
         <div style={{color:'#cbd5e1', fontSize:'14px', lineHeight:'1.6'}}>
-             
+
              <h3 style={{color:'white', marginTop:'20px', marginBottom:'5px'}}>What is BidBlaze?</h3>
              <p style={{marginTop:0}}>BidBlaze is a fast-paced, real-time crypto auction game where players battle for a growing jackpot. Each bid costs exactly $1.00 from your balance and adds time to the countdown. The last player to bid when the timer expires wins the entire pot instantly! Everything is transparent, with blockchain verification for all deposits and fair game mechanics.</p>
 
@@ -177,7 +177,7 @@ const FaqModal = ({ onClose }) => {
 
              <p style={{textAlign:'center', marginTop:'30px', fontWeight:'bold', color:'#fbbf24'}}>Good luck out there – may you snipe some massive pots! 🚀</p>
         </div>
-        
+
         <button className="action-btn" onClick={onClose} style={{marginTop:'20px'}}>Close FAQ</button>
       </div>
     </div>
@@ -204,7 +204,7 @@ function GameDashboard({ logout, user }) {
   const [cd, setCd] = useState(0);
   const [showVault, setShowVault] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  const [showFaq, setShowFaq] = useState(false); 
+  const [showFaq, setShowFaq] = useState(false);
   const [floatingBids, setFloatingBids] = useState([]);
   const [restartCount, setRestartCount] = useState(15);
   const [showMenu, setShowMenu] = useState(false);
@@ -212,6 +212,10 @@ function GameDashboard({ logout, user }) {
   // --- NEW STATES FOR HISTORY MODALS ---
   const [showTransactions, setShowTransactions] = useState(false);
   const [showUserBids, setShowUserBids] = useState(false);
+
+  // --- NEW STATE FOR PROFILE SECTION ---
+  const [showProfile, setShowProfile] = useState(false);
+  const [newUsername, setNewUsername] = useState(username || '');
 
   const prevStatus = useRef("ACTIVE");
   const lastBidId = useRef(null);
@@ -221,14 +225,14 @@ function GameDashboard({ logout, user }) {
   const userAddress = wallets.find(w => w.walletClientType === 'privy')?.address || "0x...";
   const userEmail = user?.email?.address || user?.email || "user@example.com";
   const username = user?.username || "Player";
-                                                                                          
+                                                                      
   // --- STATES ---
   const [showDeposit, setShowDeposit] = useState(false);
   const [depositAmount, setDepositAmount] = useState('');
   const [selectedNetwork, setSelectedNetwork] = useState('BSC');
   const [statusMsg, setStatusMsg] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  
+
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
@@ -259,29 +263,29 @@ function GameDashboard({ logout, user }) {
         alert("Enter a valid amount");
         return;
       }
-      
+
       if (!adminWallet) {
           alert("Secure connection pending. Please wait 2 seconds and try again.");
           socket.emit('getGameConfig');
           return;
       }
-      
+
       let provider = window.ethereum;
       let account = null;
-                                                                                              
+                                                                      
       if (!provider) {
           const w = wallets.find(w => w.walletClientType !== 'privy');
           if (w) provider = await w.getEthereumProvider();
       }
-                                                                                              
+                                                                      
       if (!provider) {
         alert("Wallet not detected. Please open this site inside MetaMask or Trust Wallet browser.");
         return;
       }
-      
+
       setIsProcessing(true);
       setShowDeposit(false);
-      
+
       const accounts = await provider.request({ method: 'eth_requestAccounts' });
       account = accounts[0];
 
@@ -317,10 +321,10 @@ function GameDashboard({ logout, user }) {
           console.warn("Chain switch warning:", switchErr);
         }
       }
-      
+
       const wei = parseEther(depositAmount.toString());
       const hexValue = `0x${wei.toString(16)}`;
-                                                                                              
+                                                                      
       const txHash = await provider.request({
         method: 'eth_sendTransaction',
         params: [{
@@ -369,21 +373,36 @@ function GameDashboard({ logout, user }) {
       setWithdrawAddress('');
   };
 
+  // --- NEW: HANDLE USERNAME CHANGE ---
+  const handleUsernameChange = () => {
+    if (!newUsername.trim() || newUsername === username) {
+      alert("Enter a valid new username");
+      return;
+    }
+    const usernameRegex = /^[a-zA-Z0-9]+$/;
+    if (!usernameRegex.test(newUsername)) {
+      alert('Username must contain only letters and numbers.');
+      return;
+    }
+    socket.emit('updateUsername', { email: userEmail.toLowerCase().trim(), newUsername });
+    alert("Username update requested! Refresh to see changes.");
+  };
+
   useEffect(() => {
     if(!socket.connected) socket.connect();
-                                                                                            
+                                                                      
     socket.emit('getGameConfig');
     socket.on('gameConfig', (cfg) => {
       if(cfg && cfg.adminWallet) setAdminWallet(cfg.adminWallet);
     });
-    
+
     socket.on('depositSuccess', (newBalance) => {
       setCredits(newBalance);
       setDepositAmount('');
       setIsProcessing(false);
       alert(`… SUCCESS! Deposit Verified.`);
     });
-    
+
     socket.on('depositError', (msg) => {
       alert(`Error: ${msg}`);
       setIsProcessing(false);
@@ -397,7 +416,7 @@ function GameDashboard({ logout, user }) {
     socket.on('withdrawalError', (msg) => { alert(`Withdrawal Failed: ${msg}`); });
     socket.on('withdrawalHistory', (data) => { setWithdrawHistory(data); });
     socket.on('depositHistory', (data) => { setDepositHistory(data); });
-                                                                                            
+                                                                      
     // CRITICAL FIX: Ensure request is sent on mount with correct email format
     if(userEmail) {
       socket.emit('getUserBalance', userEmail.toLowerCase().trim());
@@ -422,10 +441,10 @@ function GameDashboard({ logout, user }) {
       }
       prevStatus.current = data.status;
     });
-    
+
     socket.on('balanceUpdate', (bal) => setCredits(bal));
     socket.on('bidError', (msg) => alert(msg));
-                                                                                            
+                                                                      
     return () => {
       if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
       socket.off('gameState'); socket.off('balanceUpdate'); socket.off('bidError');
@@ -435,7 +454,7 @@ function GameDashboard({ logout, user }) {
       socket.off('gameConfig');
     };
   }, [userEmail, muted]);
-  
+
   useEffect(() => {
     const timerInterval = setInterval(() => {
       if (gameState?.status === 'ENDED' && gameState?.restartTimer) {
@@ -448,7 +467,7 @@ function GameDashboard({ logout, user }) {
     else if (cd <= 0) setIsCooldown(false);
     return () => { clearInterval(timerInterval); clearInterval(cdInterval); };
   }, [gameState?.status, gameState?.restartTimer, isCooldown, cd]);
-  
+
   const placeBid = () => {
     if (isCooldown) return;
     if (credits < 1.00) { setShowDeposit(true); return; }
@@ -460,7 +479,7 @@ function GameDashboard({ logout, user }) {
     setIsCooldown(true);
     setCd(8);
   };
-  
+
   if (!gameState) return (
     <div className="loading-screen" style={{display:'flex', flexDirection:'column', alignItems:'center', gap:'20px'}}>
       <div className="spinner"></div>
@@ -468,15 +487,26 @@ function GameDashboard({ logout, user }) {
       <style>{`.spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-radius: 50%; border-top-color: #fbbf24; animation: spin 1s linear infinite; } @keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
-                                                                                          
+                                                                      
+  // --- NEW: CALCULATE USER STATS ---
+  const userWins = gameState.recentWinners
+    .filter(win => win.user.toLowerCase() === userEmail.toLowerCase())
+    .reduce((sum, win) => sum + win.amount, 0);
+
+  const userBidCount = gameState.history
+    .filter(bid => bid.user.toLowerCase() === userEmail.toLowerCase())
+    .length;
+
+  const totalBidded = userBidCount * 1.00;
+
   return (
     <div className="app-container">
       <GlobalStyle />
       {gameState?.status === 'ENDED' && <Confetti width={window.innerWidth} height={window.innerHeight} recycle={false} numberOfPieces={500} colors={['#fbbf24', '#ffffff', '#22c55e']} />}
-                                                                                              
+                                                                      
       {showVault && <WalletVault onClose={() => setShowVault(false)} userAddress={userAddress} userEmail={userEmail} currentCredits={credits} />}
       {showHelp && <HowToPlay onClose={() => setShowHelp(false)} />}
-      {showFaq && <FaqModal onClose={() => setShowFaq(false)} />} 
+      {showFaq && <FaqModal onClose={() => setShowFaq(false)} />}
 
       {/* --- NEW TRANSACTIONS MODAL --- */}
       {showTransactions && (
@@ -540,18 +570,68 @@ function GameDashboard({ logout, user }) {
                      <h2 style={{margin:0, color:'#fbbf24'}}>MENU</h2>
                      <button onClick={() => setShowMenu(false)} style={{background:'none', border:'none', color:'white', fontSize:'24px'}}>✕</button>
                 </div>
-                {/* USER PROFILE SNIPPET */}
-                <div style={{background: 'rgba(255,255,255,0.05)', padding:'15px', borderRadius:'12px'}}>
-                    <div style={{color:'#94a3b8', fontSize:'12px', fontWeight:'bold', marginBottom:'5px'}}>LOGGED IN AS</div>
-                    <div style={{color:'white', fontSize:'16px', fontWeight:'bold'}}>{username}</div>
-                    <div style={{color:'#64748b', fontSize:'12px'}}>{userEmail}</div>
+
+                {/* USER PROFILE SNIPPET WITH ARROW */}
+                <div style={{background: 'rgba(255,255,255,0.05)', padding:'15px', borderRadius:'12px', position:'relative'}}>
+                    <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                        <div>
+                            <div style={{color:'#94a3b8', fontSize:'12px', fontWeight:'bold', marginBottom:'5px'}}>LOGGED IN AS</div>
+                            <div style={{color:'white', fontSize:'16px', fontWeight:'bold'}}>{username}</div>
+                            <div style={{color:'#64748b', fontSize:'12px'}}>{userEmail}</div>
+                        </div>
+                        <button 
+                            onClick={() => setShowProfile(!showProfile)} 
+                            style={{background:'none', border:'none', color:'#fbbf24', fontSize:'20px', cursor:'pointer'}}
+                        >
+                            {showProfile ? '↑' : '→'}
+                        </button>
+                    </div>
+
+                    {/* PROFILE SECTION - EXPANDED WHEN ARROW CLICKED */}
+                    {showProfile && (
+                        <div style={{marginTop:'20px', paddingTop:'15px', borderTop:'1px solid #334155'}}>
+                            <h3 style={{color:'#fbbf24', fontSize:'16px', marginBottom:'10px'}}>PROFILE</h3>
+
+                            {/* CHANGE USERNAME */}
+                            <div style={{marginBottom:'15px'}}>
+                                <p style={{color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Change Username</p>
+                                <div style={{display:'flex', gap:'8px'}}>
+                                    <input
+                                        type="text"
+                                        value={newUsername}
+                                        onChange={(e) => setNewUsername(e.target.value)}
+                                        placeholder="New username"
+                                        style={{flex:1, background:'#1e293b', border:'1px solid #334155', padding:'10px', borderRadius:'8px', color:'white'}}
+                                    />
+                                    <button 
+                                        onClick={handleUsernameChange}
+                                        style={{padding:'10px 15px', background:'#fbbf24', color:'black', border:'none', borderRadius:'8px', fontWeight:'bold'}}
+                                    >
+                                        Save
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* USER STATS CARDS */}
+                            <div style={{display:'flex', gap:'10px', marginBottom:'10px'}}>
+                                <div style={{flex:1, background:'rgba(34, 197, 94, 0.1)', padding:'12px', borderRadius:'8px', border:'1px solid rgba(34, 197, 94, 0.2)', textAlign:'center'}}>
+                                    <div style={{color:'#22c55e', fontSize:'11px', fontWeight:'bold'}}>TOTAL WON</div>
+                                    <div style={{color:'white', fontSize:'20px', fontWeight:'900'}}>${userWins.toFixed(2)}</div>
+                                </div>
+                                <div style={{flex:1, background:'rgba(251, 191, 36, 0.1)', padding:'12px', borderRadius:'8px', border:'1px solid rgba(251, 191, 36, 0.2)', textAlign:'center'}}>
+                                    <div style={{color:'#fbbf24', fontSize:'11px', fontWeight:'bold'}}>TOTAL BIDDED</div>
+                                    <div style={{color:'white', fontSize:'20px', fontWeight:'900'}}>${totalBidded.toFixed(2)}</div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* UPDATED BALANCE CARD WITH NEW BUTTONS */}
                 <div style={{background: 'rgba(34, 197, 94, 0.1)', padding:'20px', borderRadius:'12px', border:'1px solid rgba(34, 197, 94, 0.2)'}}>
                     <div style={{color:'#22c55e', fontSize:'12px', fontWeight:'bold', marginBottom:'5px', letterSpacing:'1px'}}>TOTAL BALANCE</div>
                     <div style={{fontSize:'32px', fontWeight:'900', color:'white', marginBottom:'15px'}}>${credits.toFixed(2)}</div>
-                    
+
                     {/* ROW 1: Deposit & Withdraw */}
                     <div style={{display:'flex', gap:'10px', marginBottom:'10px'}}>
                         <button onClick={() => { setShowMenu(false); setShowDeposit(true); }} style={{flex:1, padding:'10px', background:'#22c55e', border:'none', borderRadius:'8px', color:'white', fontWeight:'bold', cursor:'pointer', fontSize:'12px'}}>
@@ -575,8 +655,6 @@ function GameDashboard({ logout, user }) {
 
                 {/* MENU LINKS */}
                 <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
-                    {/* Withdraw removed from here as it is now in the card above */}
-
                      <button onClick={() => setMuted(!muted)} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
                          {muted ? '🔊 Unmute Sound' : '🔇 Mute Sound'} <span>{muted ? 'OFF' : 'ON'}</span>
                     </button>
@@ -606,7 +684,7 @@ function GameDashboard({ logout, user }) {
           <div className="spinner" style={{width:'60px', height:'60px'}}></div>
         </div>
       )}
-      
+
       {showDeposit && (
         <div className="modal-overlay">
           <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
@@ -625,11 +703,11 @@ function GameDashboard({ logout, user }) {
               onChange={(e) => setDepositAmount(e.target.value)}
               className="input-field" style={{marginTop:'5px'}}
             />
-                                                                                                    
+                                                                      
             <button className="action-btn" onClick={handleDeposit} style={{background:'#22c55e', color:'white', marginBottom:'10px'}}>
               🚀 PAY NOW (Wallet)
             </button>
-                                                                                                    
+                                                                      
             {/* DEPOSIT HISTORY SECTION */}
             <div style={{marginTop:'15px', borderTop:'1px solid #334155', paddingTop:'15px'}}>
                 <p style={{fontSize:'12px', color:'#94a3b8', fontWeight:'bold', marginBottom:'10px'}}>RECENT DEPOSITS</p>
@@ -652,27 +730,27 @@ function GameDashboard({ logout, user }) {
           </div>
         </div>
       )}
-      
+
       {showWithdraw && (
         <div className="modal-overlay">
           <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
             <button className="close-btn" onClick={() => setShowWithdraw(false)}>✕</button>
             <h2 style={{color: '#ef4444', textAlign:'center', marginTop:0}}>WITHDRAW</h2>
-            
+
             <p style={{color:'#94a3b8', fontSize:'14px'}}>Select Network:</p>
             <select value={selectedNetwork} onChange={(e) => setSelectedNetwork(e.target.value)} className="input-field" style={{marginTop:'5px'}}>
               <option value="BSC">BNB Smart Chain (BEP20)</option>
                <option value="ETH">Ethereum (ERC20)</option>
                <option value="BASE">Base Network</option>
             </select>
-            
+
             <p style={{color:'#94a3b8', fontSize:'14px'}}>Amount ($):</p>
             <input
               type="number" placeholder="Min $10.00" value={withdrawAmount}
               onChange={(e) => setWithdrawAmount(e.target.value)}
               className="input-field" style={{marginTop:'5px'}}
             />
-                                                                                                    
+                                                                      
             <p style={{color:'#94a3b8', fontSize:'14px'}}>Receiving Address:</p>
             <input
               type="text" placeholder="0x..." value={withdrawAddress}
@@ -683,7 +761,7 @@ function GameDashboard({ logout, user }) {
             <button className="action-btn" onClick={handleWithdraw} style={{background:'#ef4444', color:'white', marginBottom:'20px'}}>
                REQUEST WITHDRAWAL
             </button>
-            
+
             {/* MANUAL WITHDRAWAL WARNING */}
             <p style={{fontSize:'10px', color:'#94a3b8', marginTop:'10px', textAlign:'center'}}>
               ⚠️ Notice: Withdrawals are processed manually within 24 hours.
@@ -734,7 +812,7 @@ function GameDashboard({ logout, user }) {
                 {gameState.connectedUsers || 1} LIVE
             </div>
         </div>
-        
+
         {/* RIGHT SIDE: Help -> Menu -> Logout */}
         <div style={{display:'flex', gap:'8px'}}>
           <button className="nav-btn" onClick={() => setShowHelp(true)} style={{fontSize:'18px'}}>❓</button>
@@ -774,11 +852,11 @@ function GameDashboard({ logout, user }) {
           <div key={id} className="float-anim" onAnimationEnd={() => setFloatingBids(prev => prev.filter(bid => bid !== id))}>-$1.00</div>
         ))}
       </div>
-      
+
       <button className={`main-btn ${isCooldown ? 'cooldown' : ''}`} onClick={placeBid} disabled={gameState.status !== 'ACTIVE' || isCooldown}>
         {gameState.status === 'ENDED' ? 'GAME CLOSED' : (isCooldown ? `WAIT (${cd}s)` : `BID NOW ($${gameState.bidCost})`)}
       </button>
-      
+
       {/* ACTION BUTTONS (Still here for quick access, but also in menu now) */}
       <div className="action-buttons" style={{display: 'flex', gap: '15px', justifyContent: 'center', margin: '25px 0', width:'100%', maxWidth:'350px'}}>
         <button className="deposit-btn" onClick={() => setShowDeposit(true)} style={{background:'#22c55e', color:'white', border:'none', padding:'12px 25px', borderRadius:'12px', fontWeight:'bold', display:'flex', alignItems:'center', gap:'5px', flex:1, justifyContent:'center', fontSize:'14px'}}>
@@ -816,7 +894,7 @@ function GameDashboard({ logout, user }) {
           ))}
         </div>
       </div>
-      
+
       <div style={{marginTop: '40px', marginBottom: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', opacity: 0.8}}>
           <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
              <span style={{fontSize:'24px', fontWeight:'900', color:'white', letterSpacing:'1px'}}>BID<span style={{color:'#fbbf24'}}>BLAZE</span></span>
@@ -881,7 +959,7 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
       if(authMode === 'login') path = "/login";
       if(authMode === 'signup') path = "/signup";
       if(authMode === 'reset') path = "/reset-password";
-      
+
       // Update browser URL
       window.history.pushState(null, "", path);
 
@@ -890,7 +968,7 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
         // If user hits back, default to home
         setAuthMode('home');
       };
-      
+
       window.addEventListener('popstate', handlePopState);
       return () => window.removeEventListener('popstate', handlePopState);
   }, [authMode]);
@@ -907,7 +985,7 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
              if (!usernameRegex.test(formData.username)) return alert('Username must contain only letters and numbers.');
              const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[\W_]).{8,}$/;
              if (!passwordRegex.test(formData.password)) return alert('Password must be 8+ characters, with at least 1 uppercase, 1 lowercase, and 1 special character.');
-             
+
              setLoading(true);
              // Request OTP for Signup
              socket.emit('requestSignupOtp', { email: formData.email });
@@ -917,7 +995,7 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
              // Finalize Signup with OTP
              socket.emit('register', { ...formData, otp });
         }
-    } 
+    }
     // LOGIN LOGIC
     else if (authMode === 'login') {
       setLoading(true);
@@ -933,7 +1011,7 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
             if(otp.length < 4 || !formData.password) return alert("Enter OTP and new password");
             const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[\W_]).{8,}$/;
             if (!passwordRegex.test(formData.password)) return alert('Password must be 8+ characters, with at least 1 uppercase, 1 lowercase, and 1 special character.');
-            
+
             setLoading(true);
             socket.emit('resetPassword', { email: formData.email, otp, newPassword: formData.password });
         }
@@ -951,7 +1029,7 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
       setLoading(false);
       alert("❌" + msg);
     };
-    
+
     // OTP Sent Listeners
     const handleSignupOtpSent = () => {
         setLoading(false);
@@ -972,13 +1050,13 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
         setResetStep(1);
         setFormData(prev => ({ ...prev, password: '' })); // clear password
     };
-     
+
     socket.on('authSuccess', handleSuccess);
     socket.on('authError', handleError);
     socket.on('signupOtpSent', handleSignupOtpSent);
     socket.on('resetOtpSent', handleResetOtpSent);
     socket.on('resetSuccess', handleResetSuccess);
-                                                                                             
+                                                                      
     return () => {
       socket.off('authSuccess', handleSuccess);
       socket.off('authError', handleError);
@@ -991,7 +1069,7 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
   return (
     <div className="landing-page-wrapper">
       <GlobalStyle />
-                                                                                              
+                                                                      
       {/* Navbar */}
       <div className="lp-nav">
         <div className="lp-logo">BID<span style={{color: '#fbbf24'}}>BLAZE</span></div>
@@ -1007,7 +1085,7 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
           )}
         </div>
       </div>
-                                                                                              
+                                                                      
       {/* AUTH FORMS OR HERO */}
       {authMode === 'home' ? (
         <div className="lp-hero">
@@ -1103,7 +1181,7 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
                   )}
                 </>
             )}
-            
+
             {/* --- LOGIN FLOW --- */}
             {authMode === 'login' && (
                 <>
@@ -1127,7 +1205,7 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
                     <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>
                         {loading ? 'PROCESSING...' : 'LOG IN'}
                     </button>
-                    
+
                     {/* Forgot Password Link */}
                     <p style={{fontSize:'12px', color:'#3b82f6', marginTop:'10px', cursor:'pointer', textAlign:'right'}} onClick={() => { setAuthMode('reset'); setResetStep(1); setFormData({...formData, password: ''}); }}>
                         Forgot Password?
@@ -1189,7 +1267,7 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
             )}
         </div>
       )}
-                                                                                              
+                                                                      
       {/* Marquee Section */}
       <div className="lp-marquee-container">
          <div className="lp-marquee-content">
@@ -1203,7 +1281,7 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
            <span>🔥 Jackpot currently at $52.00</span>
          </div>
       </div>
-                                                                                              
+                                                                      
       {/* Features Grid */}
       <div className="lp-features">
          {features.map((f, i) => (
@@ -1214,7 +1292,7 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
            </div>
          ))}
       </div>
-      
+
       {/* Footer */}
       <div className="lp-footer">
         &copy; 2025 BidBlaze Protocol.
@@ -1230,7 +1308,7 @@ const GlobalStyle = () => (
     :root { --bg-dark: #020617; --glass: rgba(255, 255, 255, 0.05); --glass-border: rgba(255, 255, 255, 0.1); --gold: #fbbf24; --blue: #3b82f6; --red: #ef4444; }
 
     body { margin: 0; background: var(--bg-dark); color: white; font-family: 'Outfit', sans-serif; overflow-x: hidden; }
-                                                                                            
+                                                                      
     /* --- APP CONTAINER (GAME) --- */
     .app-container {
         min-height: 100vh;
@@ -1246,7 +1324,7 @@ const GlobalStyle = () => (
         background-size: 200% 200%;
         animation: gradientMove 15s ease infinite;
     }
-    
+
     /* --- LANDING PAGE STYLES (NEW) --- */
     .landing-page-wrapper {
         min-height: 100vh;
@@ -1341,7 +1419,7 @@ const GlobalStyle = () => (
         text-transform: uppercase;
     }
     .lp-btn-primary:hover { transform: scale(1.05); background: #f8fafc; }
-                                                                                            
+                                                                      
     .lp-btn-secondary {
         flex: 1;
         background: #fbbf24;
@@ -1420,7 +1498,7 @@ const GlobalStyle = () => (
         50% { background-position: 100% 50%; }
         100% { background-position: 0% 50%; }
     }
-                                                                                            
+                                                                      
     .glass-nav { width: 100%; max-width: 450px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px 15px; background: rgba(15, 23, 42, 0.6); border-radius: 20px; border: 1px solid var(--glass-border); backdrop-filter: blur(10px); }
     .glass-panel { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 20px; backdrop-filter: blur(10px); width: 100%; max-width: 400px; padding: 20px; box-sizing: border-box; }
     .glass-card { background: #0f172a; border: 1px solid #334155; border-radius: 24px; padding: 30px; width: 90%; max-width: 380px; text-align: center; position: relative; }
@@ -1460,7 +1538,7 @@ const GlobalStyle = () => (
     .fade-in { animation: popIn 0.3s ease-out; }
     .spinner { border: 4px solid rgba(255,255,255,0.1); border-left-color: #3b82f6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    
+
     /* MEDIA QUERIES */
     @media (max-width: 600px) {
         .lp-title { font-size: 36px; }
@@ -1473,19 +1551,19 @@ const GlobalStyle = () => (
 
 export default function App() {
   const { login, logout, user, authenticated, ready } = usePrivy();
-  
+
   // Initialize state from localStorage if available
   const [customUser, setCustomUser] = useState(() => {
       const saved = localStorage.getItem('bidblaze_user');
       return saved ? JSON.parse(saved) : null;
   });
-                                                                                         
+                                                                      
   const handleLogout = async () => {
     localStorage.removeItem('bidblaze_user');
     setCustomUser(null);
     await logout();
   };
-  
+
   const handleAuthSuccess = (userData) => {
       localStorage.setItem('bidblaze_user', JSON.stringify(userData));
       setCustomUser(userData);
@@ -1502,17 +1580,12 @@ export default function App() {
         embeddedWallets: { createOnLogin: 'users-without-wallets' },
         defaultChain: BASE_CHAIN,
         supportedChains: [BASE_CHAIN, BSC_CHAIN, ETH_CHAIN]
-      }}
-    >
+      }}                                                                  >
       {/* LOGIC: If customUser exists (logged in via form) -> Show Dashboard.
-         Else -> Show Landing Page.
-         We pass 'login' to LandingPage to allow triggering Privy if needed for wallet connection later.
+         Else -> Show Landing Page.                                            We pass 'login' to LandingPage to allow triggering Privy if needed for wallet connection later.
       */}
-      {customUser ? (
-        <GameDashboard logout={handleLogout} user={{...user, ...customUser}} />
-      ) : (
+      {customUser ? (                                                         <GameDashboard logout={handleLogout} user={{...user, ...customUser}} />                                                                   ) : (
         <LandingPage privyLogin={login} onAuthSuccess={handleAuthSuccess} />
-      )}
-    </PrivyProvider>
+      )}                                                                  </PrivyProvider>
   );
 }
