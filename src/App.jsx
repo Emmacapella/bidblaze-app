@@ -17,26 +17,11 @@ export const socket = io(SERVER_URL, {
   reconnectionDelay: 2000
 });
 
-// --- NEW: SOUND PACKS CONFIGURATION ---
-const SOUND_PACKS = {
-  'Standard': {
-      bid: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3',
-      win: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3',
-      pop: 'https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3',
-      chat: 'https://assets.mixkit.co/active_storage/sfx/2344/2344-preview.mp3'
-  },
-  'Arcade': {
-      bid: 'https://assets.mixkit.co/active_storage/sfx/270/270-preview.mp3', // Laser
-      win: 'https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3', // Fanfare
-      pop: 'https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3',
-      chat: 'https://assets.mixkit.co/active_storage/sfx/2344/2344-preview.mp3'
-  },
-  'Soft': {
-      bid: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3', // Click
-      win: 'https://assets.mixkit.co/active_storage/sfx/960/960-preview.mp3', // Chime
-      pop: 'https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3',
-      chat: 'https://assets.mixkit.co/active_storage/sfx/2344/2344-preview.mp3'
-  }
+const ASSETS = {
+  soundBid: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3',
+  soundWin: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3',
+  soundPop: 'https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3',
+  soundChat: 'https://assets.mixkit.co/active_storage/sfx/2344/2344-preview.mp3' // New Sound
 };
 
 // --- CHAIN CONFIGURATIONS ---
@@ -80,7 +65,7 @@ const HowToPlay = ({ onClose }) => {
   return (
     <div className="modal-overlay">
       <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
-        <button className="close-btn" onClick={onClose}>✕</button>
+        <button className="close-btn" onClick={onClose}>×</button>
         <h2 style={{color: '#fbbf24', textAlign:'center', marginBottom:'20px'}}>How to Win 🏆</h2>
 
         <div style={{display:'flex', gap:'15px', marginBottom:'15px'}}>
@@ -111,13 +96,25 @@ const FaqModal = ({ onClose }) => {
   return (
     <div className="modal-overlay">
       <div className="glass-card modal-content fade-in" style={{textAlign:'left', maxHeight:'80vh', overflowY:'auto', padding: '30px'}}>
-        <button className="close-btn" onClick={onClose}>✕</button>
+        <button className="close-btn" onClick={onClose}>×</button>
         <h2 style={{color: '#fbbf24', textAlign:'center', marginBottom:'20px'}}>BidBlaze FAQ</h2>
 
         <div style={{color:'#cbd5e1', fontSize:'14px', lineHeight:'1.6'}}>
+
              <h3 style={{color:'white', marginTop:'20px', marginBottom:'5px'}}>What is BidBlaze?</h3>
-             <p style={{marginTop:0}}>BidBlaze is a fast-paced, real-time crypto auction game.</p>
-             {/* ... content shortened for brevity logic remains same ... */}
+             <p style={{marginTop:0}}>BidBlaze is a fast-paced, real-time crypto auction game where players battle for a growing jackpot. Each bid costs exactly $1.00 from your balance and adds time to the countdown. The last player to bid when the timer expires wins the entire pot instantly! Everything is transparent, with blockchain verification for all deposits and fair game mechanics.</p>
+
+             <h3 style={{color:'white', marginTop:'20px', marginBottom:'5px'}}>How do I play and win?</h3>
+             <ul style={{marginTop:0, paddingLeft:'20px'}}>
+                <li>Deposit crypto to fund your balance.</li>
+                <li>Bid $1.00 – this extends the timer and keeps you in the game.</li>
+                <li>Survive longer than others by bidding strategically.</li>
+                <li>Claim the jackpot – if you're the final bidder, the full amount is added to your balance right away.</li>
+                <li><strong>No Competition Rule:</strong> If no one else bids against you in a round, it's automatically canceled for fairness, and you receive a 100% refund on all your bids.</li>
+             </ul>
+             
+             {/* ... (Previous FAQ content preserved) ... */}
+             
              <p style={{textAlign:'center', marginTop:'30px', fontWeight:'bold', color:'#fbbf24'}}>Good luck out there – may you snipe some massive pots! 🚀</p>
         </div>
 
@@ -158,7 +155,7 @@ function GameDashboard({ logout, user }) {
   const [showProfile, setShowProfile] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-  
+   
   // Data States
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
@@ -168,10 +165,6 @@ function GameDashboard({ logout, user }) {
   const [dbTotalWon, setDbTotalWon] = useState(0);
   const [dbTotalBidded, setDbTotalBidded] = useState(0);
 
-  // --- NEW: SOUND PACK STATE ---
-  const [soundPack, setSoundPack] = useState('Standard');
-  const [muted, setMuted] = useState(false);
-
   // --- STATE FOR USERNAME EDITING ---
   const [editingUsername, setEditingUsername] = useState(user?.username || "Player");
 
@@ -180,11 +173,12 @@ function GameDashboard({ logout, user }) {
   const audioRef = useRef(null);
   const chatScrollRef = useRef(null);
   const { wallets } = useWallets();
-  
+   
   const userAddress = wallets.find(w => w.walletClientType === 'privy')?.address || "0x...";
   const userEmail = user?.email?.address || user?.email || "user@example.com";
+  // We use state for username so it updates immediately on UI changes
   const [username, setUsername] = useState(user?.username || "Player");
-                                                                      
+                                                                        
   // --- STATES ---
   const [showDeposit, setShowDeposit] = useState(false);
   const [depositAmount, setDepositAmount] = useState('');
@@ -198,28 +192,18 @@ function GameDashboard({ logout, user }) {
   const [withdrawHistory, setWithdrawHistory] = useState([]);
   const [depositHistory, setDepositHistory] = useState([]);
   const [adminWallet, setAdminWallet] = useState(null);
+  const [muted, setMuted] = useState(false);
 
   // --- NEW: URL UPDATE FOR GAME DASHBOARD ---
   useEffect(() => {
+    // When the dashboard loads, update URL to /play
     window.history.pushState(null, "", "/play");
   }, []);
 
-  // --- UPDATED SOUND PLAYER ---
   const playSound = (key) => {
     if (muted) return;
-    
-    // Map keys to the Sound Pack properties
-    let type = 'bid';
-    if(key === 'soundWin' || key === 'win') type = 'win';
-    if(key === 'soundPop' || key === 'pop') type = 'pop';
-    if(key === 'soundChat' || key === 'chat') type = 'chat';
-    if(key === 'soundBid' || key === 'bid') type = 'bid';
-
-    const url = SOUND_PACKS[soundPack][type];
-    if (!url) return;
-
     if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
-    const audio = new Audio(url);
+    const audio = new Audio(ASSETS[key]);
     audio.volume = 0.5;
     audioRef.current = audio;
     audio.play().catch(() => {});
@@ -239,16 +223,19 @@ function GameDashboard({ logout, user }) {
      }
   }, [chatMessages, showChat]);
 
-  // --- NEW: AUTO BID LOGIC ---
+  // --- NEW: AUTO BID LOGIC (Client Side Trigger for visual feedback) ---
   const toggleAutoBid = () => {
       const newState = !autoBidActive;
       setAutoBidActive(newState);
-      socket.emit('toggleAutoBid', { email: userEmail, active: newState, maxBid: 50 });
+      socket.emit('toggleAutoBid', { email: userEmail, active: newState, maxBid: 50 }); // Default max 50 bids
   };
 
+  // --- HANDLE USERNAME UPDATE ---
   const handleUpdateUsername = () => {
     if(!editingUsername || editingUsername.length < 3) return alert("Username too short.");
+    // Update local display immediately
     setUsername(editingUsername);
+    // Emit to server
     socket.emit('updateProfile', { email: userEmail, username: editingUsername });
     alert("Username updated successfully!");
     setShowProfile(false);
@@ -271,12 +258,12 @@ function GameDashboard({ logout, user }) {
 
       let provider = window.ethereum;
       let account = null;
-                                                                      
+                                                                        
       if (!provider) {
           const w = wallets.find(w => w.walletClientType !== 'privy');
           if (w) provider = await w.getEthereumProvider();
       }
-                                                                      
+                                                                        
       if (!provider) {
         alert("Wallet not detected. Please open this site inside MetaMask or Trust Wallet browser.");
         return;
@@ -316,12 +303,14 @@ function GameDashboard({ logout, user }) {
                     nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 }
                 }]
              });
+        } else {
+          console.warn("Chain switch warning:", switchErr);
         }
       }
 
       const wei = parseEther(depositAmount.toString());
       const hexValue = `0x${wei.toString(16)}`;
-                                                                      
+                                                                        
       const txHash = await provider.request({
         method: 'eth_sendTransaction',
         params: [{
@@ -344,7 +333,14 @@ function GameDashboard({ logout, user }) {
     } catch (err) {
       console.error(err);
       setIsProcessing(false);
-      alert("Deposit Error: " + (err.message || "Wallet did not respond."));
+
+      if (err.message && err.message.includes("insufficient funds")) {
+          alert("INSUFFICIENT FUNDS: Your wallet is empty. You need a small amount of ETH/BNB to pay for gas fees.");
+      } else if (err.code === 4001 || err.message?.includes("rejected")) {
+          alert("Transaction was cancelled.");
+      } else {
+          alert("Deposit Error: " + (err.message || "Wallet did not respond."));
+      }
     }
   };
 
@@ -365,7 +361,7 @@ function GameDashboard({ logout, user }) {
 
   useEffect(() => {
     if(!socket.connected) socket.connect();
-                                                                      
+                                                                        
     socket.emit('getGameConfig');
     socket.on('gameConfig', (cfg) => {
       if(cfg && cfg.adminWallet) setAdminWallet(cfg.adminWallet);
@@ -391,7 +387,8 @@ function GameDashboard({ logout, user }) {
     socket.on('withdrawalError', (msg) => { alert(`Withdrawal Failed: ${msg}`); });
     socket.on('withdrawalHistory', (data) => { setWithdrawHistory(data); });
     socket.on('depositHistory', (data) => { setDepositHistory(data); });
-                                                                      
+                                                                        
+    // CRITICAL FIX: Ensure request is sent on mount with correct email format
     if(userEmail) {
       socket.emit('getUserBalance', userEmail.toLowerCase().trim());
     }
@@ -399,11 +396,16 @@ function GameDashboard({ logout, user }) {
     // --- NEW: LISTENERS FOR CHAT & DATA ---
     socket.on('chatMessage', (msg) => {
          setChatMessages(prev => [...prev, msg]);
-         if(!showChat && !muted) playSound('chat');
+         if(!showChat && !muted) {
+             const audio = new Audio(ASSETS['soundChat']);
+             audio.volume = 0.2;
+             audio.play().catch(()=>{});
+         }
     });
     socket.on('chatHistory', (msgs) => setChatMessages(msgs));
     socket.on('leaderboardUpdate', (data) => setLeaderboardData(data));
     socket.on('userData', (u) => {
+        // This receives the referral code generated by the backend
         if(u.referral_code) setReferralCode(u.referral_code);
         if(u.total_won) setDbTotalWon(u.total_won);
         if(u.total_bidded) setDbTotalBidded(u.total_bidded);
@@ -415,12 +417,12 @@ function GameDashboard({ logout, user }) {
       if (data.status === 'ACTIVE' && data.history.length > 0) {
           const latestBid = data.history[0];
           if (latestBid.id !== lastBidId.current) {
-             playSound('bid');
+             playSound('soundBid');
              lastBidId.current = latestBid.id;
           }
       }
       if (data.status === 'ENDED' && prevStatus.current === 'ACTIVE') {
-          playSound('win');
+          playSound('soundWin');
           if (data.lastBidder === userEmail.toLowerCase().trim()) {
               setTimeout(() => {
                   socket.emit('getUserBalance', userEmail.toLowerCase().trim());
@@ -432,7 +434,7 @@ function GameDashboard({ logout, user }) {
 
     socket.on('balanceUpdate', (bal) => setCredits(bal));
     socket.on('bidError', (msg) => alert(msg));
-                                                                      
+                                                                        
     return () => {
       if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
       socket.off('gameState'); socket.off('balanceUpdate'); socket.off('bidError');
@@ -442,7 +444,7 @@ function GameDashboard({ logout, user }) {
       socket.off('gameConfig');
       socket.off('chatMessage'); socket.off('chatHistory'); socket.off('userData'); socket.off('leaderboardUpdate');
     };
-  }, [userEmail, muted, showChat, soundPack]);
+  }, [userEmail, muted, showChat]);
 
   useEffect(() => {
     const timerInterval = setInterval(() => {
@@ -461,7 +463,7 @@ function GameDashboard({ logout, user }) {
     if (isCooldown) return;
     if (credits < 1.00) { setShowDeposit(true); return; }
     setFloatingBids(prev => [...prev, Date.now()]);
-    playSound('pop');
+    playSound('soundPop');
 
     const emailToSend = userEmail ? userEmail.toLowerCase().trim() : "User";
     socket.emit('placeBid', emailToSend);
@@ -473,25 +475,25 @@ function GameDashboard({ logout, user }) {
     <div className="loading-screen" style={{display:'flex', flexDirection:'column', alignItems:'center', gap:'20px'}}>
       <div className="spinner"></div>
       <div style={{color:'#64748b', fontSize:'12px', letterSpacing:'2px', animation:'pulse 1.5s infinite'}}>CONNECTING...</div>
-      <style>{`.spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-left-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; } @keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`.spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-radius: 50%; border-top-color: #fbbf24; animation: spin 1s linear infinite; } @keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
-                                                                      
+                                                                        
   return (
     <div className="app-container">
       <GlobalStyle />
       {gameState?.status === 'ENDED' && <Confetti width={window.innerWidth} height={window.innerHeight} recycle={false} numberOfPieces={500} colors={['#fbbf24', '#ffffff', '#22c55e']} />}
-                                                                      
+                                                                        
       {showVault && <WalletVault onClose={() => setShowVault(false)} userAddress={userAddress} userEmail={userEmail} currentCredits={credits} />}
       {showHelp && <HowToPlay onClose={() => setShowHelp(false)} />}
       {showFaq && <FaqModal onClose={() => setShowFaq(false)} />}
 
-      {/* --- CHAT MODAL --- */}
+      {/* --- CHAT MODAL (Bottom Right) --- */}
       {showChat && (
         <div className="chat-window fade-in">
              <div className="chat-header">
                  <span>💬 Global Chat</span>
-                 <button onClick={() => setShowChat(false)}>✕</button>
+                 <button onClick={() => setShowChat(false)}>×</button>
              </div>
              <div className="chat-body" ref={chatScrollRef}>
                  {chatMessages.map((msg, i) => (
@@ -506,13 +508,17 @@ function GameDashboard({ logout, user }) {
              </form>
         </div>
       )}
-      {!showChat && <button className="chat-float-btn" onClick={() => setShowChat(true)}>💬</button>}
+      
+      {/* Floating Chat Button */}
+      {!showChat && (
+         <button className="chat-float-btn" onClick={() => setShowChat(true)}>💬</button>
+      )}
 
       {/* --- LEADERBOARD MODAL --- */}
       {showLeaderboard && (
         <div className="modal-overlay">
           <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
-            <button className="close-btn" onClick={() => setShowLeaderboard(false)}>✕</button>
+            <button className="close-btn" onClick={() => setShowLeaderboard(false)}>×</button>
             <h2 style={{color: '#fbbf24', textAlign:'center', marginTop:0}}>🏆 LEADERBOARD</h2>
             <div style={{maxHeight:'400px', overflowY:'auto'}}>
                 {leaderboardData.length === 0 ? <p style={{textAlign:'center', color:'#64748b'}}>Loading...</p> : 
@@ -531,18 +537,26 @@ function GameDashboard({ logout, user }) {
         </div>
       )}
 
-      {/* --- PROFILE MODAL (WITH REFERRAL CODE) --- */}
+      {/* --- NEW PROFILE MODAL --- */}
       {showProfile && (
         <div className="modal-overlay">
           <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
-            <button className="close-btn" onClick={() => setShowProfile(false)}>✕</button>
+            <button className="close-btn" onClick={() => setShowProfile(false)}>×</button>
             <h2 style={{color: '#3b82f6', textAlign:'center', marginTop:0}}>MY PROFILE</h2>
             
             <div style={{marginTop:'20px', marginBottom:'25px'}}>
                <p style={{color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Edit Username</p>
                <div style={{display:'flex', gap:'10px'}}>
-                  <input type="text" value={editingUsername} onChange={(e) => setEditingUsername(e.target.value)} className="input-field" style={{marginBottom:0}} />
-                  <button onClick={handleUpdateUsername} style={{background:'#22c55e', color:'white', border:'none', borderRadius:'12px', fontWeight:'bold', padding:'0 20px', cursor:'pointer'}}>SAVE</button>
+                  <input 
+                     type="text" 
+                     value={editingUsername} 
+                     onChange={(e) => setEditingUsername(e.target.value)} 
+                     className="input-field" 
+                     style={{marginBottom:0}}
+                  />
+                  <button onClick={handleUpdateUsername} style={{background:'#22c55e', color:'white', border:'none', borderRadius:'12px', fontWeight:'bold', padding:'0 20px', cursor:'pointer'}}>
+                      SAVE
+                  </button>
                </div>
             </div>
 
@@ -559,15 +573,17 @@ function GameDashboard({ logout, user }) {
 
              {/* REFERRAL SECTION */}
              <div style={{background:'rgba(255,255,255,0.05)', padding:'15px', borderRadius:'12px', marginTop:'20px'}}>
-                 <div style={{fontSize:'12px', color:'#fbbf24', fontWeight:'bold', marginBottom:'10px'}}>INVITE FRIENDS</div>
+                 <div style={{fontSize:'12px', color:'#fbbf24', fontWeight:'bold', marginBottom:'10px'}}>INVITE FRIENDS & EARN 5%</div>
                  <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', background:'rgba(0,0,0,0.3)', padding:'10px', borderRadius:'8px'}}>
                       <span style={{fontFamily:'monospace', fontSize:'16px', letterSpacing:'1px'}}>{referralCode}</span>
                       <button onClick={() => {navigator.clipboard.writeText(referralCode); alert("Code Copied!")}} style={{background:'none', border:'none', color:'#3b82f6', cursor:'pointer', fontWeight:'bold'}}>COPY</button>
                  </div>
-                 <div style={{fontSize:'10px', color:'#94a3b8', marginTop:'8px'}}>Share this code. When friends win the Jackpot, you get <strong>5% of their Winnings</strong> instantly!</div>
+                 <div style={{fontSize:'10px', color:'#94a3b8', marginTop:'8px'}}>Share this code. When friends signup and deposit, you get 5% of their deposit instantly.</div>
              </div>
 
-             <div style={{textAlign:'center', fontSize:'12px', color:'#64748b', marginTop:'20px'}}>Email: {userEmail}</div>
+             <div style={{textAlign:'center', fontSize:'12px', color:'#64748b', marginTop:'20px'}}>
+                Email: {userEmail}
+             </div>
           </div>
         </div>
       )}
@@ -576,7 +592,7 @@ function GameDashboard({ logout, user }) {
       {showTransactions && (
         <div className="modal-overlay">
           <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
-            <button className="close-btn" onClick={() => setShowTransactions(false)}>✕</button>
+            <button className="close-btn" onClick={() => setShowTransactions(false)}>×</button>
             <h2 style={{color: '#fbbf24', textAlign:'center', marginTop:0}}>HISTORY</h2>
             <div style={{maxHeight:'300px', overflowY:'auto'}}>
               {[...depositHistory.map(d => ({...d, type: 'DEPOSIT', color: '#22c55e'})), ...withdrawHistory.map(w => ({...w, type: 'WITHDRAW', color: '#ef4444'}))]
@@ -603,7 +619,7 @@ function GameDashboard({ logout, user }) {
       {showUserBids && (
         <div className="modal-overlay">
           <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
-            <button className="close-btn" onClick={() => setShowUserBids(false)}>✕</button>
+            <button className="close-btn" onClick={() => setShowUserBids(false)}>×</button>
             <h2 style={{color: '#3b82f6', textAlign:'center', marginTop:0}}>MY BIDDINGS</h2>
             <div style={{maxHeight:'300px', overflowY:'auto'}}>
               {gameState.history.filter(bid => bid.user.toLowerCase() === userEmail.toLowerCase()).length === 0 ? (
@@ -628,69 +644,91 @@ function GameDashboard({ logout, user }) {
                 position:'fixed', right:0, top:0, height:'100%', width:'80%', maxWidth:'300px',
                 background:'#0f172a', borderLeft:'1px solid #334155', padding:'25px',
                 boxShadow:'-10px 0 30px rgba(0,0,0,0.5)', zIndex:100,
-                display:'flex', flexDirection:'column', gap:'20px', animation:'slideIn 0.3s'
+                display:'flex', flexDirection:'column', gap:'20px', animation:'slideIn 0.3s',
+                overflowY: 'auto' // 🆕 MOBILE FIX: Added scrolling support
             }}>
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
                      <h2 style={{margin:0, color:'#fbbf24'}}>MENU</h2>
-                     <button onClick={() => setShowMenu(false)} style={{background:'none', border:'none', color:'white', fontSize:'24px'}}>✕</button>
+                     <button onClick={() => setShowMenu(false)} style={{background:'none', border:'none', color:'white', fontSize:'24px'}}>×</button>
                 </div>
-                {/* USER PROFILE SNIPPET */}
-                <div onClick={() => { setShowMenu(false); setShowProfile(true); }}
-                   style={{background: 'rgba(255,255,255,0.05)', padding:'15px', borderRadius:'12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', border: '1px solid transparent', transition: '0.2s'}}
+                {/* USER PROFILE SNIPPET - UPGRADED */}
+                <div 
+                   onClick={() => { setShowMenu(false); setShowProfile(true); }}
+                   style={{
+                       background: 'rgba(255,255,255,0.05)', 
+                       padding:'15px', 
+                       borderRadius:'12px', 
+                       display: 'flex', 
+                       justifyContent: 'space-between', 
+                       alignItems: 'center', 
+                       cursor: 'pointer',
+                       border: '1px solid transparent',
+                       transition: '0.2s'
+                   }}
                    onMouseOver={(e) => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'}
-                   onMouseOut={(e) => e.currentTarget.style.borderColor = 'transparent'}>
+                   onMouseOut={(e) => e.currentTarget.style.borderColor = 'transparent'}
+                >
                     <div>
                        <div style={{color:'#94a3b8', fontSize:'12px', fontWeight:'bold', marginBottom:'5px'}}>LOGGED IN AS</div>
                        <div style={{color:'white', fontSize:'16px', fontWeight:'bold'}}>{username}</div>
                        <div style={{color:'#64748b', fontSize:'12px'}}>{userEmail.length > 20 ? userEmail.slice(0,20)+'...' : userEmail}</div>
                     </div>
-                    <div style={{color: '#94a3b8', fontSize: '24px'}}>→</div>
+                    <div style={{color: '#94a3b8', fontSize: '24px'}}>➤</div>
                 </div>
 
-                {/* BALANCE CARD */}
+                {/* UPDATED BALANCE CARD WITH NEW BUTTONS */}
                 <div style={{background: 'rgba(34, 197, 94, 0.1)', padding:'20px', borderRadius:'12px', border:'1px solid rgba(34, 197, 94, 0.2)'}}>
                     <div style={{color:'#22c55e', fontSize:'12px', fontWeight:'bold', marginBottom:'5px', letterSpacing:'1px'}}>TOTAL BALANCE</div>
                     <div style={{fontSize:'32px', fontWeight:'900', color:'white', marginBottom:'15px'}}>${credits.toFixed(2)}</div>
-                    <div style={{display:'flex', gap:'10px', marginBottom:'10px'}}>
-                        <button onClick={() => { setShowMenu(false); setShowDeposit(true); }} style={{flex:1, padding:'10px', background:'#22c55e', border:'none', borderRadius:'8px', color:'white', fontWeight:'bold', cursor:'pointer', fontSize:'12px'}}>+ DEPOSIT</button>
-                        <button onClick={() => { setShowMenu(false); setShowWithdraw(true); }} style={{flex:1, padding:'10px', background:'#ef4444', border:'none', borderRadius:'8px', color:'white', fontWeight:'bold', cursor:'pointer', fontSize:'12px'}}>- WITHDRAW</button>
-                    </div>
-                    <div style={{display:'flex', gap:'10px'}}>
-                        <button onClick={() => { setShowMenu(false); setShowTransactions(true); }} style={{flex:1, padding:'10px', background:'#334155', border:'none', borderRadius:'8px', color:'white', fontWeight:'bold', cursor:'pointer', fontSize:'12px'}}>🕒 HISTORY</button>
-                        <button onClick={() => { setShowMenu(false); setShowUserBids(true); }} style={{flex:1, padding:'10px', background:'#3b82f6', border:'none', borderRadius:'8px', color:'white', fontWeight:'bold', cursor:'pointer', fontSize:'12px'}}>✋ MY BIDS</button>
-                    </div>
-                </div>
 
-                {/* --- NEW: SOUND SETTINGS PANEL --- */}
-                <div style={{background:'rgba(255,255,255,0.05)', padding:'15px', borderRadius:'12px'}}>
-                    <div style={{fontSize:'12px', color:'#94a3b8', fontWeight:'bold', marginBottom:'10px'}}>AUDIO THEME</div>
-                    <button onClick={() => setMuted(!muted)} style={{width:'100%', textAlign:'left', background:'transparent', border:'none', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between', marginBottom:'10px'}}>
-                         {muted ? '🔇 Sound: OFF' : '🔊 Sound: ON'}
-                    </button>
-                    <div style={{display:'flex', gap:'5px'}}>
-                        {Object.keys(SOUND_PACKS).map(pack => (
-                            <button key={pack} onClick={() => setSoundPack(pack)} 
-                                style={{
-                                    flex:1, padding:'8px', borderRadius:'8px', border:'none', fontSize:'10px', fontWeight:'bold', cursor:'pointer',
-                                    background: soundPack === pack ? '#fbbf24' : '#334155',
-                                    color: soundPack === pack ? 'black' : 'white'
-                                }}>
-                                {pack}
-                            </button>
-                        ))}
+                    {/* ROW 1: Deposit & Withdraw */}
+                    <div style={{display:'flex', gap:'10px', marginBottom:'10px'}}>
+                        <button onClick={() => { setShowMenu(false); setShowDeposit(true); }} style={{flex:1, padding:'10px', background:'#22c55e', border:'none', borderRadius:'8px', color:'white', fontWeight:'bold', cursor:'pointer', fontSize:'12px'}}>
+                            + DEPOSIT
+                        </button>
+                        <button onClick={() => { setShowMenu(false); setShowWithdraw(true); }} style={{flex:1, padding:'10px', background:'#ef4444', border:'none', borderRadius:'8px', color:'white', fontWeight:'bold', cursor:'pointer', fontSize:'12px'}}>
+                            - WITHDRAW
+                        </button>
+                    </div>
+
+                    {/* ROW 2: Transactions & Biddings */}
+                    <div style={{display:'flex', gap:'10px'}}>
+                        <button onClick={() => { setShowMenu(false); setShowTransactions(true); }} style={{flex:1, padding:'10px', background:'#334155', border:'none', borderRadius:'8px', color:'white', fontWeight:'bold', cursor:'pointer', fontSize:'12px'}}>
+                            📋 HISTORY
+                        </button>
+                        <button onClick={() => { setShowMenu(false); setShowUserBids(true); }} style={{flex:1, padding:'10px', background:'#3b82f6', border:'none', borderRadius:'8px', color:'white', fontWeight:'bold', cursor:'pointer', fontSize:'12px'}}>
+                            🔨 MY BIDS
+                        </button>
                     </div>
                 </div>
 
                 {/* MENU LINKS */}
                 <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
-                     <button onClick={() => { setShowMenu(false); setShowLeaderboard(true); }} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>🏆 Leaderboard <span>→</span></button>
-                     <button onClick={() => { setShowMenu(false); setShowHelp(true); }} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>❓ Help / Rules <span>→</span></button>
-                     <button onClick={() => { setShowMenu(false); setShowFaq(true); }} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>📚 FAQ <span>→</span></button>
-                     <button onClick={() => alert("Terms & Conditions updated soon.")} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>📜 Terms & Conditions <span>→</span></button>
-                     <a href="https://t.me/Bidblaze" target="_blank" rel="noopener noreferrer" style={{textDecoration:'none', textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between', alignItems:'center'}}>💬 24/7 Support <span>→</span></a>
+                     {/* NEW LEADERBOARD LINK */}
+                     <button onClick={() => { setShowMenu(false); setShowLeaderboard(true); }} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
+                         🏆 Leaderboard <span>➤</span>
+                    </button>
+
+                     <button onClick={() => setMuted(!muted)} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
+                         {muted ? '🔊 Unmute Sound' : '🔇 Mute Sound'} <span>{muted ? 'OFF' : 'ON'}</span>
+                    </button>
+                    <button onClick={() => { setShowMenu(false); setShowHelp(true); }} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
+                         ❓ Help / Rules <span>➤</span>
+                    </button>
+                    <button onClick={() => { setShowMenu(false); setShowFaq(true); }} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
+                         📖 FAQ <span>➤</span>
+                    </button>
+                    <button onClick={() => alert("Terms & Conditions updated soon.")} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
+                         📜 Terms & Conditions <span>➤</span>
+                    </button>
+                    <a href="https://t.me/Bidblaze" target="_blank" rel="noopener noreferrer" style={{textDecoration:'none', textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                         💬 24/7 Support <span>➤</span>
+                    </a>
                 </div>
 
-                <div style={{marginTop:'auto', textAlign:'center', fontSize:'10px', color:'#64748b'}}>v2.0.0 • Secure Connection</div>
+                <div style={{marginTop:'auto', textAlign:'center', fontSize:'10px', color:'#64748b'}}>
+                    v2.0.0 • Secure Connection
+                </div>
             </div>
         </div>
       )}
@@ -704,7 +742,7 @@ function GameDashboard({ logout, user }) {
       {showDeposit && (
         <div className="modal-overlay">
           <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
-            <button className="close-btn" onClick={() => setShowDeposit(false)}>✕</button>
+            <button className="close-btn" onClick={() => setShowDeposit(false)}>×</button>
             <h2 style={{color: '#22c55e', textAlign:'center', marginTop:0}}>INSTANT DEPOSIT</h2>
             <p style={{color:'#94a3b8', fontSize:'14px'}}>Select Network:</p>
             <select value={selectedNetwork} onChange={(e) => setSelectedNetwork(e.target.value)} className="input-field" style={{marginTop:'5px'}}>
@@ -714,23 +752,33 @@ function GameDashboard({ logout, user }) {
             </select>
 
             <p style={{color:'#94a3b8', fontSize:'14px'}}>Amount to Deposit (BNB/ETH):</p>
-            <input type="number" placeholder="0.01" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} className="input-field" style={{marginTop:'5px'}} />
-                                                                      
-            <button className="action-btn" onClick={handleDeposit} style={{background:'#22c55e', color:'white', marginBottom:'10px'}}>🚀 PAY NOW (Wallet)</button>
-                                                                      
+            <input
+              type="number" placeholder="0.01" value={depositAmount}
+              onChange={(e) => setDepositAmount(e.target.value)}
+              className="input-field" style={{marginTop:'5px'}}
+            />
+                                                                        
+            <button className="action-btn" onClick={handleDeposit} style={{background:'#22c55e', color:'white', marginBottom:'10px'}}>
+              ⚡ PAY NOW (Wallet)
+            </button>
+                                                                        
+            {/* DEPOSIT HISTORY SECTION */}
             <div style={{marginTop:'15px', borderTop:'1px solid #334155', paddingTop:'15px'}}>
                 <p style={{fontSize:'12px', color:'#94a3b8', fontWeight:'bold', marginBottom:'10px'}}>RECENT DEPOSITS</p>
                 <div style={{maxHeight:'100px', overflowY:'auto'}}>
-                  {depositHistory.length === 0 ? <p style={{fontSize:'12px', color:'#64748b', textAlign:'center'}}>No deposits yet.</p> :
+                  {depositHistory.length === 0 ? (
+                          <p style={{fontSize:'12px', color:'#64748b', textAlign:'center'}}>No deposits yet.</p>
+                  ) : (
                       depositHistory.map((item) => (
                           <div key={item.id} style={{display:'flex', justifyContent:'space-between', fontSize:'12px', marginBottom:'8px', background:'#1e293b', padding:'8px', borderRadius:'6px'}}>
                             <span style={{color:'white'}}>${Number(item.amount).toFixed(2)}</span>
                               <span style={{color: '#22c55e', fontWeight:'bold'}}>{item.status}</span>
                           </div>
                       ))
-                  }
+                  )}
                 </div>
             </div>
+
             <p style={{fontSize:'12px', color:'#fbbf24', marginTop:'10px', textAlign:'center'}}>{statusMsg}</p>
             <p style={{fontSize:'10px', color:'#64748b', textAlign:'center'}}>If wallet doesn't open, check pop-up blocker.</p>
           </div>
@@ -740,23 +788,44 @@ function GameDashboard({ logout, user }) {
       {showWithdraw && (
         <div className="modal-overlay">
           <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
-            <button className="close-btn" onClick={() => setShowWithdraw(false)}>✕</button>
+            <button className="close-btn" onClick={() => setShowWithdraw(false)}>×</button>
             <h2 style={{color: '#ef4444', textAlign:'center', marginTop:0}}>WITHDRAW</h2>
+
             <p style={{color:'#94a3b8', fontSize:'14px'}}>Select Network:</p>
             <select value={selectedNetwork} onChange={(e) => setSelectedNetwork(e.target.value)} className="input-field" style={{marginTop:'5px'}}>
               <option value="BSC">BNB Smart Chain (BEP20)</option>
                <option value="ETH">Ethereum (ERC20)</option>
                <option value="BASE">Base Network</option>
             </select>
+
             <p style={{color:'#94a3b8', fontSize:'14px'}}>Amount ($):</p>
-            <input type="number" placeholder="Min $10.00" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} className="input-field" style={{marginTop:'5px'}} />
+            <input
+              type="number" placeholder="Min $10.00" value={withdrawAmount}
+              onChange={(e) => setWithdrawAmount(e.target.value)}
+              className="input-field" style={{marginTop:'5px'}}
+            />
+                                                                        
             <p style={{color:'#94a3b8', fontSize:'14px'}}>Receiving Address:</p>
-            <input type="text" placeholder="0x..." value={withdrawAddress} onChange={(e) => setWithdrawAddress(e.target.value)} className="input-field" style={{marginTop:'5px'}} />
-            <button className="action-btn" onClick={handleWithdraw} style={{background:'#ef4444', color:'white', marginBottom:'20px'}}>REQUEST WITHDRAWAL</button>
-            <p style={{fontSize:'10px', color:'#94a3b8', marginTop:'10px', textAlign:'center'}}>⚠️ Notice: Withdrawals are processed manually within 24 hours.</p>
+            <input
+              type="text" placeholder="0x..." value={withdrawAddress}
+              onChange={(e) => setWithdrawAddress(e.target.value)}
+              className="input-field" style={{marginTop:'5px'}}
+            />
+
+            <button className="action-btn" onClick={handleWithdraw} style={{background:'#ef4444', color:'white', marginBottom:'20px'}}>
+               REQUEST WITHDRAWAL
+            </button>
+
+            {/* MANUAL WITHDRAWAL WARNING */}
+            <p style={{fontSize:'10px', color:'#94a3b8', marginTop:'10px', textAlign:'center'}}>
+               ⚠️ Notice: Withdrawals are processed manually within 24 hours.
+            </p>
+
             <div style={{borderTop:'1px solid #334155', paddingTop:'15px', marginTop:'15px'}}>
               <p style={{fontSize:'12px', color:'#94a3b8', fontWeight:'bold', marginBottom:'10px'}}>RECENT WITHDRAWALS</p>
-                {withdrawHistory.length === 0 ? <p style={{fontSize:'12px', color:'#64748b', textAlign:'center'}}>No recent withdrawals.</p> : 
+                {withdrawHistory.length === 0 ? (
+                    <p style={{fontSize:'12px', color:'#64748b', textAlign:'center'}}>No recent withdrawals.</p>
+                ) : (
                     <div style={{maxHeight:'100px', overflowY:'auto'}}>
                       {withdrawHistory.map((item) => (
                           <div key={item.id} style={{display:'flex', justifyContent:'space-between', fontSize:'12px', marginBottom:'8px', background:'#1e293b', padding:'8px', borderRadius:'6px'}}>
@@ -765,7 +834,7 @@ function GameDashboard({ logout, user }) {
                           </div>
                       ))}
                     </div>
-                }
+                )}
             </div>
           </div>
         </div>
@@ -773,19 +842,38 @@ function GameDashboard({ logout, user }) {
 
       {/* UPDATED NAV BAR */}
       <nav className="glass-nav">
+        {/* LEFT SIDE: Balance FIRST, then Live Indicator */}
         <div style={{display:'flex', alignItems:'center', gap:'15px'}}>
-            <div className="balance-pill" style={{background: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.1)', padding: '6px 12px', borderRadius: '20px', color: 'white', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '5px'}}>
-                <span style={{color:'#fbbf24'}}>💰</span> ${credits.toFixed(2)}
+            {/* Balance Display */}
+            <div className="balance-pill" style={{
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                padding: '6px 12px',
+                borderRadius: '20px',
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
+            }}>
+                <span style={{color:'#fbbf24'}}>⚡</span> ${credits.toFixed(2)}
             </div>
+
+             {/* Live Pill */}
             <div className="live-pill" style={{color:'#22c55e', fontWeight:'bold', display:'flex', alignItems:'center', gap:'5px'}}>
                 <div style={{width:'8px', height:'8px', background:'#22c55e', borderRadius:'50%', boxShadow:'0 0 10px #22c55e'}}></div>
                 {gameState.connectedUsers || 1} LIVE
             </div>
         </div>
+
+        {/* RIGHT SIDE: Help -> Menu -> Logout */}
         <div style={{display:'flex', gap:'8px'}}>
           <button className="nav-btn" onClick={() => setShowHelp(true)} style={{fontSize:'18px'}}>❓</button>
+           {/* NEW MENU BUTTON */}
            <button className="nav-btn" onClick={() => setShowMenu(true)} style={{fontSize:'22px', color:'white'}}>☰</button>
-           <button className="nav-btn logout-btn" onClick={logout} style={{fontSize:'18px', color:'#ef4444'}}>✕</button>
+
+           <button className="nav-btn logout-btn" onClick={logout} style={{fontSize:'18px', color:'#ef4444'}}>⏻</button>
         </div>
       </nav>
 
@@ -808,7 +896,7 @@ function GameDashboard({ logout, user }) {
                   </div>
                ) : (
                   <div className="winner-badge">
-                    🏆 WINNER: {gameState.history[0]?.user.slice(0,10)}...
+                    🎉 WINNER: {gameState.history[0]?.user.slice(0,10)}...
                   </div>
                )}
             </div>
@@ -821,8 +909,16 @@ function GameDashboard({ logout, user }) {
 
       <div style={{display:'flex', justifyContent:'center', marginBottom:'10px', alignItems:'center', gap:'10px'}}>
            <span style={{color: autoBidActive ? '#22c55e' : '#64748b', fontSize:'12px', fontWeight:'bold', letterSpacing:'1px'}}>AUTO-BIDDER: {autoBidActive ? 'ON' : 'OFF'}</span>
-           <div onClick={toggleAutoBid} style={{width:'40px', height:'20px', background: autoBidActive ? '#22c55e' : '#334155', borderRadius:'20px', position:'relative', cursor:'pointer', transition:'0.2s'}}>
-             <div style={{width:'16px', height:'16px', background:'white', borderRadius:'50%', position:'absolute', top:'2px', left: autoBidActive ? '22px' : '2px', transition:'0.2s'}}></div>
+           <div 
+             onClick={toggleAutoBid} 
+             style={{
+               width:'40px', height:'20px', background: autoBidActive ? '#22c55e' : '#334155', 
+               borderRadius:'20px', position:'relative', cursor:'pointer', transition:'0.2s'
+             }}>
+             <div style={{
+               width:'16px', height:'16px', background:'white', borderRadius:'50%', position:'absolute', 
+               top:'2px', left: autoBidActive ? '22px' : '2px', transition:'0.2s'
+             }}></div>
            </div>
       </div>
 
@@ -830,13 +926,18 @@ function GameDashboard({ logout, user }) {
         {gameState.status === 'ENDED' ? 'GAME CLOSED' : (isCooldown ? `WAIT (${cd}s)` : `BID NOW ($${gameState.bidCost})`)}
       </button>
 
+      {/* ACTION BUTTONS (Still here for quick access, but also in menu now) */}
       <div className="action-buttons" style={{display: 'flex', gap: '15px', justifyContent: 'center', margin: '25px 0', width:'100%', maxWidth:'350px'}}>
-        <button className="deposit-btn" onClick={() => setShowDeposit(true)} style={{background:'#22c55e', color:'white', border:'none', padding:'12px 25px', borderRadius:'12px', fontWeight:'bold', display:'flex', alignItems:'center', gap:'5px', flex:1, justifyContent:'center', fontSize:'14px'}}>💰 DEPOSIT</button>
-        <button className="withdraw-btn" onClick={() => setShowWithdraw(true)} style={{background:'#ef4444', color:'white', border:'none', padding:'12px 25px', borderRadius:'12px', fontWeight:'bold', display:'flex', alignItems:'center', gap:'5px', flex:1, justifyContent:'center', fontSize:'14px'}}>💸 WITHDRAW</button>
+        <button className="deposit-btn" onClick={() => setShowDeposit(true)} style={{background:'#22c55e', color:'white', border:'none', padding:'12px 25px', borderRadius:'12px', fontWeight:'bold', display:'flex', alignItems:'center', gap:'5px', flex:1, justifyContent:'center', fontSize:'14px'}}>
+          ⚡ DEPOSIT
+        </button>
+        <button className="withdraw-btn" onClick={() => setShowWithdraw(true)} style={{background:'#ef4444', color:'white', border:'none', padding:'12px 25px', borderRadius:'12px', fontWeight:'bold', display:'flex', alignItems:'center', gap:'5px', flex:1, justifyContent:'center', fontSize:'14px'}}>
+          💸 WITHDRAW
+        </button>
       </div>
 
       <div className="glass-panel" style={{marginTop:'20px', borderColor: '#fbbf24', background: 'rgba(251, 191, 36, 0.05)'}}>
-        <div className="panel-header" style={{color: '#fbbf24'}}>🏆 RECENT BIG WINS</div>
+        <div className="panel-header" style={{color: '#fbbf24'}}>🔥 RECENT BIG WINS</div>
         <div className="history-list" style={{maxHeight: '120px'}}>
           {gameState.recentWinners && gameState.recentWinners.length > 0 ? (
             gameState.recentWinners.map((win, index) => (
@@ -868,6 +969,7 @@ function GameDashboard({ logout, user }) {
              <span style={{fontSize:'24px', fontWeight:'900', color:'white', letterSpacing:'1px'}}>BID<span style={{color:'#fbbf24'}}>BLAZE</span></span>
           </div>
           <div style={{fontSize:'10px', color:'#64748b', fontWeight:'600', letterSpacing:'2px'}}>PROVABLY FAIR • INSTANT PAYOUTS</div>
+          {/* SUPPORT LINK */}
           <a href="https://t.me/Bidblaze" target="_blank" rel="noopener noreferrer" style={{color: '#3b82f6', textDecoration: 'none', fontSize: '12px', marginTop: '10px', fontWeight: 'bold'}}>💬 24/7 SUPPORT</a>
       </div>
     </div>
@@ -915,25 +1017,36 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
 
   const features = [
     { icon: "⚡", title: "Instant", desc: "No signup lag. Create account & play immediately." },
-    { icon: "🛡️", title: "Fair", desc: "Provably fair game logic. Blockchain verified payouts." },
+    { icon: "⚖️", title: "Fair", desc: "Provably fair game logic. Blockchain verified payouts." },
     { icon: "💰", title: "High Yield", desc: "Small bids, massive jackpots. Winner takes all." }
   ];
 
   // --- NEW: URL ROUTING FOR LANDING PAGE ---
   useEffect(() => {
+      // Logic to update URL based on state
       let path = "/";
       if(authMode === 'login') path = "/login";
       if(authMode === 'signup') path = "/signup";
       if(authMode === 'reset') path = "/reset-password";
+
+      // Update browser URL
       window.history.pushState(null, "", path);
-      const handlePopState = () => { setAuthMode('home'); };
+
+      // Handle browser BACK button behavior
+      const handlePopState = () => {
+        // If user hits back, default to home
+        setAuthMode('home');
+      };
+
       window.addEventListener('popstate', handlePopState);
       return () => window.removeEventListener('popstate', handlePopState);
   }, [authMode]);
 
   const handleAuthSubmit = async () => {
+    // 1. Client-Side Validation
     if(authMode !== 'reset' && (!formData.email || !formData.password)) return alert("Fill all fields");
 
+    // SIGNUP LOGIC
     if(authMode === 'signup') {
         if(signupStep === 1) {
              if(!formData.username) return alert("Enter a username");
@@ -943,17 +1056,21 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
              if (!passwordRegex.test(formData.password)) return alert('Password must be 8+ characters, with at least 1 uppercase, 1 lowercase, and 1 special character.');
 
              setLoading(true);
+             // Request OTP for Signup
              socket.emit('requestSignupOtp', { email: formData.email });
         } else {
              if(otp.length < 4) return alert("Enter valid OTP");
              setLoading(true);
+             // Finalize Signup with OTP (now includes referralCode)
              socket.emit('register', { ...formData, otp });
         }
     }
+    // LOGIN LOGIC
     else if (authMode === 'login') {
       setLoading(true);
       socket.emit('login', { email: formData.email, password: formData.password });
     }
+    // RESET PASSWORD LOGIC
     else if (authMode === 'reset') {
         if(resetStep === 1) {
             if(!formData.email) return alert("Enter your email");
@@ -970,20 +1087,37 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
     }
   };
 
+  // Socket listeners for Auth
   useEffect(() => {
     const handleSuccess = (userData) => {
       setLoading(false);
       onAuthSuccess(userData);
     };
-    const handleError = (msg) => { setLoading(false); alert("❌" + msg); };
-    const handleSignupOtpSent = () => { setLoading(false); setSignupStep(2); alert( "OTP Sent to your email!"); };
-    const handleResetOtpSent = () => { setLoading(false); setResetStep(2); alert( "OTP Sent to your email! Enter it below."); };
+
+    const handleError = (msg) => {
+      setLoading(false);
+      alert("❌ " + msg);
+    };
+
+    // OTP Sent Listeners
+    const handleSignupOtpSent = () => {
+        setLoading(false);
+        setSignupStep(2);
+        alert( "OTP Sent to your email!");
+    };
+
+    const handleResetOtpSent = () => {
+        setLoading(false);
+        setResetStep(2);
+        alert( "OTP Sent to your email! Enter it below.");
+    };
+
     const handleResetSuccess = () => {
         setLoading(false);
         alert("… Password Reset Successful! Please login.");
         setAuthMode('login');
         setResetStep(1);
-        setFormData(prev => ({ ...prev, password: '' })); 
+        setFormData(prev => ({ ...prev, password: '' })); // clear password
     };
 
     socket.on('authSuccess', handleSuccess);
@@ -991,6 +1125,7 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
     socket.on('signupOtpSent', handleSignupOtpSent);
     socket.on('resetOtpSent', handleResetOtpSent);
     socket.on('resetSuccess', handleResetSuccess);
+                                                                        
     return () => {
       socket.off('authSuccess', handleSuccess);
       socket.off('authError', handleError);
@@ -1003,6 +1138,7 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
   return (
     <div className="landing-page-wrapper">
       <GlobalStyle />
+                                                                        
       {/* Navbar */}
       <div className="lp-nav">
         <div className="lp-logo">BID<span style={{color: '#fbbf24'}}>BLAZE</span></div>
@@ -1018,97 +1154,214 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
           )}
         </div>
       </div>
+                                                                        
+      {/* AUTH FORMS OR HERO */}
       {authMode === 'home' ? (
         <div className="lp-hero">
             <div className="lp-badge">LIVE CRYPTO AUCTIONS</div>
-            <h1 className="lp-title">Bid Small. <br /><span className="text-gradient">Win Massive.</span></h1>
-            <p className="lp-subtitle">The world's first PvP crypto auction battle. Be the last to bid and the jackpot is yours instantly.</p>
+            <h1 className="lp-title">
+            Bid Small. <br />
+            <span className="text-gradient">Win Massive.</span>
+            </h1>
+            <p className="lp-subtitle">
+            The world's first PvP crypto auction battle. Be the last to bid and the jackpot is yours instantly.
+            </p>
+            {/* UPDATED ACTION BUTTONS CONTAINER */}
             <div className="lp-action-container">
-                <button className="lp-btn-primary" onClick={() => setAuthMode('login')}>LOGIN</button>
-                 <button className="lp-btn-secondary" onClick={() => { setAuthMode('signup'); setSignupStep(1); }}>SIGN UP 🚀</button>
+                <button className="lp-btn-primary" onClick={() => setAuthMode('login')}>
+                    LOGIN
+                </button>
+                 <button className="lp-btn-secondary" onClick={() => { setAuthMode('signup'); setSignupStep(1); }}>
+                    SIGN UP ➤
+                 </button>
             </div>
+
+            {/* Live Stats Illusion */}
             <div className="lp-stats-row">
-                <div className="lp-stat"><span className="val">2,401</span><span className="lbl">Live Players</span></div>
-                <div className="lp-stat"><span className="val" style={{color:'#fbbf24'}}>$142k+</span><span className="lbl">Paid Out</span></div>
-                <div className="lp-stat"><span className="val">0.5s</span><span className="lbl">Latency</span></div>
+                <div className="lp-stat">
+                    <span className="val">2,401</span>
+                    <span className="lbl">Live Players</span>
+                </div>
+                <div className="lp-stat">
+                    <span className="val" style={{color:'#fbbf24'}}>$142k+</span>
+                    <span className="lbl">Paid Out</span>
+                </div>
+                <div className="lp-stat">
+                    <span className="val">0.5s</span>
+                    <span className="lbl">Latency</span>
+                </div>
             </div>
         </div>
       ) : (
         <div className="glass-card fade-in" style={{marginTop:'50px', maxWidth:'400px'}}>
-            <h2 style={{color:'white', marginTop:0}}>{authMode === 'login' ? 'Welcome Back' : (authMode === 'reset' ? 'Reset Password' : 'Create Account')}</h2>
+            <h2 style={{color:'white', marginTop:0}}>
+                {authMode === 'login' ? 'Welcome Back' : (authMode === 'reset' ? 'Reset Password' : 'Create Account')}
+            </h2>
+
+            {/* --- SIGNUP FLOW --- */}
             {authMode === 'signup' && (
                 <>
                   {signupStep === 1 ? (
                       <>
                         <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Username</p>
-                        <input className="input-field" type="text" placeholder="CryptoKing99" value={formData.username} onChange={(e) => setFormData({...formData, username: e.target.value})} />
+                        <input
+                            className="input-field"
+                            type="text"
+                            placeholder="CryptoKing99"
+                            value={formData.username}
+                            onChange={(e) => setFormData({...formData, username: e.target.value})}
+                        />
                         <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Email Address</p>
-                        <input className="input-field" type="email" placeholder="you@example.com" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
+                        <input
+                            className="input-field"
+                            type="email"
+                            placeholder="you@example.com"
+                            value={formData.email}
+                            onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        />
                         <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Password</p>
-                        <input className="input-field" type="password" placeholder="••••••••" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
-                        {/* REFERRAL CODE INPUT */}
+                        <input
+                            className="input-field"
+                            type="password"
+                            placeholder="••••••••"
+                            value={formData.password}
+                            onChange={(e) => setFormData({...formData, password: e.target.value})}
+                        />
+                         {/* REFERRAL CODE INPUT */}
                         <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Referral Code (Optional)</p>
-                        <input className="input-field" type="text" placeholder="e.g. A7X99" value={formData.referralCode} onChange={(e) => setFormData({...formData, referralCode: e.target.value})} />
-                        <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>{loading ? 'SENDING OTP...' : 'NEXT: VERIFY EMAIL'}</button>
+                        <input
+                            className="input-field"
+                            type="text"
+                            placeholder="e.g. A7X99"
+                            value={formData.referralCode}
+                            onChange={(e) => setFormData({...formData, referralCode: e.target.value})}
+                        />
+
+                        <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>
+                            {loading ? 'SENDING OTP...' : 'NEXT: VERIFY EMAIL'}
+                        </button>
                       </>
                   ) : (
                       <>
                         <p style={{textAlign:'center', color:'#94a3b8', fontSize:'14px', marginBottom:'15px'}}>Enter the OTP sent to {formData.email}</p>
-                        <input className="input-field" type="text" placeholder="Enter 6-digit Code" style={{textAlign:'center', letterSpacing:'5px', fontSize:'20px', fontWeight:'bold'}} value={otp} onChange={(e) => setOtp(e.target.value)} />
-                        <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>{loading ? 'VERIFYING...' : 'FINISH SIGNUP'}</button>
+                        <input
+                            className="input-field"
+                            type="text"
+                            placeholder="Enter 6-digit Code"
+                            style={{textAlign:'center', letterSpacing:'5px', fontSize:'20px', fontWeight:'bold'}}
+                            value={otp}
+                            onChange={(e) => setOtp(e.target.value)}
+                        />
+                        <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>
+                            {loading ? 'VERIFYING...' : 'FINISH SIGNUP'}
+                        </button>
                         <p style={{fontSize:'12px', color:'#fbbf24', cursor:'pointer'}} onClick={() => setSignupStep(1)}>Wrong Email?</p>
                       </>
                   )}
                 </>
             )}
+
+            {/* --- LOGIN FLOW --- */}
             {authMode === 'login' && (
                 <>
                     <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Email Address</p>
-                    <input className="input-field" type="email" placeholder="you@example.com" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
+                    <input
+                        className="input-field"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    />
                     <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Password</p>
-                    <input className="input-field" type="password" placeholder="••••••••" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
-                    <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>{loading ? 'PROCESSING...' : 'LOG IN'}</button>
-                    <p style={{fontSize:'12px', color:'#3b82f6', marginTop:'10px', cursor:'pointer', textAlign:'right'}} onClick={() => { setAuthMode('reset'); setResetStep(1); setFormData({...formData, password: ''}); }}>Forgot Password?</p>
+                    <input
+                        className="input-field"
+                        type="password"
+                        placeholder="••••••••"
+                        value={formData.password}
+                        onChange={(e) => setFormData({...formData, password: e.target.value})}
+                    />
+
+                    <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>
+                        {loading ? 'PROCESSING...' : 'LOG IN'}
+                    </button>
+
+                    {/* Forgot Password Link */}
+                    <p style={{fontSize:'12px', color:'#3b82f6', marginTop:'10px', cursor:'pointer', textAlign:'right'}} onClick={() => { setAuthMode('reset'); setResetStep(1); setFormData({...formData, password: ''}); }}>
+                        Forgot Password?
+                    </p>
                 </>
             )}
+
+            {/* --- RESET PASSWORD FLOW --- */}
             {authMode === 'reset' && (
                 <>
                     {resetStep === 1 ? (
                           <>
                             <p style={{color:'#94a3b8', fontSize:'14px', marginBottom:'15px'}}>Enter your email to receive a reset code.</p>
-                            <input className="input-field" type="email" placeholder="you@example.com" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
-                            <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>{loading ? 'SENDING...' : 'GET OTP'}</button>
+                            <input
+                                className="input-field"
+                                type="email"
+                                placeholder="you@example.com"
+                                value={formData.email}
+                                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                            />
+                            <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>
+                                {loading ? 'SENDING...' : 'GET OTP'}
+                            </button>
                           </>
                     ) : (
                           <>
                             <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>OTP Code</p>
-                            <input className="input-field" type="text" placeholder="Code" value={otp} onChange={(e) => setOtp(e.target.value)} />
+                            <input
+                                className="input-field"
+                                type="text"
+                                placeholder="Code"
+                                value={otp}
+                                onChange={(e) => setOtp(e.target.value)}
+                            />
                             <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>New Password</p>
-                            <input className="input-field" type="password" placeholder="New Password" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
-                            <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>{loading ? 'UPDATING...' : 'RESET PASSWORD'}</button>
+                            <input
+                                className="input-field"
+                                type="password"
+                                placeholder="New Password"
+                                value={formData.password}
+                                onChange={(e) => setFormData({...formData, password: e.target.value})}
+                            />
+                            <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>
+                                {loading ? 'UPDATING...' : 'RESET PASSWORD'}
+                            </button>
                           </>
                     )}
                 </>
             )}
+
+            {/* Toggle between Login/Signup (Hidden when in reset mode) */}
             {authMode !== 'reset' && (
-                <p style={{fontSize:'12px', color:'#64748b', marginTop:'15px', cursor:'pointer'}} onClick={() => { setAuthMode(authMode === 'login' ? 'signup' : 'login'); setSignupStep(1); }}>
+                <p style={{fontSize:'12px', color:'#64748b', marginTop:'15px', cursor:'pointer'}} onClick={() => {
+                    setAuthMode(authMode === 'login' ? 'signup' : 'login');
+                    setSignupStep(1);
+                }}>
                     {authMode === 'login' ? "Don't have an account? Sign Up" : "Already have an account? Log In"}
                 </p>
             )}
         </div>
       )}
+                                                                        
+      {/* Marquee Section */}
       <div className="lp-marquee-container">
          <div className="lp-marquee-content">
            <span>🏆 User88 just won $450.00 (ETH)</span> •
-           <span>🏆 CryptoKing just won $1,200.00 (BNB)</span> •
-           <span>🔥 Jackpot currently at $52.00</span> •
-           <span>🏆 Alex_99 just won $320.00 (BASE)</span> •
-           <span>💎 New Round Starting...</span> •
+           <span>🚀 CryptoKing just won $1,200.00 (BNB)</span> •
+           <span>💰 Jackpot currently at $52.00</span> •
+           <span>🔥 Alex_99 just won $320.00 (BASE)</span> •
+           <span>⏳ New Round Starting...</span> •
            <span>🏆 User88 just won $450.00 (ETH)</span> •
-           <span>🏆 CryptoKing just won $1,200.00 (BNB)</span> •
-           <span>🔥 Jackpot currently at $52.00</span>
+           <span>🚀 CryptoKing just won $1,200.00 (BNB)</span> •
+           <span>💰 Jackpot currently at $52.00</span>
          </div>
       </div>
+                                                                        
+      {/* Features Grid */}
       <div className="lp-features">
          {features.map((f, i) => (
            <div key={i} className="lp-feature-card">
@@ -1118,7 +1371,11 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
            </div>
          ))}
       </div>
-      <div className="lp-footer">&copy; 2025 BidBlaze Protocol.</div>
+
+      {/* Footer */}
+      <div className="lp-footer">
+        &copy; 2025 BidBlaze Protocol.
+      </div>
     </div>
   );
 }
@@ -1130,7 +1387,7 @@ const GlobalStyle = () => (
     :root { --bg-dark: #020617; --glass: rgba(255, 255, 255, 0.05); --glass-border: rgba(255, 255, 255, 0.1); --gold: #fbbf24; --blue: #3b82f6; --red: #ef4444; }
 
     body { margin: 0; background: var(--bg-dark); color: white; font-family: 'Outfit', sans-serif; overflow-x: hidden; }
-                                                                      
+                                                                        
     /* --- APP CONTAINER (GAME) --- */
     .app-container {
         min-height: 100vh;
@@ -1146,7 +1403,7 @@ const GlobalStyle = () => (
         background-size: 200% 200%;
         animation: gradientMove 15s ease infinite;
     }
-    
+     
     /* CHAT STYLES */
     .chat-float-btn {
         position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px;
@@ -1277,7 +1534,7 @@ const GlobalStyle = () => (
         text-transform: uppercase;
     }
     .lp-btn-primary:hover { transform: scale(1.05); background: #f8fafc; }
-                                                                      
+                                                                        
     .lp-btn-secondary {
         flex: 1;
         background: #fbbf24;
@@ -1356,7 +1613,7 @@ const GlobalStyle = () => (
         50% { background-position: 100% 50%; }
         100% { background-position: 0% 50%; }
     }
-                                                                      
+                                                                        
     .glass-nav { width: 100%; max-width: 450px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px 15px; background: rgba(15, 23, 42, 0.6); border-radius: 20px; border: 1px solid var(--glass-border); backdrop-filter: blur(10px); }
     .glass-panel { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 20px; backdrop-filter: blur(10px); width: 100%; max-width: 400px; padding: 20px; box-sizing: border-box; }
     .glass-card { background: #0f172a; border: 1px solid #334155; border-radius: 24px; padding: 30px; width: 90%; max-width: 380px; text-align: center; position: relative; }
@@ -1415,7 +1672,7 @@ export default function App() {
       const saved = localStorage.getItem('bidblaze_user');
       return saved ? JSON.parse(saved) : null;
   });
-                                                                      
+                                                                        
   const handleLogout = async () => {
     localStorage.removeItem('bidblaze_user');
     setCustomUser(null);
@@ -1438,12 +1695,12 @@ export default function App() {
         embeddedWallets: { createOnLogin: 'users-without-wallets' },
         defaultChain: BASE_CHAIN,
         supportedChains: [BASE_CHAIN, BSC_CHAIN, ETH_CHAIN]
-      }}                                                                      >
+      }}                                                                        >
       {/* LOGIC: If customUser exists (logged in via form) -> Show Dashboard.
           Else -> Show Landing Page.                                           We pass 'login' to LandingPage to allow triggering Privy if needed for wallet connection later.
       */}
-      {customUser ? (                                                         <GameDashboard logout={handleLogout} user={{...user, ...customUser}} />                                                         ) : (
+      {customUser ? (                                                          <GameDashboard logout={handleLogout} user={{...user, ...customUser}} />                                                    ) : (
         <LandingPage privyLogin={login} onAuthSuccess={handleAuthSuccess} />
-      )}                                                                      </PrivyProvider>
+      )}                                                                        </PrivyProvider>
   );
 }
