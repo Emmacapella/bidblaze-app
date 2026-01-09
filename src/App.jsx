@@ -590,7 +590,7 @@ function GameDashboard({ logout, user }) {
                       <span style={{fontFamily:'monospace', fontSize:'16px', letterSpacing:'1px'}}>{referralCode}</span>
                       <button onClick={() => {navigator.clipboard.writeText(referralCode); alert("Code Copied!")}} style={{background:'none', border:'none', color:'#3b82f6', cursor:'pointer', fontWeight:'bold'}}>COPY</button>
                  </div>
-                 <div style={{fontSize:'10px', color:'#94a3b8', marginTop:'8px'}}>Share this code. When friends signup and deposit, you get 5% of their deposit instantly.</div>
+                 <div style={{fontSize:'10px', color:'#94a3b8', marginTop:'8px'}}>Share this code. When friends signup and deposit, you get 5% of their winnings instantly.</div>
              </div>
 
              {/* REFERRAL STATISTICS TABLE - NEW */}
