@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
 import { parseEther } from 'viem';
@@ -8,7 +8,7 @@ import Lobby from './components/Lobby';
 import GameRoom from './components/GameRoom';
 
 // --- CONFIGURATION ---
-const PRIVY_APP_ID = "cm4l3033r048epf1ln3q59956"; 
+const PRIVY_APP_ID = "cm4l3033r048epf1ln3q59956";
 const SERVER_URL = "https://bidblaze-server.onrender.com";
 
 export const socket = io(SERVER_URL, {
@@ -179,7 +179,7 @@ export default function App() {
       appId={PRIVY_APP_ID}
       config={{
         loginMethods: ['email', 'wallet'],
-        appearance: { theme: 'dark', accentColor: '#fbbf24' },
+        appearance: { theme: 'dark', accentColor: '#3b82f6' },
         supportedChains: [BASE_CHAIN, BSC_CHAIN, ETH_CHAIN]
       }}
     >
@@ -187,7 +187,7 @@ export default function App() {
 
         {view === 'landing' && (
            <LandingPage
-             onLogin={(u) => {
+             onAuthSuccess={(u) => {
                localStorage.setItem('bidblaze_user', JSON.stringify(u));
                setUser(u);
                setView('lobby');
@@ -254,108 +254,363 @@ export default function App() {
   );
 }
 
-// --- RESTORED RICH LANDING PAGE ---
-const LandingPage = ({ onLogin, privyLogin }) => {
-   const [mode, setMode] = useState('home');
-   const [email, setEmail] = useState('');
-   const [password, setPassword] = useState('');
-   const [username, setUsername] = useState('');
+// --- ORIGINAL PROFESSIONAL LANDING PAGE ---
+function LandingPage({ privyLogin, onAuthSuccess }) {
+  const [authMode, setAuthMode] = useState('home'); // 'home', 'login', 'signup', 'reset'
+  const [formData, setFormData] = useState({ username: '', email: '', password: '', referralCode: '' });
+  const [loading, setLoading] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [signupStep, setSignupStep] = useState(1); // 1 = Details, 2 = OTP
+  const [resetStep, setResetStep] = useState(1); // 1 = Email, 2 = OTP + New Password
 
-   const features = [
-    { icon: "⚡", title: "Instant", desc: "No signup lag. Play immediately." },
-    { icon: "⚖️", title: "Fair", desc: "Provably fair game logic. Blockchain verified." },
+  const features = [
+    { icon: "⚡", title: "Instant", desc: "No signup lag. Create account & play immediately." },
+    { icon: "⚖️", title: "Fair", desc: "Provably fair game logic. Blockchain verified payouts." },
     { icon: "💰", title: "High Yield", desc: "Small bids, massive jackpots. Winner takes all." }
-   ];
+  ];
 
-   const handleSubmit = (type) => {
-      if (type === 'login') socket.emit('login', { email, password });
-      if (type === 'signup') socket.emit('register', { email, password, username, otp: '0000' });
-   };
+  // --- NEW: URL ROUTING FOR LANDING PAGE ---
+  useEffect(() => {
+      let path = "/";
+      if(authMode === 'login') path = "/login";
+      if(authMode === 'signup') path = "/signup";
+      if(authMode === 'reset') path = "/reset-password";
+      window.history.pushState(null, "", path);
+      const handlePopState = () => { setAuthMode('home'); };
+      window.addEventListener('popstate', handlePopState);
+      return () => window.removeEventListener('popstate', handlePopState);
+  }, [authMode]);
 
-   useEffect(() => {
-     socket.on('authSuccess', (u) => onLogin(u));
-     return () => socket.off('authSuccess');
-   }, [onLogin]);
+  const handleAuthSubmit = async () => {
+    // 1. Client-Side Validation
+    if(authMode !== 'reset' && (!formData.email || !formData.password)) return alert("Fill all fields");
 
-   if (mode === 'login' || mode === 'signup') return (
-     <div className="landing-overlay fade-in">
-        <div className="glass-card">
-           <h2 style={{marginBottom:'20px', fontSize:'24px'}}>{mode === 'login' ? 'LOGIN' : 'SIGN UP'}</h2>
-           {mode === 'signup' && <input className="input-field" placeholder="Username" onChange={e => setUsername(e.target.value)} />}
-           <input className="input-field" placeholder="Email" onChange={e => setEmail(e.target.value)} />
-           <input className="input-field" type="password" placeholder="Password" onChange={e => setPassword(e.target.value)} />
-           <button className="action-btn" onClick={() => handleSubmit(mode)}>{mode === 'login' ? 'ENTER' : 'REGISTER'}</button>
-           
-           <div style={{marginTop:'20px', display:'flex', justifyContent:'space-between', fontSize:'12px', color:'#94a3b8'}}>
-              <span onClick={() => setMode(mode === 'login' ? 'signup' : 'login')} style={{cursor:'pointer'}}>
-                  {mode === 'login' ? 'Create Account' : 'Have an account?'}
-              </span>
-              <span onClick={() => setMode('home')} style={{cursor:'pointer'}}>Cancel</span>
-           </div>
+    // SIGNUP LOGIC
+    if(authMode === 'signup') {
+        if(signupStep === 1) {
+             if(!formData.username) return alert("Enter a username");
+             setLoading(true);
+             socket.emit('requestSignupOtp', { email: formData.email });
+        } else {
+             if(otp.length < 4) return alert("Enter valid OTP");
+             setLoading(true);
+             socket.emit('register', { ...formData, otp });
+        }
+    }
+    // LOGIN LOGIC
+    else if (authMode === 'login') {
+      setLoading(true);
+      socket.emit('login', { email: formData.email, password: formData.password });
+    }
+    // RESET PASSWORD LOGIC
+    else if (authMode === 'reset') {
+        if(resetStep === 1) {
+            if(!formData.email) return alert("Enter your email");
+            setLoading(true);
+            socket.emit('requestResetOtp', { email: formData.email });
+        } else {
+            if(otp.length < 4 || !formData.password) return alert("Enter OTP and new password");
+            setLoading(true);
+            socket.emit('resetPassword', { email: formData.email, otp, newPassword: formData.password });
+        }
+    }
+  };
+
+  // Socket listeners for Auth
+  useEffect(() => {
+    const handleSuccess = (userData) => {
+      setLoading(false);
+      onAuthSuccess(userData);
+    };
+
+    const handleError = (msg) => {
+      setLoading(false);
+      alert("❌ " + msg);
+    };
+
+    const handleSignupOtpSent = () => {
+        setLoading(false);
+        setSignupStep(2);
+        alert( "OTP Sent to your email!");
+    };
+
+    const handleResetOtpSent = () => {
+        setLoading(false);
+        setResetStep(2);
+        alert( "OTP Sent to your email! Enter it below.");
+    };
+
+    const handleResetSuccess = () => {
+        setLoading(false);
+        alert("… Password Reset Successful! Please login.");
+        setAuthMode('login');
+        setResetStep(1);
+        setFormData(prev => ({ ...prev, password: '' })); 
+    };
+
+    socket.on('authSuccess', handleSuccess);
+    socket.on('authError', handleError);
+    socket.on('signupOtpSent', handleSignupOtpSent);
+    socket.on('resetOtpSent', handleResetOtpSent);
+    socket.on('resetSuccess', handleResetSuccess);
+
+    return () => {
+      socket.off('authSuccess', handleSuccess);
+      socket.off('authError', handleError);
+      socket.off('signupOtpSent', handleSignupOtpSent);
+      socket.off('resetOtpSent', handleResetOtpSent);
+      socket.off('resetSuccess', handleResetSuccess);
+    };
+  }, [onAuthSuccess]);
+
+  return (
+    <div className="landing-page-wrapper">
+      {/* Navbar */}
+      <div className="lp-nav">
+        <div className="lp-logo">BID<span style={{color: '#fbbf24'}}>BLAZE</span></div>
+        <div>
+          {authMode === 'home' && (
+            <>
+              <button className="lp-login-btn-small" onClick={() => setAuthMode('login')} style={{marginRight:'10px'}}>Login</button>
+              <button className="lp-login-btn-small" onClick={() => { setAuthMode('signup'); setSignupStep(1); }} style={{background:'#fbbf24', color:'black', border:'none'}}>Sign Up</button>
+            </>
+          )}
+          {authMode !== 'home' && (
+            <button className="lp-login-btn-small" onClick={() => { setAuthMode('home'); setSignupStep(1); setResetStep(1); }}>← Back</button>
+          )}
         </div>
-     </div>
-   );
+      </div>
 
-   return (
-     <div className="landing-scroll-container fade-in">
-       {/* 1. HERO SECTION */}
-       <div className="landing-hero">
-         <h1 className="hero-logo">BID<span style={{color:'#fbbf24'}}>BLAZE</span></h1>
-         <p className="hero-subtitle">The Ultimate Crypto Auction</p>
-         
-         <div className="hero-actions">
-           <button className="hero-btn primary" onClick={() => setMode('login')}>LOGIN</button>
-           <button className="hero-btn secondary" onClick={privyLogin}>WALLET LOGIN</button>
+      {/* AUTH FORMS OR HERO */}
+      {authMode === 'home' ? (
+        <div className="lp-hero">
+            <div className="lp-badge">LIVE CRYPTO AUCTIONS</div>
+            <h1 className="lp-title">
+            Bid Small. <br />
+            <span className="text-gradient">Win Massive.</span>
+            </h1>
+            <p className="lp-subtitle">
+            The world's first PvP crypto auction battle. Be the last to bid and the jackpot is yours instantly.
+            </p>
+            {/* UPDATED ACTION BUTTONS CONTAINER */}
+            <div className="lp-action-container">
+                <button className="lp-btn-primary" onClick={() => setAuthMode('login')}>
+                    LOGIN
+                </button>
+                 <button className="lp-btn-secondary" onClick={() => { setAuthMode('signup'); setSignupStep(1); }}>
+                    SIGN UP ➤
+                 </button>
+            </div>
+
+            {/* Live Stats Illusion */}
+            <div className="lp-stats-row">
+                <div className="lp-stat">
+                    <span className="val">2,401</span>
+                    <span className="lbl">Live Players</span>
+                </div>
+                <div className="lp-stat">
+                    <span className="val" style={{color:'#fbbf24'}}>$142k+</span>
+                    <span className="lbl">Paid Out</span>
+                </div>
+                <div className="lp-stat">
+                    <span className="val">0.5s</span>
+                    <span className="lbl">Latency</span>
+                </div>
+            </div>
+        </div>
+      ) : (
+        <div className="glass-card fade-in" style={{marginTop:'50px', maxWidth:'400px'}}>
+            <h2 style={{color:'white', marginTop:0}}>
+                {authMode === 'login' ? 'Welcome Back' : (authMode === 'reset' ? 'Reset Password' : 'Create Account')}
+            </h2>
+
+            {/* --- SIGNUP FLOW --- */}
+            {authMode === 'signup' && (
+                <>
+                  {signupStep === 1 ? (
+                      <>
+                        <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Username</p>
+                        <input
+                            className="input-field"
+                            type="text"
+                            placeholder="CryptoKing99"
+                            value={formData.username}
+                            onChange={(e) => setFormData({...formData, username: e.target.value})}
+                        />
+                        <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Email Address</p>
+                        <input
+                            className="input-field"
+                            type="email"
+                            placeholder="you@example.com"
+                            value={formData.email}
+                            onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        />
+                        <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Password</p>
+                        <input
+                            className="input-field"
+                            type="password"
+                            placeholder="••••••••"
+                            value={formData.password}
+                            onChange={(e) => setFormData({...formData, password: e.target.value})}
+                        />
+                         {/* REFERRAL CODE INPUT */}
+                        <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Referral Code (Optional)</p>
+                        <input
+                            className="input-field"
+                            type="text"
+                            placeholder="e.g. A7X99"
+                            value={formData.referralCode}
+                            onChange={(e) => setFormData({...formData, referralCode: e.target.value})}
+                        />
+
+                        <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>
+                            {loading ? 'SENDING OTP...' : 'NEXT: VERIFY EMAIL'}
+                        </button>
+                      </>
+                  ) : (
+                      <>
+                        <p style={{textAlign:'center', color:'#94a3b8', fontSize:'14px', marginBottom:'15px'}}>Enter the OTP sent to {formData.email}</p>
+                        <input
+                            className="input-field"
+                            type="text"
+                            placeholder="Enter 6-digit Code"
+                            style={{textAlign:'center', letterSpacing:'5px', fontSize:'20px', fontWeight:'bold'}}
+                            value={otp}
+                            onChange={(e) => setOtp(e.target.value)}
+                        />
+                        <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>
+                            {loading ? 'VERIFYING...' : 'FINISH SIGNUP'}
+                        </button>
+                        <p style={{fontSize:'12px', color:'#fbbf24', cursor:'pointer'}} onClick={() => setSignupStep(1)}>Wrong Email?</p>
+                      </>
+                  )}
+                </>
+            )}
+
+            {/* --- LOGIN FLOW --- */}
+            {authMode === 'login' && (
+                <>
+                    <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Email Address</p>
+                    <input
+                        className="input-field"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    />
+                    <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Password</p>
+                    <input
+                        className="input-field"
+                        type="password"
+                        placeholder="••••••••"
+                        value={formData.password}
+                        onChange={(e) => setFormData({...formData, password: e.target.value})}
+                    />
+
+                    <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>
+                        {loading ? 'PROCESSING...' : 'LOG IN'}
+                    </button>
+                    
+                    {/* Wallet Login Option */}
+                    <button className="main-btn" onClick={privyLogin} style={{fontSize:'14px', marginTop:'10px', background:'#334155', color:'#cbd5e1'}}>
+                        WALLET LOGIN
+                    </button>
+
+                    <p style={{fontSize:'12px', color:'#3b82f6', marginTop:'10px', cursor:'pointer', textAlign:'right'}} onClick={() => { setAuthMode('reset'); setResetStep(1); setFormData({...formData, password: ''}); }}>
+                        Forgot Password?
+                    </p>
+                </>
+            )}
+
+            {/* --- RESET PASSWORD FLOW --- */}
+            {authMode === 'reset' && (
+                <>
+                    {resetStep === 1 ? (
+                          <>
+                            <p style={{color:'#94a3b8', fontSize:'14px', marginBottom:'15px'}}>Enter your email to receive a reset code.</p>
+                            <input
+                                className="input-field"
+                                type="email"
+                                placeholder="you@example.com"
+                                value={formData.email}
+                                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                            />
+                            <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>
+                                {loading ? 'SENDING...' : 'GET OTP'}
+                            </button>
+                          </>
+                    ) : (
+                          <>
+                            <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>OTP Code</p>
+                            <input
+                                className="input-field"
+                                type="text"
+                                placeholder="Code"
+                                value={otp}
+                                onChange={(e) => setOtp(e.target.value)}
+                            />
+                            <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>New Password</p>
+                            <input
+                                className="input-field"
+                                type="password"
+                                placeholder="New Password"
+                                value={formData.password}
+                                onChange={(e) => setFormData({...formData, password: e.target.value})}
+                            />
+                            <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>
+                                {loading ? 'UPDATING...' : 'RESET PASSWORD'}
+                            </button>
+                          </>
+                    )}
+                </>
+            )}
+
+            {/* Toggle between Login/Signup (Hidden when in reset mode) */}
+            {authMode !== 'reset' && (
+                <p style={{fontSize:'12px', color:'#64748b', marginTop:'15px', cursor:'pointer'}} onClick={() => {
+                    setAuthMode(authMode === 'login' ? 'signup' : 'login');
+                    setSignupStep(1);
+                }}>
+                    {authMode === 'login' ? "Don't have an account? Sign Up" : "Already have an account? Log In"}
+                </p>
+            )}
+        </div>
+      )}
+
+      {/* Marquee Section */}
+      <div className="lp-marquee-container">
+         <div className="lp-marquee-content">
+           <span>🏆 User88 just won $450.00 (ETH)</span> •
+           <span>🚀 CryptoKing just won $1,200.00 (BNB)</span> •
+           <span>💰 Jackpot currently at $52.00</span> •
+           <span>🔥 Alex_99 just won $320.00 (BASE)</span> •
+           <span>⏳ New Round Starting...</span> •
+           <span>🏆 User88 just won $450.00 (ETH)</span> •
+           <span>🚀 CryptoKing just won $1,200.00 (BNB)</span> •
+           <span>💰 Jackpot currently at $52.00</span>
          </div>
+      </div>
 
-         {/* Detailed Stats Restored */}
-         <div className="lp-stats-row">
-            <div className="lp-stat">
-                <span className="val">2,401</span>
-                <span className="lbl">Live Players</span>
-            </div>
-            <div className="lp-stat">
-                <span className="val" style={{color:'#fbbf24'}}>$142k+</span>
-                <span className="lbl">Paid Out</span>
-            </div>
-            <div className="lp-stat">
-                <span className="val">0.5s</span>
-                <span className="lbl">Latency</span>
-            </div>
-         </div>
-       </div>
+      {/* Features Grid */}
+      <div className="lp-features">
+         {features.map((f, i) => (
+           <div key={i} className="lp-feature-card">
+                 <div className="lp-icon">{f.icon}</div>
+                 <h3>{f.title}</h3>
+                 <p>{f.desc}</p>
+           </div>
+         ))}
+      </div>
 
-       {/* 2. MARQUEE SECTION (Restored) */}
-       <div className="lp-marquee-container">
-          <div className="lp-marquee-content">
-            <span>🏆 User88 just won $450.00 (ETH)</span> •
-            <span>🚀 CryptoKing just won $1,200.00 (BNB)</span> •
-            <span>💰 Jackpot currently at $52.00</span> •
-            <span>🔥 Alex_99 just won $320.00 (BASE)</span> •
-            <span>⏳ New Round Starting...</span>
-          </div>
-       </div>
-
-       {/* 3. FEATURES GRID (Restored) */}
-       <div className="lp-features">
-          {features.map((f, i) => (
-            <div key={i} className="lp-feature-card">
-                  <div className="lp-icon">{f.icon}</div>
-                  <h3>{f.title}</h3>
-                  <p>{f.desc}</p>
-            </div>
-          ))}
-       </div>
-
-       {/* 4. FOOTER (Restored) */}
-       <div className="lp-footer">
-         © 2026 BidBlaze Protocol. All rights reserved.
-       </div>
-     </div>
-   );
+      {/* Footer */}
+      <div className="lp-footer">
+        © 2025 BidBlaze Protocol.
+      </div>
+    </div>
+  );
 }
 
-// --- GLOBAL STYLES (INCLUDES ALL LANDING PAGE CSS) ---
+// --- GLOBAL STYLES ---
 const GlobalStyle = () => (
   <style>{`
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&family=JetBrains+Mono:wght@500&display=swap');
@@ -368,58 +623,77 @@ const GlobalStyle = () => (
         background: radial-gradient(circle at top, #1e293b, #020617);
     }
 
-    /* MODALS */
-    .modal-overlay, .landing-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
-    .glass-card { background: #0f172a; border: 1px solid #334155; border-radius: 24px; padding: 30px; width: 85%; max-width: 350px; text-align: center; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+    /* GLOBAL MODALS */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+    .glass-card { background: #0f172a; border: 1px solid #334155; border-radius: 24px; padding: 30px; width: 90%; max-width: 350px; text-align: center; position: relative; }
     .close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
-    .input-field { width: 100%; background: #1e293b; border: 1px solid #334155; padding: 14px; border-radius: 12px; color: white; margin-bottom: 12px; box-sizing: border-box; font-family: inherit; }
-    .input-field:focus { outline: none; border-color: #fbbf24; }
+    .input-field { width: 100%; background: #1e293b; border: 1px solid #334155; padding: 14px; border-radius: 12px; color: white; margin-bottom: 12px; box-sizing: border-box; }
     .action-btn { width: 100%; padding: 14px; background: #fbbf24; border: none; border-radius: 12px; color: black; font-weight: 900; cursor: pointer; transition: 0.2s; }
-    .action-btn:active { transform: scale(0.98); }
+    .main-btn { width: 100%; padding: 14px; background: #3b82f6; border: none; border-radius: 12px; color: white; font-weight: bold; cursor: pointer; }
 
-    /* LANDING PAGE SPECIFIC STYLES */
-    .landing-scroll-container { width: 100%; display: flex; flex-direction: column; align-items: center; }
-    
-    .landing-hero { text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 80px; width: 100%; }
-    .hero-logo { font-size: 64px; margin: 0; font-weight: 900; letter-spacing: -2px; }
-    .hero-subtitle { font-size: 16px; color: #94a3b8; margin: 10px 0 40px 0; font-weight: 400; }
-    
-    .hero-actions { display: flex; gap: 15px; width: 100%; max-width: 350px; justify-content: center; }
-    
-    .hero-btn { flex: 1; padding: 16px; border: none; border-radius: 12px; font-weight: 800; font-size: 14px; cursor: pointer; transition: transform 0.2s; text-transform: uppercase; }
-    .hero-btn:active { transform: scale(0.95); }
-    .hero-btn.primary { background: #fbbf24; color: black; box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3); }
-    .hero-btn.secondary { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; }
-    .hero-btn.secondary:hover { background: #334155; color: white; }
+    /* --- LANDING PAGE STYLES (FROM ORIGINAL) --- */
+    .landing-page-wrapper {
+        min-height: 100vh; width: 100%;
+        background: radial-gradient(circle at top, #1e293b, #020617);
+        display: flex; flex-direction: column; align-items: center; text-align: center;
+    }
+    .lp-nav {
+        width: 100%; max-width: 1000px; padding: 20px;
+        display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;
+    }
+    .lp-logo { font-size: 24px; font-weight: 900; letter-spacing: -1px; }
+    .lp-login-btn-small {
+        background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+        color: white; padding: 8px 20px; border-radius: 20px; cursor: pointer; font-weight: 600; transition: all 0.2s;
+    }
+    .lp-login-btn-small:hover { background: white; color: black; }
 
-    /* Stats Row (Restored) */
+    .lp-hero { padding: 60px 20px; max-width: 800px; display: flex; flex-direction: column; align-items: center; }
+    .lp-badge {
+        background: rgba(251, 191, 36, 0.15); color: #fbbf24; font-size: 12px; font-weight: bold;
+        padding: 6px 12px; border-radius: 20px; margin-bottom: 20px; border: 1px solid rgba(251, 191, 36, 0.3);
+    }
+    .lp-title { font-size: 56px; font-weight: 900; line-height: 1.1; margin: 0 0 20px 0; letter-spacing: -2px; }
+    .text-gradient {
+        background: linear-gradient(135deg, #fff 30%, #94a3b8 100%);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .lp-subtitle { color: #94a3b8; font-size: 18px; line-height: 1.6; max-width: 500px; margin-bottom: 40px; }
+
+    .lp-action-container { display: flex; gap: 15px; margin-top: 10px; justify-content: center; width: 100%; max-width: 400px; }
+    .lp-btn-primary { flex: 1; background: white; color: black; border: none; padding: 14px 24px; font-size: 16px; font-weight: 800; border-radius: 12px; cursor: pointer; transition: transform 0.2s; text-transform: uppercase; }
+    .lp-btn-secondary { flex: 1; background: #fbbf24; color: black; border: none; padding: 14px 24px; font-size: 16px; font-weight: 800; border-radius: 12px; cursor: pointer; box-shadow: 0 4px 20px rgba(251, 191, 36, 0.4); transition: transform 0.2s; text-transform: uppercase; }
+
     .lp-stats-row { display: flex; gap: 40px; margin-top: 60px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 30px; }
-    .lp-stat { display: flex; flex-direction: column; align-items: center; }
+    .lp-stat { display: flex; flex-direction: column; }
     .lp-stat .val { font-size: 28px; font-weight: 800; }
     .lp-stat .lbl { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; }
 
-    /* Marquee (Restored) */
-    .lp-marquee-container { width: 100%; background: #0f172a; padding: 15px 0; margin: 60px 0; overflow: hidden; white-space: nowrap; border-top: 1px solid #1e293b; border-bottom: 1px solid #1e293b; }
+    .lp-marquee-container {
+        width: 100%; background: #0f172a; padding: 15px 0; margin: 40px 0; overflow: hidden; white-space: nowrap;
+        border-top: 1px solid #1e293b; border-bottom: 1px solid #1e293b;
+    }
     .lp-marquee-content { display: inline-block; animation: marquee 20s linear infinite; font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #cbd5e1; }
     .lp-marquee-content span { margin: 0 20px; }
-    @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
-    /* Features Grid (Restored) */
-    .lp-features { display: flex; gap: 20px; padding: 20px; flex-wrap: wrap; justify-content: center; max-width: 1000px; margin-bottom: 40px; }
+    .lp-features { display: flex; gap: 20px; padding: 20px; flex-wrap: wrap; justify-content: center; max-width: 1000px; }
     .lp-feature-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 30px; border-radius: 20px; width: 250px; text-align: left; }
     .lp-icon { font-size: 30px; margin-bottom: 15px; }
-    .lp-feature-card h3 { margin: 0 0 10px 0; font-size: 18px; color: white; }
+    .lp-feature-card h3 { margin: 0 0 10px 0; font-size: 18px; }
     .lp-feature-card p { margin: 0; font-size: 14px; color: #94a3b8; line-height: 1.5; }
 
-    .lp-footer { margin-top: 20px; color: #475569; font-size: 12px; padding-bottom: 40px; }
+    .lp-footer { margin-top: 50px; color: #475569; font-size: 12px; padding-bottom: 20px; }
 
-    .fade-in { animation: popIn 0.4s ease-out; }
+    @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+    @keyframes slideIn { from { transform: translateX(100%); opacity:0; } to { transform: translateX(0); opacity:1; } }
+    .fade-in { animation: popIn 0.3s ease-out; }
     @keyframes popIn { 0% { opacity:0; transform:scale(0.95); } 100% { opacity:1; transform:scale(1); } }
 
     @media (max-width: 600px) {
-        .hero-logo { font-size: 42px; }
-        .lp-stats-row { gap: 20px; flex-direction: row; flex-wrap: wrap; justify-content: center; }
-        .lp-action-container { flex-direction: column; width: 100%; max-width: 280px; }
+        .lp-title { font-size: 36px; }
+        .lp-stats-row { flex-direction: column; gap: 20px; margin-top: 40px; }
+        .lp-features { flex-direction: column; align-items: center; }
+        .lp-action-container { flex-direction: column; gap: 10px; width: 100%; max-width: 250px; }
     }
   `}</style>
 );
