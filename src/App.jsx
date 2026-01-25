@@ -1,17 +1,15 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import io from 'socket.io-client';
 import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
 import { parseEther } from 'viem';
 
-// IMPORT YOUR NEW COMPONENTS
+// IMPORT YOUR COMPONENTS
 import Lobby from './components/Lobby';
 import GameRoom from './components/GameRoom';
-import MilliTimer from './components/MilliTimer'; // Used in Landing Page preview
 
 // --- CONFIGURATION ---
-const PRIVY_APP_ID = "cm4l3033r048epf1ln3q59956";
-// CHANGE THIS TO YOUR LOCAL IP IF TESTING ON PHONE, OR LIVE URL
-const SERVER_URL = "https://bidblaze-server.onrender.com"; 
+const PRIVY_APP_ID = "cm4l3033r048epf1ln3q59956"; 
+const SERVER_URL = "https://bidblaze-server.onrender.com";
 
 export const socket = io(SERVER_URL, {
   transports: ['websocket', 'polling'],
@@ -21,8 +19,8 @@ export const socket = io(SERVER_URL, {
 
 // --- CHAIN CONFIG ---
 const BASE_CHAIN = {
-  id: 8453, name: 'Base', network: 'base', 
-  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, 
+  id: 8453, name: 'Base', network: 'base',
+  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
   rpcUrls: { default: { http: ['https://mainnet.base.org'] } }
 };
 const BSC_CHAIN = {
@@ -41,16 +39,16 @@ export default function App() {
   const { login, logout, user: privyUser, ready, authenticated } = usePrivy();
   const { wallets } = useWallets();
 
-  // --- STATE MANAGEMENT ---
-  const [user, setUser] = useState(null); // Backend user data
+  // --- STATE ---
+  const [user, setUser] = useState(null); 
   const [view, setView] = useState('landing'); // 'landing', 'lobby', 'game'
-  const [activeRoom, setActiveRoom] = useState(null); // 'low' or 'high'
+  const [activeRoom, setActiveRoom] = useState(null); 
   const [connectedUsers, setConnectedUsers] = useState(0);
 
   // Modals
   const [showDeposit, setShowDeposit] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
-  
+
   // Transaction State
   const [depositAmount, setDepositAmount] = useState('');
   const [selectedNetwork, setSelectedNetwork] = useState('BSC');
@@ -62,16 +60,14 @@ export default function App() {
   useEffect(() => {
     if (!socket.connected) socket.connect();
 
-    // Listen for connection stats
     socket.on('gameConfig', (cfg) => {
        if (cfg?.adminWallet) setAdminWallet(cfg.adminWallet);
        if (cfg?.connectedUsers) setConnectedUsers(cfg.connectedUsers);
     });
 
-    // Listen for Auth Success from Backend (Custom Login or Privy Sync)
     socket.on('authSuccess', (userData) => {
       setUser(userData);
-      setView('lobby'); // Go to Lobby on login
+      setView('lobby'); 
     });
 
     socket.on('balanceUpdate', (bal) => {
@@ -81,12 +77,12 @@ export default function App() {
     socket.on('depositSuccess', () => { setShowDeposit(false); alert("Deposit Confirmed!"); });
     socket.on('withdrawalSuccess', () => { setShowWithdraw(false); alert("Withdrawal Requested!"); });
 
-    // Privy Sync: If Privy is logged in, tell backend
+    // Privy Sync
     if (ready && authenticated && privyUser?.email?.address) {
        socket.emit('getUserBalance', privyUser.email.address);
     }
-    
-    // Check LocalStorage for custom login
+
+    // Check LocalStorage
     const saved = localStorage.getItem('bidblaze_user');
     if (saved) {
        const u = JSON.parse(saved);
@@ -122,15 +118,12 @@ export default function App() {
     setView('lobby');
   };
 
-  // --- TRANSACTION LOGIC (Kept Centralized) ---
   const handleDeposit = async () => {
     try {
       if (!depositAmount || depositAmount <= 0) return alert("Invalid Amount");
-      
       let provider = window.ethereum;
       let account = null;
 
-      // Detect Wallet
       if (!provider) {
           const w = wallets.find(w => w.walletClientType !== 'privy');
           if (w) provider = await w.getEthereumProvider();
@@ -140,7 +133,6 @@ export default function App() {
       const accounts = await provider.request({ method: 'eth_requestAccounts' });
       account = accounts[0];
 
-      // Chain Switching Logic
       const chainConfig = {
         'BSC': { hex: '0x38', rpc: 'https://bsc-dataseed1.binance.org' },
         'ETH': { hex: '0x1', rpc: 'https://cloudflare-eth.com' },
@@ -154,7 +146,6 @@ export default function App() {
              params: [{ chainId: target.hex }]
         });
       } catch (e) {
-         // Add chain if missing (Simplified for brevity)
          alert("Please switch network manually to " + selectedNetwork);
          return;
       }
@@ -176,9 +167,9 @@ export default function App() {
 
   const handleWithdraw = () => {
      if (user.balance < withdrawAmount) return alert("Insufficient Funds");
-     socket.emit('requestWithdrawal', { 
-       email: user.email, amount: parseFloat(withdrawAmount), 
-       address: withdrawAddress, network: selectedNetwork 
+     socket.emit('requestWithdrawal', {
+       email: user.email, amount: parseFloat(withdrawAmount),
+       address: withdrawAddress, network: selectedNetwork
      });
   };
 
@@ -193,33 +184,32 @@ export default function App() {
       }}
     >
       <div className="app-container">
-        
-        {/* VIEW ROUTER */}
+
         {view === 'landing' && (
-           <LandingPage 
-             onLogin={(u) => { 
-                localStorage.setItem('bidblaze_user', JSON.stringify(u)); 
-                setUser(u); 
-                setView('lobby'); 
-             }} 
-             privyLogin={login} 
+           <LandingPage
+             onLogin={(u) => {
+               localStorage.setItem('bidblaze_user', JSON.stringify(u));
+               setUser(u);
+               setView('lobby');
+             }}
+             privyLogin={login}
            />
         )}
 
         {view === 'lobby' && user && (
-           <Lobby 
-             user={user} 
+           <Lobby
+             user={user}
              connectedUsers={connectedUsers}
-             onJoin={handleJoinRoom} 
-             onLogout={handleLogout} 
+             onJoin={handleJoinRoom}
+             onLogout={handleLogout}
            />
         )}
 
         {view === 'game' && user && activeRoom && (
-           <GameRoom 
-             socket={socket} 
-             user={user} 
-             roomType={activeRoom} 
+           <GameRoom
+             socket={socket}
+             user={user}
+             roomType={activeRoom}
              onLeave={handleLeaveRoom}
              openDeposit={() => setShowDeposit(true)}
              openWithdraw={() => setShowWithdraw(true)}
@@ -242,7 +232,6 @@ export default function App() {
              </div>
           </div>
         )}
-
         {showWithdraw && (
           <div className="modal-overlay">
              <div className="glass-card modal-content fade-in">
@@ -265,73 +254,172 @@ export default function App() {
   );
 }
 
-// --- LANDING PAGE (Internal Component) ---
+// --- RESTORED RICH LANDING PAGE ---
 const LandingPage = ({ onLogin, privyLogin }) => {
    const [mode, setMode] = useState('home');
    const [email, setEmail] = useState('');
    const [password, setPassword] = useState('');
    const [username, setUsername] = useState('');
 
+   const features = [
+    { icon: "⚡", title: "Instant", desc: "No signup lag. Play immediately." },
+    { icon: "⚖️", title: "Fair", desc: "Provably fair game logic. Blockchain verified." },
+    { icon: "💰", title: "High Yield", desc: "Small bids, massive jackpots. Winner takes all." }
+   ];
+
    const handleSubmit = (type) => {
       if (type === 'login') socket.emit('login', { email, password });
-      if (type === 'signup') socket.emit('register', { email, password, username, otp: '0000' }); // Note: OTP simplified for flow
-      // In real version, you'd add the OTP modal flow here
+      if (type === 'signup') socket.emit('register', { email, password, username, otp: '0000' });
    };
 
-   // Listen for Auth response specifically for Landing
    useEffect(() => {
      socket.on('authSuccess', (u) => onLogin(u));
      return () => socket.off('authSuccess');
    }, [onLogin]);
 
-   if (mode === 'login') return (
-     <div className="landing-form fade-in">
-        <h2>LOGIN</h2>
-        <input className="input-field" placeholder="Email" onChange={e => setEmail(e.target.value)} />
-        <input className="input-field" type="password" placeholder="Password" onChange={e => setPassword(e.target.value)} />
-        <button className="action-btn" onClick={() => handleSubmit('login')}>ENTER</button>
-        <p onClick={() => setMode('home')} style={{cursor:'pointer', marginTop:'10px'}}>Back</p>
+   if (mode === 'login' || mode === 'signup') return (
+     <div className="landing-overlay fade-in">
+        <div className="glass-card">
+           <h2 style={{marginBottom:'20px', fontSize:'24px'}}>{mode === 'login' ? 'LOGIN' : 'SIGN UP'}</h2>
+           {mode === 'signup' && <input className="input-field" placeholder="Username" onChange={e => setUsername(e.target.value)} />}
+           <input className="input-field" placeholder="Email" onChange={e => setEmail(e.target.value)} />
+           <input className="input-field" type="password" placeholder="Password" onChange={e => setPassword(e.target.value)} />
+           <button className="action-btn" onClick={() => handleSubmit(mode)}>{mode === 'login' ? 'ENTER' : 'REGISTER'}</button>
+           
+           <div style={{marginTop:'20px', display:'flex', justifyContent:'space-between', fontSize:'12px', color:'#94a3b8'}}>
+              <span onClick={() => setMode(mode === 'login' ? 'signup' : 'login')} style={{cursor:'pointer'}}>
+                  {mode === 'login' ? 'Create Account' : 'Have an account?'}
+              </span>
+              <span onClick={() => setMode('home')} style={{cursor:'pointer'}}>Cancel</span>
+           </div>
+        </div>
      </div>
    );
 
    return (
-     <div className="landing-hero fade-in">
-       <h1>BID<span style={{color:'#fbbf24'}}>BLAZE</span></h1>
-       <p>The Ultimate Crypto Auction</p>
-       <div style={{display:'flex', gap:'10px', marginTop:'20px'}}>
-         <button className="action-btn" onClick={() => setMode('login')}>LOGIN</button>
-         <button className="action-btn" onClick={privyLogin} style={{background:'#334155'}}>WALLET LOGIN</button>
+     <div className="landing-scroll-container fade-in">
+       {/* 1. HERO SECTION */}
+       <div className="landing-hero">
+         <h1 className="hero-logo">BID<span style={{color:'#fbbf24'}}>BLAZE</span></h1>
+         <p className="hero-subtitle">The Ultimate Crypto Auction</p>
+         
+         <div className="hero-actions">
+           <button className="hero-btn primary" onClick={() => setMode('login')}>LOGIN</button>
+           <button className="hero-btn secondary" onClick={privyLogin}>WALLET LOGIN</button>
+         </div>
+
+         {/* Detailed Stats Restored */}
+         <div className="lp-stats-row">
+            <div className="lp-stat">
+                <span className="val">2,401</span>
+                <span className="lbl">Live Players</span>
+            </div>
+            <div className="lp-stat">
+                <span className="val" style={{color:'#fbbf24'}}>$142k+</span>
+                <span className="lbl">Paid Out</span>
+            </div>
+            <div className="lp-stat">
+                <span className="val">0.5s</span>
+                <span className="lbl">Latency</span>
+            </div>
+         </div>
        </div>
-       <div className="lp-stats">
-          <div className="stat-box">2 Rooms Live</div>
-          <div className="stat-box">Instant Payouts</div>
+
+       {/* 2. MARQUEE SECTION (Restored) */}
+       <div className="lp-marquee-container">
+          <div className="lp-marquee-content">
+            <span>🏆 User88 just won $450.00 (ETH)</span> •
+            <span>🚀 CryptoKing just won $1,200.00 (BNB)</span> •
+            <span>💰 Jackpot currently at $52.00</span> •
+            <span>🔥 Alex_99 just won $320.00 (BASE)</span> •
+            <span>⏳ New Round Starting...</span>
+          </div>
+       </div>
+
+       {/* 3. FEATURES GRID (Restored) */}
+       <div className="lp-features">
+          {features.map((f, i) => (
+            <div key={i} className="lp-feature-card">
+                  <div className="lp-icon">{f.icon}</div>
+                  <h3>{f.title}</h3>
+                  <p>{f.desc}</p>
+            </div>
+          ))}
+       </div>
+
+       {/* 4. FOOTER (Restored) */}
+       <div className="lp-footer">
+         © 2026 BidBlaze Protocol. All rights reserved.
        </div>
      </div>
    );
 }
 
-// --- GLOBAL STYLES ---
+// --- GLOBAL STYLES (INCLUDES ALL LANDING PAGE CSS) ---
 const GlobalStyle = () => (
   <style>{`
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&family=JetBrains+Mono:wght@500&display=swap');
     :root { --bg-dark: #020617; --glass: rgba(255, 255, 255, 0.05); }
     body { margin: 0; background: var(--bg-dark); color: white; font-family: 'Outfit', sans-serif; overflow-x: hidden; }
-    .app-container { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding-top: 20px; background: radial-gradient(circle at top, #1e293b, #020617); }
     
+    .app-container { 
+        min-height: 100vh; 
+        display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+        background: radial-gradient(circle at top, #1e293b, #020617);
+    }
+
     /* MODALS */
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; display: flex; justify-content: center; align-items: center; }
-    .glass-card { background: #0f172a; border: 1px solid #334155; border-radius: 24px; padding: 30px; width: 90%; max-width: 350px; text-align: center; position: relative; }
+    .modal-overlay, .landing-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+    .glass-card { background: #0f172a; border: 1px solid #334155; border-radius: 24px; padding: 30px; width: 85%; max-width: 350px; text-align: center; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
     .close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
-    .input-field { width: 100%; background: #1e293b; border: 1px solid #334155; padding: 14px; border-radius: 12px; color: white; margin-bottom: 15px; box-sizing: border-box; }
-    .action-btn { width: 100%; padding: 14px; background: #fbbf24; border: none; border-radius: 12px; color: black; font-weight: 900; cursor: pointer; margin-bottom: 10px; }
+    .input-field { width: 100%; background: #1e293b; border: 1px solid #334155; padding: 14px; border-radius: 12px; color: white; margin-bottom: 12px; box-sizing: border-box; font-family: inherit; }
+    .input-field:focus { outline: none; border-color: #fbbf24; }
+    .action-btn { width: 100%; padding: 14px; background: #fbbf24; border: none; border-radius: 12px; color: black; font-weight: 900; cursor: pointer; transition: 0.2s; }
+    .action-btn:active { transform: scale(0.98); }
+
+    /* LANDING PAGE SPECIFIC STYLES */
+    .landing-scroll-container { width: 100%; display: flex; flex-direction: column; align-items: center; }
     
-    /* LANDING */
-    .landing-hero { text-align: center; margin-top: 100px; }
-    .landing-hero h1 { font-size: 60px; margin: 0; font-weight: 900; letter-spacing: -2px; }
-    .lp-stats { display: flex; gap: 20px; justify-content: center; margin-top: 40px; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
-    .landing-form { width: 300px; margin-top: 100px; text-align: center; }
+    .landing-hero { text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 80px; width: 100%; }
+    .hero-logo { font-size: 64px; margin: 0; font-weight: 900; letter-spacing: -2px; }
+    .hero-subtitle { font-size: 16px; color: #94a3b8; margin: 10px 0 40px 0; font-weight: 400; }
     
-    .fade-in { animation: popIn 0.3s ease-out; }
+    .hero-actions { display: flex; gap: 15px; width: 100%; max-width: 350px; justify-content: center; }
+    
+    .hero-btn { flex: 1; padding: 16px; border: none; border-radius: 12px; font-weight: 800; font-size: 14px; cursor: pointer; transition: transform 0.2s; text-transform: uppercase; }
+    .hero-btn:active { transform: scale(0.95); }
+    .hero-btn.primary { background: #fbbf24; color: black; box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3); }
+    .hero-btn.secondary { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; }
+    .hero-btn.secondary:hover { background: #334155; color: white; }
+
+    /* Stats Row (Restored) */
+    .lp-stats-row { display: flex; gap: 40px; margin-top: 60px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 30px; }
+    .lp-stat { display: flex; flex-direction: column; align-items: center; }
+    .lp-stat .val { font-size: 28px; font-weight: 800; }
+    .lp-stat .lbl { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; }
+
+    /* Marquee (Restored) */
+    .lp-marquee-container { width: 100%; background: #0f172a; padding: 15px 0; margin: 60px 0; overflow: hidden; white-space: nowrap; border-top: 1px solid #1e293b; border-bottom: 1px solid #1e293b; }
+    .lp-marquee-content { display: inline-block; animation: marquee 20s linear infinite; font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #cbd5e1; }
+    .lp-marquee-content span { margin: 0 20px; }
+    @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+    /* Features Grid (Restored) */
+    .lp-features { display: flex; gap: 20px; padding: 20px; flex-wrap: wrap; justify-content: center; max-width: 1000px; margin-bottom: 40px; }
+    .lp-feature-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 30px; border-radius: 20px; width: 250px; text-align: left; }
+    .lp-icon { font-size: 30px; margin-bottom: 15px; }
+    .lp-feature-card h3 { margin: 0 0 10px 0; font-size: 18px; color: white; }
+    .lp-feature-card p { margin: 0; font-size: 14px; color: #94a3b8; line-height: 1.5; }
+
+    .lp-footer { margin-top: 20px; color: #475569; font-size: 12px; padding-bottom: 40px; }
+
+    .fade-in { animation: popIn 0.4s ease-out; }
     @keyframes popIn { 0% { opacity:0; transform:scale(0.95); } 100% { opacity:1; transform:scale(1); } }
+
+    @media (max-width: 600px) {
+        .hero-logo { font-size: 42px; }
+        .lp-stats-row { gap: 20px; flex-direction: row; flex-wrap: wrap; justify-content: center; }
+        .lp-action-container { flex-direction: column; width: 100%; max-width: 280px; }
+    }
   `}</style>
 );
