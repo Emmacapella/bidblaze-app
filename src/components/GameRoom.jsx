@@ -20,7 +20,10 @@ const GameRoom = ({ socket, user, roomType, onLeave, openDeposit, openWithdraw }
 
   const isHighStakes = roomType === 'high';
   const bidCost = isHighStakes ? 1.00 : 0.10;
-  const displayBidCost = isHighStakes ? bidCost.toFixed(2) : bidCost.toFixed(3);
+  
+  // FIX: Force 3 decimals for Novice ($0.095), 2 decimals for High Roller ($0.95)
+  const decimals = isHighStakes ? 2 : 3;
+  const displayBidCost = bidCost.toFixed(2); // Button always shows what you PAY ($0.10)
 
   const themeColor = isHighStakes ? '#fbbf24' : '#22c55e';
   const themeShadow = isHighStakes ? 'rgba(251, 191, 36, 0.4)' : 'rgba(34, 197, 94, 0.4)';
@@ -101,7 +104,8 @@ const GameRoom = ({ socket, user, roomType, onLeave, openDeposit, openWithdraw }
         <div className="jackpot-core">
           <div className="jackpot-label">CURRENT JACKPOT</div>
           <div className="jackpot-amount" style={{ textShadow: `0 0 25px ${themeShadow}, 0 0 5px white` }}>
-            ${gameState.jackpot.toFixed(2)}
+            {/* FIX: Using 'decimals' var to force 3 decimal places for Novice */}
+            ${gameState.jackpot.toFixed(decimals)}
           </div>
           <div className="last-bidder-pill">
              {gameState.lastBidder ? (
@@ -112,6 +116,7 @@ const GameRoom = ({ socket, user, roomType, onLeave, openDeposit, openWithdraw }
 
         {floatingBids.map(id => (
           <div key={id} className="float-bid" style={{color: themeColor, textShadow: `0 0 10px ${themeColor}`}}>
+              {/* FIX: Floating text shows full cost */}
               -${displayBidCost}
           </div>
         ))}
@@ -150,7 +155,7 @@ const GameRoom = ({ socket, user, roomType, onLeave, openDeposit, openWithdraw }
                   <div className="row-user" style={{ color: bid.user === user.email || bid.user === user.username ? themeColor : 'white' }}>
                     {bid.user.split('@')[0]}
                   </div>
-                  <div className="row-amt" style={{color: '#94a3b8'}}>${bid.amount.toFixed(isHighStakes ? 2 : 3)}</div>
+                  <div className="row-amt" style={{color: '#94a3b8'}}>${bid.amount.toFixed(2)}</div>
                   <div className="row-time">{new Date(bid.id).toLocaleTimeString([], {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'})}</div>
                 </div>
               ))

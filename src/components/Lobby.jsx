@@ -15,6 +15,7 @@ const Lobby = ({ user, onJoin, onLogout, connectedUsers, onOpenHelp, onOpenMenu 
         </div>
 
         <div className="nav-right">
+          {/* BUTTONS NOW WIRED UP */}
           <button className="nav-icon-btn" onClick={onOpenHelp}>❓</button>
           <button className="nav-icon-btn" onClick={onOpenMenu}>☰</button>
           <button className="logout-btn-minimal" onClick={onLogout}>⏻</button>
@@ -30,7 +31,7 @@ const Lobby = ({ user, onJoin, onLogout, connectedUsers, onOpenHelp, onOpenMenu 
         <h3 className="category-header">🔥 BIDBLAZE ORIGINALS</h3>
         
         <div className="room-grid">
-          {/* NOVICE ROOM ($0.10) -> 3 DECIMALS */}
+          {/* NOVICE ROOM ($0.10) */}
           <div className="room-card novice-card" onClick={() => onJoin('low')}>
             <div className="card-badge popular">POPULAR</div>
             <div className="card-content">
@@ -38,6 +39,7 @@ const Lobby = ({ user, onJoin, onLogout, connectedUsers, onOpenHelp, onOpenMenu 
                <h3 className="room-name">Novice</h3>
                <div className="stat-row">
                   <span className="stat-label">JACKPOT ADDS</span>
+                  {/* FIX: Explicitly showing 3 decimals */}
                   <span className="stat-val green">+$0.095</span>
                </div>
                <div className="bid-cost-tiny">Bid Cost: $0.10</div>
@@ -65,6 +67,7 @@ const Lobby = ({ user, onJoin, onLogout, connectedUsers, onOpenHelp, onOpenMenu 
       <div className="lobby-footer">Verified Fair • House Fee 5% • Secure v2.3</div>
 
       <style>{`
+        /* MOBILE OPTIMIZED LAYOUT */
         .lobby-container { width: 100%; max-width: 500px; display: flex; flex-direction: column; align-items: center; padding: 15px; margin: 0 auto; box-sizing: border-box; }
 
         .glass-nav { width: 100%; display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 16px; margin-bottom: 25px; }

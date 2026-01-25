@@ -22,7 +22,7 @@ const BASE_CHAIN = { id: 8453, name: 'Base', network: 'base', nativeCurrency: { 
 const BSC_CHAIN = { id: 56, name: 'BNB Smart Chain', network: 'bsc', nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 }, rpcUrls: { default: { http: ['https://bsc-dataseed1.binance.org'] } } };
 const ETH_CHAIN = { id: 1, name: 'Ethereum', network: 'homestead', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: ['https://cloudflare-eth.com'] } } };
 
-// --- RESTORED COMPONENTS (FROM OLD CODE) ---
+// --- RESTORED MODALS (FAQ & Terms from Old Code) ---
 
 const HowToPlay = ({ onClose }) => (
   <div className="modal-overlay">
@@ -142,7 +142,6 @@ export default function App() {
     });
 
     socket.on('userData', (u) => {
-        // Update local user data when profile updates
         setUser(prev => ({...prev, ...u}));
     });
 
@@ -185,7 +184,6 @@ export default function App() {
     if(!editingUsername || editingUsername.length < 3) return alert("Username too short.");
     socket.emit('updateProfile', { email: user.email, username: editingUsername });
     alert("Username updated!");
-    // Optimistically update local state
     setUser(prev => ({...prev, username: editingUsername}));
     setShowProfile(false);
   };
