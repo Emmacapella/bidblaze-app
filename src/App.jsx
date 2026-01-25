@@ -41,13 +41,15 @@ export default function App() {
 
   // --- STATE ---
   const [user, setUser] = useState(null); 
-  const [view, setView] = useState('landing'); // 'landing', 'lobby', 'game'
+  const [view, setView] = useState('landing'); 
   const [activeRoom, setActiveRoom] = useState(null); 
   const [connectedUsers, setConnectedUsers] = useState(0);
 
   // Modals
   const [showDeposit, setShowDeposit] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
 
   // Transaction State
   const [depositAmount, setDepositAmount] = useState('');
@@ -179,7 +181,7 @@ export default function App() {
       appId={PRIVY_APP_ID}
       config={{
         loginMethods: ['email', 'wallet'],
-        appearance: { theme: 'dark', accentColor: '#3b82f6' },
+        appearance: { theme: 'dark', accentColor: '#fbbf24' },
         supportedChains: [BASE_CHAIN, BSC_CHAIN, ETH_CHAIN]
       }}
     >
@@ -202,6 +204,8 @@ export default function App() {
              connectedUsers={connectedUsers}
              onJoin={handleJoinRoom}
              onLogout={handleLogout}
+             onOpenHelp={() => setShowHelp(true)}
+             onOpenMenu={() => setShowMenu(true)}
            />
         )}
 
@@ -246,6 +250,29 @@ export default function App() {
                 <button className="action-btn" onClick={handleWithdraw} style={{background:'#ef4444'}}>REQUEST PAYOUT</button>
              </div>
           </div>
+        )}
+
+        {showHelp && (
+            <div className="modal-overlay">
+                <div className="glass-card fade-in">
+                    <button className="close-btn" onClick={() => setShowHelp(false)}>×</button>
+                    <h2>How to Play</h2>
+                    <p>1. Deposit Crypto.</p>
+                    <p>2. Choose a Room.</p>
+                    <p>3. Be the Last Bidder to Win.</p>
+                </div>
+            </div>
+        )}
+
+        {showMenu && (
+            <div className="modal-overlay">
+                <div className="glass-card fade-in">
+                    <button className="close-btn" onClick={() => setShowMenu(false)}>×</button>
+                    <h2>Menu</h2>
+                    <button className="action-btn" onClick={() => setShowProfile(true)}>Profile</button>
+                    <button className="action-btn" onClick={handleLogout}>Logout</button>
+                </div>
+            </div>
         )}
 
       </div>
