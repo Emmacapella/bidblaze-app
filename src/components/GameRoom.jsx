@@ -14,16 +14,16 @@ const GameRoom = ({ socket, user, roomType, onLeave, openDeposit, openWithdraw }
   const [floatingBids, setFloatingBids] = useState([]);
   const [isCooldown, setIsCooldown] = useState(false);
   const [cd, setCd] = useState(0);
-  
-  // Refs for sound and logic
+
   const lastBidId = useRef(null);
   const audioRef = useRef(null);
   const prevStatus = useRef("ACTIVE");
 
-  // Determine room settings based on props
   const isHighStakes = roomType === 'high';
   const bidCost = isHighStakes ? 1.00 : 0.10;
-  const themeColor = isHighStakes ? '#fbbf24' : '#22c55e'; // Gold vs Green
+  // Theme Colors: Gold for High Roller, Neon Green for Novice
+  const themeColor = isHighStakes ? '#fbbf24' : '#22c55e';
+  const themeShadow = isHighStakes ? 'rgba(251, 191, 36, 0.4)' : 'rgba(34, 197, 94, 0.4)';
 
   const playSound = (key) => {
     if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
@@ -33,18 +33,11 @@ const GameRoom = ({ socket, user, roomType, onLeave, openDeposit, openWithdraw }
     audio.play().catch(() => {});
   };
 
-  // --- SOCKET LISTENERS FOR THIS SPECIFIC ROOM ---
   useEffect(() => {
-    // 1. Join the specific room
     socket.emit('joinRoom', roomType);
-
-    // 2. Listen for game state updates ONLY for this room
     socket.on('roomUpdate', (data) => {
-      // The backend will send data specific to this room
       if (data.room === roomType) {
         setGameState(data.state);
-        
-        // Sound Logic
         if (data.state.status === 'ACTIVE' && data.state.history.length > 0) {
            const latestBid = data.state.history[0];
            if (latestBid.id !== lastBidId.current) {
@@ -53,14 +46,12 @@ const GameRoom = ({ socket, user, roomType, onLeave, openDeposit, openWithdraw }
            }
         }
         if (data.state.status === 'ENDED' && prevStatus.current === 'ACTIVE') {
-           playSound('soundWin');
+             playSound('soundWin');
         }
         prevStatus.current = data.state.status;
       }
     });
-
     socket.on('bidError', (msg) => alert(msg));
-
     return () => {
       socket.emit('leaveRoom', roomType);
       socket.off('roomUpdate');
@@ -68,7 +59,6 @@ const GameRoom = ({ socket, user, roomType, onLeave, openDeposit, openWithdraw }
     };
   }, [roomType, socket]);
 
-  // --- COOLDOWN TIMER ---
   useEffect(() => {
     let cdInterval;
     if (isCooldown && cd > 0) cdInterval = setInterval(() => setCd(prev => prev - 1), 1000);
@@ -79,15 +69,9 @@ const GameRoom = ({ socket, user, roomType, onLeave, openDeposit, openWithdraw }
   const placeBid = () => {
     if (isCooldown) return;
     if (user.balance < bidCost) { openDeposit(); return; }
-
-    // Visual feedback immediately
     setFloatingBids(prev => [...prev, Date.now()]);
     playSound('soundPop');
-    
-    // Emit bid with Room ID
     socket.emit('placeBid', { room: roomType, email: user.email });
-    
-    // Start Cooldown (8 seconds)
     setIsCooldown(true);
     setCd(8);
   };
@@ -96,107 +80,201 @@ const GameRoom = ({ socket, user, roomType, onLeave, openDeposit, openWithdraw }
 
   return (
     <div className="game-room fade-in">
-      {gameState.status === 'ENDED' && <Confetti recycle={false} numberOfPieces={500} />}
+      {gameState.status === 'ENDED' && <Confetti recycle={false} numberOfPieces={500} colors={[themeColor, '#ffffff']} />}
 
-      {/* HEADER */}
-      <div className="room-header">
-         <button onClick={onLeave} className="back-btn">← LOBBY</button>
-         <div className="room-tag" style={{borderColor: themeColor, color: themeColor}}>
-            {isHighStakes ? '👑 HIGH ROLLER' : '🛡️ NOVICE ROOM'}
+      {/* HEADER: Minimalist Casino Bar */}
+      <div className="casino-header">
+         <button onClick={onLeave} className="back-btn-pill">
+           ← LOBBY
+         </button>
+         
+         {/* Room Badge */}
+         <div className="room-badge" style={{
+           boxShadow: `0 0 15px ${themeShadow}`,
+           borderColor: themeColor,
+           color: themeColor
+         }}>
+             {isHighStakes ? '👑 HIGH ROLLER' : '🛡️ NOVICE ROOM'}
          </div>
-         <div className="balance-display" onClick={openDeposit}>
-            ⚡ ${user.balance.toFixed(2)} <span style={{fontSize:'10px'}}>+</span>
+
+         {/* Balance Wallet */}
+         <div className="wallet-pill" onClick={openDeposit}>
+            <span style={{color: themeColor}}>⚡</span> ${user.balance.toFixed(2)} <span className="plus">+</span>
          </div>
       </div>
 
-      {/* MAIN STAGE */}
+      {/* MAIN STAGE: The "Reactor" */}
       <div className="game-stage-wrapper">
+        {/* The Timer Ring (MilliTimer) sits behind the jackpot */}
+        <div className="timer-backdrop" style={{ boxShadow: `0 0 40px ${themeShadow}` }}></div>
         <MilliTimer targetDate={gameState.endTime} status={gameState.status} />
-        
-        <div className="jackpot-display">
+
+        <div className="jackpot-core">
           <div className="jackpot-label">CURRENT JACKPOT</div>
-          <div className="jackpot-amount" style={{ textShadow: `0 0 30px ${themeColor}66` }}>
+          <div className="jackpot-amount" style={{ 
+              textShadow: `0 0 25px ${themeShadow}, 0 0 5px white` 
+          }}>
             ${gameState.jackpot.toFixed(2)}
           </div>
-          <div className="last-bidder">
-             {gameState.lastBidder ? `Last: ${gameState.lastBidder.split('@')[0]}` : 'Waiting for bids...'}
+          <div className="last-bidder-pill">
+             {gameState.lastBidder ? (
+                 <>LAST: <span style={{color: themeColor, fontWeight:'bold'}}>{gameState.lastBidder.split('@')[0]}</span></>
+             ) : 'WAITING FOR BIDS...'}
           </div>
         </div>
 
-        {/* Floating Animation */}
+        {/* Floating Numbers Effect */}
         {floatingBids.map(id => (
-          <div key={id} className="float-bid" style={{color: themeColor}}>-${bidCost.toFixed(2)}</div>
+          <div key={id} className="float-bid" style={{color: themeColor, textShadow: `0 0 10px ${themeColor}`}}>
+              -${bidCost.toFixed(2)}
+          </div>
         ))}
       </div>
 
-      {/* BID BUTTON */}
+      {/* ACTION AREA: The Big Button */}
       <div className="controls-area">
         {gameState.status === 'ENDED' ? (
-           <div className="winner-banner">
+           <div className="winner-banner" style={{ background: themeColor, boxShadow: `0 0 30px ${themeColor}` }}>
              {gameState.lastBidder === user.email ? '🏆 YOU WON!' : `WINNER: ${gameState.lastBidder}`}
            </div>
         ) : (
-           <button 
-             className={`bid-btn ${isCooldown ? 'disabled' : ''}`} 
+           <button
+             className={`bid-btn-3d ${isCooldown ? 'cooldown' : ''}`}
              onClick={placeBid}
-             style={{ background: isCooldown ? '#334155' : themeColor, boxShadow: isCooldown ? 'none' : `0 0 20px ${themeColor}66` }}
+             style={!isCooldown ? { 
+                 background: `linear-gradient(180deg, ${themeColor} 0%, #000 100%)`,
+                 boxShadow: `0 6px 0 #064e3b, 0 0 20px ${themeShadow}` 
+             } : {}}
            >
-             {isCooldown ? `WAIT (${cd}s)` : `BID $${bidCost.toFixed(2)}`}
+             {isCooldown ? `COOLDOWN (${cd}s)` : `BID $${bidCost.toFixed(2)}`}
            </button>
         )}
       </div>
 
-      {/* ACTION LINKS */}
-      <div className="quick-actions">
-        <button onClick={openDeposit}>DEPOSIT</button>
-        <button onClick={openWithdraw}>WITHDRAW</button>
+      {/* QUICK ACTIONS */}
+      <div className="action-row">
+        <button className="secondary-btn" onClick={openDeposit}>DEPOSIT</button>
+        <button className="secondary-btn" onClick={openWithdraw}>WITHDRAW</button>
       </div>
 
-      {/* HISTORY FEED */}
-      <div className="history-feed">
-        <div className="feed-header">RECENT ACTIVITY</div>
-        <div className="feed-list">
-          {gameState.history.map((bid, i) => (
-             <div key={i} className="feed-item">
-               <span className="feed-user" style={{color: bid.user === user.email || bid.user === user.username ? '#fbbf24' : 'white'}}>
-                 {bid.user.split('@')[0]}
-               </span>
-               <span className="feed-amt" style={{color: themeColor}}>${bid.amount.toFixed(2)}</span>
-             </div>
-          ))}
+      {/* LIVE FEED TABLE */}
+      <div className="history-table glass-panel">
+        <div className="table-header">RECENT BIDS</div>
+        <div className="table-body">
+          {gameState.history.length === 0 ? (
+              <div style={{padding:'10px', textAlign:'center', color:'#64748b', fontSize:'12px'}}>No bids yet. Be the first!</div>
+          ) : (
+              gameState.history.map((bid, i) => (
+                <div key={i} className="table-row">
+                  <div className="row-user" style={{ color: bid.user === user.email || bid.user === user.username ? themeColor : 'white' }}>
+                    {bid.user.split('@')[0]}
+                  </div>
+                  <div className="row-amt" style={{color: '#94a3b8'}}>${bid.amount.toFixed(2)}</div>
+                  <div className="row-time">{new Date(bid.id).toLocaleTimeString([], {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'})}</div>
+                </div>
+              ))
+          )}
         </div>
       </div>
 
+      {/* STYLES */}
       <style>{`
-        .game-room { width: 100%; max-width: 450px; display: flex; flex-direction: column; align-items: center; padding-bottom: 30px; }
-        .room-header { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px; }
-        .back-btn { background: none; border: none; color: #94a3b8; font-weight: bold; cursor: pointer; }
-        .room-tag { border: 1px solid; padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 900; letter-spacing: 1px; }
-        .balance-display { background: rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        /* LAYOUT & UTILS */
+        .game-room { width: 100%; max-width: 450px; display: flex; flex-direction: column; align-items: center; padding-bottom: 40px; margin: 0 auto; }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
 
-        .game-stage-wrapper { position: relative; margin: 20px 0; display: flex; justify-content: center; align-items: center; }
-        .jackpot-display { position: absolute; text-align: center; z-index: 10; }
-        .jackpot-label { font-size: 10px; letter-spacing: 2px; color: #94a3b8; }
-        .jackpot-amount { font-size: 42px; font-weight: 900; color: white; margin: 5px 0; }
-        .last-bidder { font-size: 12px; color: #fbbf24; background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 4px; display: inline-block; }
-
-        .controls-area { width: 100%; padding: 0 20px; margin-bottom: 15px; }
-        .bid-btn { width: 100%; padding: 20px; border: none; border-radius: 16px; font-size: 20px; font-weight: 900; color: #0f172a; cursor: pointer; transition: transform 0.1s; }
-        .bid-btn:active { transform: scale(0.98); }
-        .bid-btn.disabled { color: #94a3b8; cursor: not-allowed; }
-        .winner-banner { background: #fbbf24; color: black; padding: 20px; text-align: center; font-weight: 900; font-size: 20px; border-radius: 16px; width: 100%; }
-
-        .quick-actions { display: flex; gap: 10px; width: 100%; padding: 0 20px; margin-bottom: 20px; }
-        .quick-actions button { flex: 1; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; border-radius: 8px; font-weight: bold; cursor: pointer; }
-
-        .history-feed { width: 90%; background: rgba(0,0,0,0.2); border-radius: 12px; padding: 15px; border: 1px solid rgba(255,255,255,0.05); }
-        .feed-header { font-size: 10px; color: #64748b; margin-bottom: 10px; font-weight: bold; letter-spacing: 1px; }
-        .feed-list { display: flex; flex-direction: column; gap: 8px; max-height: 100px; overflow-y: auto; }
-        .feed-item { display: flex; justify-content: space-between; font-size: 12px; border-bottom: 1px solid rgba(255,255,255,0.02); padding-bottom: 4px; }
+        /* HEADER */
+        .casino-header { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding: 10px; }
+        .back-btn-pill { background: rgba(255,255,255,0.1); border: none; color: #94a3b8; padding: 8px 16px; border-radius: 20px; font-weight: 700; font-size: 11px; cursor: pointer; transition: 0.2s; }
+        .back-btn-pill:hover { background: rgba(255,255,255,0.2); color: white; }
         
-        .float-bid { position: absolute; font-size: 24px; font-weight: bold; animation: floatUp 0.8s forwards; pointer-events: none; z-index: 20; }
-        @keyframes floatUp { 0% { opacity:1; transform:translateY(0); } 100% { opacity:0; transform:translateY(-100px); } }
-        .loading-spinner { color: #fbbf24; font-family: monospace; margin-top: 50px; }
+        .room-badge { 
+            padding: 6px 14px; 
+            border-radius: 20px; 
+            border: 1px solid; 
+            font-size: 10px; 
+            font-weight: 900; 
+            letter-spacing: 1px; 
+            background: rgba(0,0,0,0.4); 
+            backdrop-filter: blur(5px);
+        }
+
+        .wallet-pill { 
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05)); 
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 8px 16px; 
+            border-radius: 20px; 
+            font-weight: 800; 
+            cursor: pointer; 
+            font-size: 14px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .wallet-pill:hover { background: rgba(255,255,255,0.15); }
+        .plus { font-size: 10px; background: rgba(255,255,255,0.2); width: 14px; height: 14px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+
+        /* GAME STAGE (REACTOR) */
+        .game-stage-wrapper { position: relative; width: 300px; height: 300px; margin: 10px 0 30px 0; display: flex; justify-content: center; align-items: center; }
+        /* The glow behind the timer */
+        .timer-backdrop { position: absolute; width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(circle, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 100%); z-index: 0; }
+        
+        .jackpot-core { position: absolute; text-align: center; z-index: 10; display: flex; flex-direction: column; align-items: center; }
+        .jackpot-label { font-size: 10px; letter-spacing: 3px; color: #64748b; font-weight: 700; margin-bottom: 5px; text-transform: uppercase; }
+        .jackpot-amount { font-size: 48px; font-weight: 900; color: white; line-height: 1; letter-spacing: -1px; }
+        .last-bidder-pill { background: rgba(15, 23, 42, 0.8); padding: 6px 12px; border-radius: 12px; font-size: 11px; margin-top: 10px; color: #94a3b8; border: 1px solid rgba(255,255,255,0.1); }
+
+        /* CONTROLS */
+        .controls-area { width: 100%; padding: 0 20px; margin-bottom: 20px; display: flex; justify-content: center; }
+        
+        /* 3D CASINO BUTTON */
+        .bid-btn-3d { 
+            width: 100%; max-width: 320px;
+            padding: 18px; 
+            border: none; 
+            border-radius: 16px; 
+            font-size: 22px; 
+            font-weight: 900; 
+            color: white; 
+            text-shadow: 0 2px 0 rgba(0,0,0,0.3);
+            cursor: pointer; 
+            transition: transform 0.1s, box-shadow 0.1s;
+            position: relative;
+            overflow: hidden;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .bid-btn-3d:active { transform: translateY(4px); box-shadow: none !important; }
+        .bid-btn-3d::after {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 50%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.2), transparent);
+            pointer-events: none;
+        }
+        .bid-btn-3d.cooldown { 
+            background: #334155 !important; 
+            color: #64748b; 
+            box-shadow: 0 6px 0 #1e293b !important; 
+            cursor: not-allowed;
+        }
+
+        .winner-banner { width: 100%; padding: 20px; text-align: center; font-weight: 900; font-size: 20px; border-radius: 16px; color: black; animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popIn { 0% { transform: scale(0.5); opacity:0; } 100% { transform: scale(1); opacity:1; } }
+
+        .action-row { display: flex; gap: 15px; width: 100%; padding: 0 30px; margin-bottom: 30px; }
+        .secondary-btn { flex: 1; padding: 12px; background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; font-weight: 700; font-size: 12px; border-radius: 10px; cursor: pointer; transition: 0.2s; }
+        .secondary-btn:hover { background: rgba(255,255,255,0.1); color: white; border-color: rgba(255,255,255,0.2); }
+
+        /* DATA TABLE */
+        .history-table { width: 90%; background: #0f172a; border-radius: 16px; border: 1px solid #1e293b; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .table-header { background: #1e293b; padding: 12px 20px; font-size: 11px; font-weight: 800; color: #64748b; letter-spacing: 1px; text-transform: uppercase; border-bottom: 1px solid #334155; }
+        .table-body { max-height: 150px; overflow-y: auto; }
+        .table-row { display: flex; justify-content: space-between; padding: 10px 20px; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 13px; font-family: 'JetBrains Mono', monospace; }
+        .row-user { font-weight: 700; }
+        .row-time { color: #475569; font-size: 11px; }
+
+        .float-bid { position: absolute; font-size: 28px; font-weight: 900; animation: floatUp 0.8s ease-out forwards; pointer-events: none; z-index: 100; top: 40%; }
+        @keyframes floatUp { 0% { opacity:1; transform:translateY(0) scale(0.8); } 50% { transform:translateY(-50px) scale(1.2); } 100% { opacity:0; transform:translateY(-100px) scale(1); } }
+        
+        .loading-spinner { color: #fbbf24; margin-top: 50px; font-family: monospace; letter-spacing: 2px; }
       `}</style>
     </div>
   );
