@@ -3,7 +3,7 @@ import io from 'socket.io-client';
 import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
 import { parseEther } from 'viem';
 
-// IMPORT YOUR COMPONENTS
+// IMPORT COMPONENTS
 import Lobby from './components/Lobby';
 import GameRoom from './components/GameRoom';
 
@@ -18,21 +18,72 @@ export const socket = io(SERVER_URL, {
 });
 
 // --- CHAIN CONFIG ---
-const BASE_CHAIN = {
-  id: 8453, name: 'Base', network: 'base',
-  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-  rpcUrls: { default: { http: ['https://mainnet.base.org'] } }
-};
-const BSC_CHAIN = {
-  id: 56, name: 'BNB Smart Chain', network: 'bsc',
-  nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
-  rpcUrls: { default: { http: ['https://bsc-dataseed1.binance.org'] } }
-};
-const ETH_CHAIN = {
-  id: 1, name: 'Ethereum', network: 'homestead',
-  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-  rpcUrls: { default: { http: ['https://cloudflare-eth.com'] } }
-};
+const BASE_CHAIN = { id: 8453, name: 'Base', network: 'base', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: ['https://mainnet.base.org'] } } };
+const BSC_CHAIN = { id: 56, name: 'BNB Smart Chain', network: 'bsc', nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 }, rpcUrls: { default: { http: ['https://bsc-dataseed1.binance.org'] } } };
+const ETH_CHAIN = { id: 1, name: 'Ethereum', network: 'homestead', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: ['https://cloudflare-eth.com'] } } };
+
+// --- RESTORED COMPONENTS (FROM OLD CODE) ---
+
+const HowToPlay = ({ onClose }) => (
+  <div className="modal-overlay">
+    <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
+      <button className="close-btn" onClick={onClose}>×</button>
+      <h2 style={{color: '#fbbf24', textAlign:'center', marginBottom:'20px'}}>How to Win 🏆</h2>
+      <div style={{display:'flex', gap:'15px', marginBottom:'15px'}}>
+        <div style={{background:'#3b82f6', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold'}}>1</div>
+        <div><div style={{fontWeight:'bold', color:'white'}}>Deposit Crypto</div><div style={{fontSize:'12px', color:'#94a3b8'}}>Connect Wallet & Pay (BSC/ETH/Base).</div></div>
+      </div>
+      <div style={{display:'flex', gap:'15px', marginBottom:'15px'}}>
+        <div style={{background:'#ef4444', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold'}}>2</div>
+        <div><div style={{fontWeight:'bold', color:'white'}}>Place a Bid</div><div style={{fontSize:'12px', color:'#94a3b8'}}>Bid costs specific amount and resets timer.</div></div>
+      </div>
+      <div style={{display:'flex', gap:'15px', marginBottom:'15px'}}>
+        <div style={{background:'#22c55e', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold'}}>3</div>
+        <div><div style={{fontWeight:'bold', color:'white'}}>Be the Last One</div><div style={{fontSize:'12px', color:'#94a3b8'}}>Last bidder wins the <span style={{color:'#fbbf24'}}>JACKPOT!</span></div></div>
+      </div>
+      <div style={{display:'flex', gap:'15px', marginBottom:'15px'}}>
+        <div style={{background:'#a855f7', borderRadius:'50%', width:'30px', height:'30px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold'}}>4</div>
+        <div><div style={{fontWeight:'bold', color:'white'}}>Only Bidder?</div><div style={{fontSize:'12px', color:'#94a3b8'}}>If no one challenges you, the game voids and you get a <span style={{color:'#fbbf24'}}>FULL REFUND</span>.</div></div>
+      </div>
+      <button className="action-btn" onClick={onClose}>Got it! Let's Play</button>
+    </div>
+  </div>
+);
+
+const FaqModal = ({ onClose }) => (
+  <div className="modal-overlay">
+    <div className="glass-card modal-content fade-in" style={{textAlign:'left', maxHeight:'80vh', overflowY:'auto', padding: '30px'}}>
+      <button className="close-btn" onClick={onClose}>×</button>
+      <h2 style={{color: '#fbbf24', textAlign:'center', marginBottom:'20px'}}>BidBlaze FAQ</h2>
+      <div style={{color:'#cbd5e1', fontSize:'14px', lineHeight:'1.6'}}>
+           <h3 style={{color:'white', marginTop:'20px', marginBottom:'5px'}}>What is BidBlaze?</h3>
+           <p style={{marginTop:0}}>BidBlaze is a fast-paced, real-time crypto auction game where players battle for a growing jackpot.</p>
+           <h3 style={{color:'white', marginTop:'20px', marginBottom:'5px'}}>How do I play and win?</h3>
+           <ul style={{marginTop:0, paddingLeft:'20px'}}>
+              <li>Deposit crypto to fund your balance.</li>
+              <li>Bid to reset the timer.</li>
+              <li>Last bidder wins the pot.</li>
+           </ul>
+      </div>
+      <button className="action-btn" onClick={onClose} style={{marginTop:'20px'}}>Close FAQ</button>
+    </div>
+  </div>
+);
+
+const TermsModal = ({ onClose }) => (
+  <div className="modal-overlay">
+    <div className="glass-card modal-content fade-in" style={{textAlign:'left', maxHeight:'80vh', overflowY:'auto', padding: '30px'}}>
+      <button className="close-btn" onClick={onClose}>×</button>
+      <h2 style={{color: '#fbbf24', textAlign:'center', marginBottom:'20px'}}>Terms of Service</h2>
+      <div style={{color:'#cbd5e1', fontSize:'12px', lineHeight:'1.6'}}>
+          <p><strong>1. Acceptance</strong><br/>By playing, you agree to these terms.</p>
+          <p><strong>2. Mechanics</strong><br/>Bids are non-refundable unless the round voids.</p>
+          <p><strong>3. Transactions</strong><br/>Withdrawals are subject to security reviews.</p>
+      </div>
+      <button className="action-btn" onClick={onClose} style={{marginTop:'20px'}}>I Agree</button>
+    </div>
+  </div>
+);
 
 // --- MAIN APP COMPONENT ---
 export default function App() {
@@ -45,11 +96,19 @@ export default function App() {
   const [activeRoom, setActiveRoom] = useState(null); 
   const [connectedUsers, setConnectedUsers] = useState(0);
 
-  // Modals
+  // Modals & Menu State
   const [showDeposit, setShowDeposit] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
-  const [showHelp, setShowHelp] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  
+  // Restored Modals from Old Code
+  const [showProfile, setShowProfile] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [showFaq, setShowFaq] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  
+  // Profile Editing State
+  const [editingUsername, setEditingUsername] = useState("");
 
   // Transaction State
   const [depositAmount, setDepositAmount] = useState('');
@@ -57,6 +116,7 @@ export default function App() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [adminWallet, setAdminWallet] = useState(null);
+  const [muted, setMuted] = useState(false);
 
   // --- INITIALIZATION ---
   useEffect(() => {
@@ -69,6 +129,7 @@ export default function App() {
 
     socket.on('authSuccess', (userData) => {
       setUser(userData);
+      setEditingUsername(userData.username); // Init editing state
       setView('lobby'); 
     });
 
@@ -76,19 +137,23 @@ export default function App() {
       setUser(prev => prev ? { ...prev, balance: bal } : null);
     });
 
+    socket.on('userData', (u) => {
+        // Update local user data when profile updates
+        setUser(prev => ({...prev, ...u}));
+    });
+
     socket.on('depositSuccess', () => { setShowDeposit(false); alert("Deposit Confirmed!"); });
     socket.on('withdrawalSuccess', () => { setShowWithdraw(false); alert("Withdrawal Requested!"); });
 
-    // Privy Sync
     if (ready && authenticated && privyUser?.email?.address) {
        socket.emit('getUserBalance', privyUser.email.address);
     }
 
-    // Check LocalStorage
     const saved = localStorage.getItem('bidblaze_user');
     if (saved) {
        const u = JSON.parse(saved);
        setUser(u);
+       setEditingUsername(u.username);
        setView('lobby');
        socket.emit('getUserBalance', u.email);
     }
@@ -96,6 +161,7 @@ export default function App() {
     return () => {
       socket.off('authSuccess');
       socket.off('balanceUpdate');
+      socket.off('userData');
       socket.off('depositSuccess');
       socket.off('withdrawalSuccess');
     };
@@ -107,17 +173,17 @@ export default function App() {
     setUser(null);
     setView('landing');
     setActiveRoom(null);
+    setShowMenu(false);
     await logout();
   };
 
-  const handleJoinRoom = (roomType) => {
-    setActiveRoom(roomType);
-    setView('game');
-  };
-
-  const handleLeaveRoom = () => {
-    setActiveRoom(null);
-    setView('lobby');
+  const handleUpdateUsername = () => {
+    if(!editingUsername || editingUsername.length < 3) return alert("Username too short.");
+    socket.emit('updateProfile', { email: user.email, username: editingUsername });
+    alert("Username updated!");
+    // Optimistically update local state
+    setUser(prev => ({...prev, username: editingUsername}));
+    setShowProfile(false);
   };
 
   const handleDeposit = async () => {
@@ -192,6 +258,7 @@ export default function App() {
              onAuthSuccess={(u) => {
                localStorage.setItem('bidblaze_user', JSON.stringify(u));
                setUser(u);
+               setEditingUsername(u.username);
                setView('lobby');
              }}
              privyLogin={login}
@@ -202,7 +269,7 @@ export default function App() {
            <Lobby
              user={user}
              connectedUsers={connectedUsers}
-             onJoin={handleJoinRoom}
+             onJoin={(room) => { setActiveRoom(room); setView('game'); }}
              onLogout={handleLogout}
              onOpenHelp={() => setShowHelp(true)}
              onOpenMenu={() => setShowMenu(true)}
@@ -214,10 +281,116 @@ export default function App() {
              socket={socket}
              user={user}
              roomType={activeRoom}
-             onLeave={handleLeaveRoom}
+             onLeave={() => { setActiveRoom(null); setView('lobby'); }}
              openDeposit={() => setShowDeposit(true)}
              openWithdraw={() => setShowWithdraw(true)}
            />
+        )}
+
+        {/* --- RESTORED SLIDE-OUT MENU --- */}
+        {showMenu && user && (
+            <div className="modal-overlay" onClick={(e) => { if(e.target.className === 'modal-overlay') setShowMenu(false); }}>
+                <div className="slide-menu" style={{
+                    position:'fixed', right:0, top:0, height:'100%', width:'80%', maxWidth:'300px',
+                    background:'#0f172a', borderLeft:'1px solid #334155', padding:'25px',
+                    boxShadow:'-10px 0 30px rgba(0,0,0,0.5)', zIndex:100,
+                    display:'flex', flexDirection:'column', gap:'20px', animation:'slideIn 0.3s',
+                    overflowY: 'auto'
+                }}>
+                    <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                          <h2 style={{margin:0, color:'#fbbf24'}}>MENU</h2>
+                          <button onClick={() => setShowMenu(false)} style={{background:'none', border:'none', color:'white', fontSize:'24px'}}>×</button>
+                    </div>
+
+                    {/* USER PROFILE BUTTON */}
+                    <div onClick={() => { setShowMenu(false); setShowProfile(true); }}
+                        style={{
+                            background: 'rgba(255,255,255,0.05)', padding:'15px', borderRadius:'12px',
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', border: '1px solid transparent'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'}
+                        onMouseOut={(e) => e.currentTarget.style.borderColor = 'transparent'}
+                    >
+                        <div>
+                            <div style={{color:'#94a3b8', fontSize:'12px', fontWeight:'bold', marginBottom:'5px'}}>LOGGED IN AS</div>
+                            <div style={{color:'white', fontSize:'16px', fontWeight:'bold'}}>{user.username}</div>
+                            <div style={{color:'#64748b', fontSize:'12px'}}>{user.email.length > 20 ? user.email.slice(0,20)+'...' : user.email}</div>
+                        </div>
+                        <div style={{color: '#94a3b8', fontSize: '24px'}}>➤</div>
+                    </div>
+
+                    {/* BALANCE CARD */}
+                    <div style={{background: 'rgba(34, 197, 94, 0.1)', padding:'20px', borderRadius:'12px', border:'1px solid rgba(34, 197, 94, 0.2)'}}>
+                        <div style={{color:'#22c55e', fontSize:'12px', fontWeight:'bold', marginBottom:'5px', letterSpacing:'1px'}}>TOTAL BALANCE</div>
+                        <div style={{fontSize:'32px', fontWeight:'900', color:'white', marginBottom:'15px'}}>${user.balance.toFixed(2)}</div>
+                        <div style={{display:'flex', gap:'10px'}}>
+                            <button onClick={() => { setShowMenu(false); setShowDeposit(true); }} style={{flex:1, padding:'10px', background:'#22c55e', border:'none', borderRadius:'8px', color:'white', fontWeight:'bold', cursor:'pointer', fontSize:'12px'}}>+ DEPOSIT</button>
+                            <button onClick={() => { setShowMenu(false); setShowWithdraw(true); }} style={{flex:1, padding:'10px', background:'#ef4444', border:'none', borderRadius:'8px', color:'white', fontWeight:'bold', cursor:'pointer', fontSize:'12px'}}>- WITHDRAW</button>
+                        </div>
+                    </div>
+
+                    {/* MENU LINKS */}
+                    <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
+                        <button onClick={() => setMuted(!muted)} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
+                            {muted ? '🔊 Unmute Sound' : '🔇 Mute Sound'} <span>{muted ? 'OFF' : 'ON'}</span>
+                        </button>
+                        <button onClick={() => { setShowMenu(false); setShowHelp(true); }} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
+                            ❓ Help / Rules <span>➤</span>
+                        </button>
+                        <button onClick={() => { setShowMenu(false); setShowFaq(true); }} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
+                            📖 FAQ <span>➤</span>
+                        </button>
+                        <button onClick={() => { setShowMenu(false); setShowTerms(true); }} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
+                            📜 Terms & Conditions <span>➤</span>
+                        </button>
+                        <a href="https://t.me/Bidblaze" target="_blank" rel="noopener noreferrer" style={{textDecoration:'none', textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                            💬 24/7 Support <span>➤</span>
+                        </a>
+                    </div>
+
+                    <button onClick={handleLogout} style={{width:'100%', padding:'15px', background:'#ef4444', color:'white', border:'none', borderRadius:'10px', fontWeight:'bold', cursor:'pointer', marginTop:'10px', fontSize:'16px'}}>
+                        LOGOUT
+                    </button>
+                </div>
+            </div>
+        )}
+
+        {/* --- PROFILE MODAL (RESTORED) --- */}
+        {showProfile && user && (
+            <div className="modal-overlay">
+                <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
+                    <button className="close-btn" onClick={() => setShowProfile(false)}>×</button>
+                    <h2 style={{color: '#3b82f6', textAlign:'center', marginTop:0}}>MY PROFILE</h2>
+
+                    <div style={{marginTop:'20px', marginBottom:'25px'}}>
+                        <p style={{color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Edit Username</p>
+                        <div style={{display:'flex', gap:'10px'}}>
+                            <input type="text" value={editingUsername} onChange={(e) => setEditingUsername(e.target.value)} className="input-field" style={{marginBottom:0}} />
+                            <button onClick={handleUpdateUsername} style={{background:'#22c55e', color:'white', border:'none', borderRadius:'12px', fontWeight:'bold', padding:'0 20px', cursor:'pointer'}}>SAVE</button>
+                        </div>
+                    </div>
+
+                    <div style={{display:'flex', gap:'15px', marginBottom:'20px'}}>
+                        <div style={{flex:1, background:'rgba(34, 197, 94, 0.1)', padding:'15px', borderRadius:'12px', textAlign:'center', border:'1px solid rgba(34, 197, 94, 0.2)'}}>
+                            <div style={{fontSize:'12px', color:'#94a3b8'}}>TOTAL WON</div>
+                            <div style={{fontSize:'20px', fontWeight:'bold', color:'#22c55e'}}>${(user.total_won || 0).toFixed(2)}</div>
+                        </div>
+                        <div style={{flex:1, background:'rgba(59, 130, 246, 0.1)', padding:'15px', borderRadius:'12px', textAlign:'center', border:'1px solid rgba(59, 130, 246, 0.2)'}}>
+                            <div style={{fontSize:'12px', color:'#94a3b8'}}>TOTAL BIDDED</div>
+                            <div style={{fontSize:'20px', fontWeight:'bold', color:'#3b82f6'}}>${(user.total_bidded || 0).toFixed(2)}</div>
+                        </div>
+                    </div>
+
+                    <div style={{background:'rgba(255,255,255,0.05)', padding:'15px', borderRadius:'12px', marginTop:'20px'}}>
+                        <div style={{fontSize:'12px', color:'#fbbf24', fontWeight:'bold', marginBottom:'10px'}}>INVITE FRIENDS & EARN 5%</div>
+                        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', background:'rgba(0,0,0,0.3)', padding:'10px', borderRadius:'8px'}}>
+                            <span style={{fontFamily:'monospace', fontSize:'16px', letterSpacing:'1px'}}>{user.referralCode || '...'}</span>
+                            <button onClick={() => {navigator.clipboard.writeText(user.referralCode); alert("Code Copied!")}} style={{background:'none', border:'none', color:'#3b82f6', cursor:'pointer', fontWeight:'bold'}}>COPY</button>
+                        </div>
+                        <div style={{fontSize:'10px', color:'#94a3b8', marginTop:'8px'}}>Share this code. Earn 5% of their winnings instantly.</div>
+                    </div>
+                </div>
+            </div>
         )}
 
         {/* --- GLOBAL MODALS --- */}
@@ -252,28 +425,10 @@ export default function App() {
           </div>
         )}
 
-        {showHelp && (
-            <div className="modal-overlay">
-                <div className="glass-card fade-in">
-                    <button className="close-btn" onClick={() => setShowHelp(false)}>×</button>
-                    <h2>How to Play</h2>
-                    <p>1. Deposit Crypto.</p>
-                    <p>2. Choose a Room.</p>
-                    <p>3. Be the Last Bidder to Win.</p>
-                </div>
-            </div>
-        )}
-
-        {showMenu && (
-            <div className="modal-overlay">
-                <div className="glass-card fade-in">
-                    <button className="close-btn" onClick={() => setShowMenu(false)}>×</button>
-                    <h2>Menu</h2>
-                    <button className="action-btn" onClick={() => setShowProfile(true)}>Profile</button>
-                    <button className="action-btn" onClick={handleLogout}>Logout</button>
-                </div>
-            </div>
-        )}
+        {/* RESTORED MODALS */}
+        {showHelp && <HowToPlay onClose={() => setShowHelp(false)} />}
+        {showFaq && <FaqModal onClose={() => setShowFaq(false)} />}
+        {showTerms && <TermsModal onClose={() => setShowTerms(false)} />}
 
       </div>
       <GlobalStyle />
@@ -283,12 +438,12 @@ export default function App() {
 
 // --- ORIGINAL PROFESSIONAL LANDING PAGE ---
 function LandingPage({ privyLogin, onAuthSuccess }) {
-  const [authMode, setAuthMode] = useState('home'); // 'home', 'login', 'signup', 'reset'
+  const [authMode, setAuthMode] = useState('home'); 
   const [formData, setFormData] = useState({ username: '', email: '', password: '', referralCode: '' });
   const [loading, setLoading] = useState(false);
   const [otp, setOtp] = useState('');
-  const [signupStep, setSignupStep] = useState(1); // 1 = Details, 2 = OTP
-  const [resetStep, setResetStep] = useState(1); // 1 = Email, 2 = OTP + New Password
+  const [signupStep, setSignupStep] = useState(1); 
+  const [resetStep, setResetStep] = useState(1); 
 
   const features = [
     { icon: "⚡", title: "Instant", desc: "No signup lag. Create account & play immediately." },
@@ -312,7 +467,6 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
     // 1. Client-Side Validation
     if(authMode !== 'reset' && (!formData.email || !formData.password)) return alert("Fill all fields");
 
-    // SIGNUP LOGIC
     if(authMode === 'signup') {
         if(signupStep === 1) {
              if(!formData.username) return alert("Enter a username");
@@ -324,12 +478,10 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
              socket.emit('register', { ...formData, otp });
         }
     }
-    // LOGIN LOGIC
     else if (authMode === 'login') {
       setLoading(true);
       socket.emit('login', { email: formData.email, password: formData.password });
     }
-    // RESET PASSWORD LOGIC
     else if (authMode === 'reset') {
         if(resetStep === 1) {
             if(!formData.email) return alert("Enter your email");
@@ -343,36 +495,17 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
     }
   };
 
-  // Socket listeners for Auth
   useEffect(() => {
     const handleSuccess = (userData) => {
       setLoading(false);
       onAuthSuccess(userData);
     };
-
-    const handleError = (msg) => {
-      setLoading(false);
-      alert("❌ " + msg);
-    };
-
-    const handleSignupOtpSent = () => {
-        setLoading(false);
-        setSignupStep(2);
-        alert( "OTP Sent to your email!");
-    };
-
-    const handleResetOtpSent = () => {
-        setLoading(false);
-        setResetStep(2);
-        alert( "OTP Sent to your email! Enter it below.");
-    };
-
+    const handleError = (msg) => { setLoading(false); alert("❌ " + msg); };
+    const handleSignupOtpSent = () => { setLoading(false); setSignupStep(2); alert( "OTP Sent!"); };
+    const handleResetOtpSent = () => { setLoading(false); setResetStep(2); alert( "OTP Sent!"); };
     const handleResetSuccess = () => {
-        setLoading(false);
-        alert("… Password Reset Successful! Please login.");
-        setAuthMode('login');
-        setResetStep(1);
-        setFormData(prev => ({ ...prev, password: '' })); 
+        setLoading(false); alert("… Password Reset Successful!");
+        setAuthMode('login'); setResetStep(1); setFormData(prev => ({ ...prev, password: '' })); 
     };
 
     socket.on('authSuccess', handleSuccess);
@@ -392,7 +525,6 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
 
   return (
     <div className="landing-page-wrapper">
-      {/* Navbar */}
       <div className="lp-nav">
         <div className="lp-logo">BID<span style={{color: '#fbbf24'}}>BLAZE</span></div>
         <div>
@@ -408,217 +540,92 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
         </div>
       </div>
 
-      {/* AUTH FORMS OR HERO */}
       {authMode === 'home' ? (
         <div className="lp-hero">
             <div className="lp-badge">LIVE CRYPTO AUCTIONS</div>
-            <h1 className="lp-title">
-            Bid Small. <br />
-            <span className="text-gradient">Win Massive.</span>
-            </h1>
-            <p className="lp-subtitle">
-            The world's first PvP crypto auction battle. Be the last to bid and the jackpot is yours instantly.
-            </p>
-            {/* UPDATED ACTION BUTTONS CONTAINER */}
+            <h1 className="lp-title">Bid Small. <br /><span className="text-gradient">Win Massive.</span></h1>
+            <p className="lp-subtitle">The world's first PvP crypto auction battle. Be the last to bid and the jackpot is yours instantly.</p>
             <div className="lp-action-container">
-                <button className="lp-btn-primary" onClick={() => setAuthMode('login')}>
-                    LOGIN
-                </button>
-                 <button className="lp-btn-secondary" onClick={() => { setAuthMode('signup'); setSignupStep(1); }}>
-                    SIGN UP ➤
-                 </button>
+                <button className="lp-btn-primary" onClick={() => setAuthMode('login')}>LOGIN</button>
+                 <button className="lp-btn-secondary" onClick={() => { setAuthMode('signup'); setSignupStep(1); }}>SIGN UP ➤</button>
             </div>
-
-            {/* Live Stats Illusion */}
             <div className="lp-stats-row">
-                <div className="lp-stat">
-                    <span className="val">2,401</span>
-                    <span className="lbl">Live Players</span>
-                </div>
-                <div className="lp-stat">
-                    <span className="val" style={{color:'#fbbf24'}}>$142k+</span>
-                    <span className="lbl">Paid Out</span>
-                </div>
-                <div className="lp-stat">
-                    <span className="val">0.5s</span>
-                    <span className="lbl">Latency</span>
-                </div>
+                <div className="lp-stat"><span className="val">2,401</span><span className="lbl">Live Players</span></div>
+                <div className="lp-stat"><span className="val" style={{color:'#fbbf24'}}>$142k+</span><span className="lbl">Paid Out</span></div>
+                <div className="lp-stat"><span className="val">0.5s</span><span className="lbl">Latency</span></div>
             </div>
         </div>
       ) : (
         <div className="glass-card fade-in" style={{marginTop:'50px', maxWidth:'400px'}}>
-            <h2 style={{color:'white', marginTop:0}}>
-                {authMode === 'login' ? 'Welcome Back' : (authMode === 'reset' ? 'Reset Password' : 'Create Account')}
-            </h2>
-
-            {/* --- SIGNUP FLOW --- */}
+            <h2 style={{color:'white', marginTop:0}}>{authMode === 'login' ? 'Welcome Back' : (authMode === 'reset' ? 'Reset Password' : 'Create Account')}</h2>
             {authMode === 'signup' && (
                 <>
                   {signupStep === 1 ? (
                       <>
                         <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Username</p>
-                        <input
-                            className="input-field"
-                            type="text"
-                            placeholder="CryptoKing99"
-                            value={formData.username}
-                            onChange={(e) => setFormData({...formData, username: e.target.value})}
-                        />
+                        <input className="input-field" type="text" placeholder="CryptoKing99" value={formData.username} onChange={(e) => setFormData({...formData, username: e.target.value})} />
                         <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Email Address</p>
-                        <input
-                            className="input-field"
-                            type="email"
-                            placeholder="you@example.com"
-                            value={formData.email}
-                            onChange={(e) => setFormData({...formData, email: e.target.value})}
-                        />
+                        <input className="input-field" type="email" placeholder="you@example.com" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
                         <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Password</p>
-                        <input
-                            className="input-field"
-                            type="password"
-                            placeholder="••••••••"
-                            value={formData.password}
-                            onChange={(e) => setFormData({...formData, password: e.target.value})}
-                        />
-                         {/* REFERRAL CODE INPUT */}
+                        <input className="input-field" type="password" placeholder="••••••••" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
                         <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Referral Code (Optional)</p>
-                        <input
-                            className="input-field"
-                            type="text"
-                            placeholder="e.g. A7X99"
-                            value={formData.referralCode}
-                            onChange={(e) => setFormData({...formData, referralCode: e.target.value})}
-                        />
-
-                        <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>
-                            {loading ? 'SENDING OTP...' : 'NEXT: VERIFY EMAIL'}
-                        </button>
+                        <input className="input-field" type="text" placeholder="e.g. A7X99" value={formData.referralCode} onChange={(e) => setFormData({...formData, referralCode: e.target.value})} />
+                        <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>{loading ? 'SENDING OTP...' : 'NEXT: VERIFY EMAIL'}</button>
                       </>
                   ) : (
                       <>
                         <p style={{textAlign:'center', color:'#94a3b8', fontSize:'14px', marginBottom:'15px'}}>Enter the OTP sent to {formData.email}</p>
-                        <input
-                            className="input-field"
-                            type="text"
-                            placeholder="Enter 6-digit Code"
-                            style={{textAlign:'center', letterSpacing:'5px', fontSize:'20px', fontWeight:'bold'}}
-                            value={otp}
-                            onChange={(e) => setOtp(e.target.value)}
-                        />
-                        <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>
-                            {loading ? 'VERIFYING...' : 'FINISH SIGNUP'}
-                        </button>
+                        <input className="input-field" type="text" placeholder="Enter 6-digit Code" style={{textAlign:'center', letterSpacing:'5px', fontSize:'20px', fontWeight:'bold'}} value={otp} onChange={(e) => setOtp(e.target.value)} />
+                        <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>{loading ? 'VERIFYING...' : 'FINISH SIGNUP'}</button>
                         <p style={{fontSize:'12px', color:'#fbbf24', cursor:'pointer'}} onClick={() => setSignupStep(1)}>Wrong Email?</p>
                       </>
                   )}
                 </>
             )}
-
-            {/* --- LOGIN FLOW --- */}
             {authMode === 'login' && (
                 <>
                     <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Email Address</p>
-                    <input
-                        className="input-field"
-                        type="email"
-                        placeholder="you@example.com"
-                        value={formData.email}
-                        onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    />
+                    <input className="input-field" type="email" placeholder="you@example.com" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
                     <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Password</p>
-                    <input
-                        className="input-field"
-                        type="password"
-                        placeholder="••••••••"
-                        value={formData.password}
-                        onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    />
-
-                    <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>
-                        {loading ? 'PROCESSING...' : 'LOG IN'}
-                    </button>
-                    
-                    {/* Wallet Login Option */}
-                    <button className="main-btn" onClick={privyLogin} style={{fontSize:'14px', marginTop:'10px', background:'#334155', color:'#cbd5e1'}}>
-                        WALLET LOGIN
-                    </button>
-
-                    <p style={{fontSize:'12px', color:'#3b82f6', marginTop:'10px', cursor:'pointer', textAlign:'right'}} onClick={() => { setAuthMode('reset'); setResetStep(1); setFormData({...formData, password: ''}); }}>
-                        Forgot Password?
-                    </p>
+                    <input className="input-field" type="password" placeholder="••••••••" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
+                    <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>{loading ? 'PROCESSING...' : 'LOG IN'}</button>
+                    <button className="main-btn" onClick={privyLogin} style={{fontSize:'14px', marginTop:'10px', background:'#334155', color:'#cbd5e1'}}>WALLET LOGIN</button>
+                    <p style={{fontSize:'12px', color:'#3b82f6', marginTop:'10px', cursor:'pointer', textAlign:'right'}} onClick={() => { setAuthMode('reset'); setResetStep(1); setFormData({...formData, password: ''}); }}>Forgot Password?</p>
                 </>
             )}
-
-            {/* --- RESET PASSWORD FLOW --- */}
             {authMode === 'reset' && (
                 <>
                     {resetStep === 1 ? (
                           <>
                             <p style={{color:'#94a3b8', fontSize:'14px', marginBottom:'15px'}}>Enter your email to receive a reset code.</p>
-                            <input
-                                className="input-field"
-                                type="email"
-                                placeholder="you@example.com"
-                                value={formData.email}
-                                onChange={(e) => setFormData({...formData, email: e.target.value})}
-                            />
-                            <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>
-                                {loading ? 'SENDING...' : 'GET OTP'}
-                            </button>
+                            <input className="input-field" type="email" placeholder="you@example.com" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
+                            <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>{loading ? 'SENDING...' : 'GET OTP'}</button>
                           </>
                     ) : (
                           <>
                             <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>OTP Code</p>
-                            <input
-                                className="input-field"
-                                type="text"
-                                placeholder="Code"
-                                value={otp}
-                                onChange={(e) => setOtp(e.target.value)}
-                            />
+                            <input className="input-field" type="text" placeholder="Code" value={otp} onChange={(e) => setOtp(e.target.value)} />
                             <p style={{textAlign:'left', color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>New Password</p>
-                            <input
-                                className="input-field"
-                                type="password"
-                                placeholder="New Password"
-                                value={formData.password}
-                                onChange={(e) => setFormData({...formData, password: e.target.value})}
-                            />
-                            <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>
-                                {loading ? 'UPDATING...' : 'RESET PASSWORD'}
-                            </button>
+                            <input className="input-field" type="password" placeholder="New Password" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
+                            <button className="main-btn" onClick={handleAuthSubmit} style={{fontSize:'16px', marginTop:'10px'}}>{loading ? 'UPDATING...' : 'RESET PASSWORD'}</button>
                           </>
                     )}
                 </>
             )}
-
-            {/* Toggle between Login/Signup (Hidden when in reset mode) */}
             {authMode !== 'reset' && (
                 <p style={{fontSize:'12px', color:'#64748b', marginTop:'15px', cursor:'pointer'}} onClick={() => {
-                    setAuthMode(authMode === 'login' ? 'signup' : 'login');
-                    setSignupStep(1);
-                }}>
-                    {authMode === 'login' ? "Don't have an account? Sign Up" : "Already have an account? Log In"}
-                </p>
+                    setAuthMode(authMode === 'login' ? 'signup' : 'login'); setSignupStep(1);
+                }}>{authMode === 'login' ? "Don't have an account? Sign Up" : "Already have an account? Log In"}</p>
             )}
         </div>
       )}
 
-      {/* Marquee Section */}
       <div className="lp-marquee-container">
          <div className="lp-marquee-content">
-           <span>🏆 User88 just won $450.00 (ETH)</span> •
-           <span>🚀 CryptoKing just won $1,200.00 (BNB)</span> •
-           <span>💰 Jackpot currently at $52.00</span> •
-           <span>🔥 Alex_99 just won $320.00 (BASE)</span> •
-           <span>⏳ New Round Starting...</span> •
-           <span>🏆 User88 just won $450.00 (ETH)</span> •
-           <span>🚀 CryptoKing just won $1,200.00 (BNB)</span> •
-           <span>💰 Jackpot currently at $52.00</span>
+           <span>🏆 User88 just won $450.00 (ETH)</span> • <span>🚀 CryptoKing just won $1,200.00 (BNB)</span> • <span>💰 Jackpot currently at $52.00</span> • <span>🔥 Alex_99 just won $320.00 (BASE)</span> • <span>⏳ New Round Starting...</span>
          </div>
       </div>
 
-      {/* Features Grid */}
       <div className="lp-features">
          {features.map((f, i) => (
            <div key={i} className="lp-feature-card">
@@ -629,10 +636,7 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
          ))}
       </div>
 
-      {/* Footer */}
-      <div className="lp-footer">
-        © 2025 BidBlaze Protocol.
-      </div>
+      <div className="lp-footer">© 2025 BidBlaze Protocol.</div>
     </div>
   );
 }
