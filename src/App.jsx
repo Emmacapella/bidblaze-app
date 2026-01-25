@@ -57,13 +57,16 @@ const FaqModal = ({ onClose }) => (
       <h2 style={{color: '#fbbf24', textAlign:'center', marginBottom:'20px'}}>BidBlaze FAQ</h2>
       <div style={{color:'#cbd5e1', fontSize:'14px', lineHeight:'1.6'}}>
            <h3 style={{color:'white', marginTop:'20px', marginBottom:'5px'}}>What is BidBlaze?</h3>
-           <p style={{marginTop:0}}>BidBlaze is a fast-paced, real-time crypto auction game where players battle for a growing jackpot.</p>
+           <p style={{marginTop:0}}>BidBlaze is a fast-paced, real-time crypto auction game where players battle for a growing jackpot. Each bid costs exactly $1.00 from your balance and adds time to the countdown. The last player to bid when the timer expires wins the entire pot instantly! Everything is transparent, with blockchain verification for all deposits and fair game mechanics.</p>
            <h3 style={{color:'white', marginTop:'20px', marginBottom:'5px'}}>How do I play and win?</h3>
            <ul style={{marginTop:0, paddingLeft:'20px'}}>
               <li>Deposit crypto to fund your balance.</li>
-              <li>Bid to reset the timer.</li>
-              <li>Last bidder wins the pot.</li>
+              <li>Bid $1.00 – this extends the timer and keeps you in the game.</li>
+              <li>Survive longer than others by bidding strategically.</li>
+              <li>Claim the jackpot – if you're the final bidder, the full amount is added to your balance right away.</li>
+              <li><strong>No Competition Rule:</strong> If no one else bids against you in a round, it's automatically canceled for fairness, and you receive a 100% refund on all your bids.</li>
            </ul>
+           <p style={{textAlign:'center', marginTop:'30px', fontWeight:'bold', color:'#fbbf24'}}>Good luck out there – may you snipe some massive pots! 🚀</p>
       </div>
       <button className="action-btn" onClick={onClose} style={{marginTop:'20px'}}>Close FAQ</button>
     </div>
@@ -76,11 +79,12 @@ const TermsModal = ({ onClose }) => (
       <button className="close-btn" onClick={onClose}>×</button>
       <h2 style={{color: '#fbbf24', textAlign:'center', marginBottom:'20px'}}>Terms of Service</h2>
       <div style={{color:'#cbd5e1', fontSize:'12px', lineHeight:'1.6'}}>
-          <p><strong>1. Acceptance</strong><br/>By playing, you agree to these terms.</p>
-          <p><strong>2. Mechanics</strong><br/>Bids are non-refundable unless the round voids.</p>
-          <p><strong>3. Transactions</strong><br/>Withdrawals are subject to security reviews.</p>
+          <p><strong>1. Acceptance of Terms</strong><br/>By accessing BidBlaze, you agree to be bound by these terms. Risk is inherent in crypto gaming.</p>
+          <p><strong>2. Game Mechanics</strong><br/>Bids are non-refundable unless the round concludes with only a single participant (The "Void/Refund" Rule). The last registered bidder when the server timer reaches zero is declared the winner.</p>
+          <p><strong>3. Transactions</strong><br/>Deposits require 1 blockchain confirmation. Withdrawals are processed automatically but are subject to security reviews which may take 10-60 minutes depending on network congestion.</p>
+          <p><strong>4. Fair Play</strong><br/>Use of exploits, botnets, or multiple accounts to abuse referral bonuses will result in immediate account suspension.</p>
       </div>
-      <button className="action-btn" onClick={onClose} style={{marginTop:'20px'}}>I Agree</button>
+      <button className="action-btn" onClick={onClose} style={{marginTop:'20px'}}>I Agree & Close</button>
     </div>
   </div>
 );
