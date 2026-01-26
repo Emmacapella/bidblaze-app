@@ -17,12 +17,11 @@ export const socket = io(SERVER_URL, {
   reconnection: true
 });
 
-// --- CHAIN CONFIG ---
 const BASE_CHAIN = { id: 8453, name: 'Base', network: 'base', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: ['https://mainnet.base.org'] } } };
 const BSC_CHAIN = { id: 56, name: 'BNB Smart Chain', network: 'bsc', nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 }, rpcUrls: { default: { http: ['https://bsc-dataseed1.binance.org'] } } };
 const ETH_CHAIN = { id: 1, name: 'Ethereum', network: 'homestead', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: ['https://cloudflare-eth.com'] } } };
 
-// --- MODAL COMPONENTS ---
+// --- RESTORED MODALS ---
 const HowToPlay = ({ onClose }) => (
   <div className="modal-overlay">
     <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
@@ -93,13 +92,11 @@ export default function App() {
   const { login, logout, user: privyUser, ready, authenticated } = usePrivy();
   const { wallets } = useWallets();
 
-  // --- STATE ---
   const [user, setUser] = useState(null); 
   const [view, setView] = useState('landing'); 
   const [activeRoom, setActiveRoom] = useState(null); 
   const [connectedUsers, setConnectedUsers] = useState(0);
 
-  // Modals & Menu State
   const [showDeposit, setShowDeposit] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -108,18 +105,17 @@ export default function App() {
   const [showFaq, setShowFaq] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   
-  // New: Transaction/Bids Modals for Menu
-  const [showHistory, setShowHistory] = useState(false); 
+  // NEW MENU MODALS
+  const [showTransactions, setShowTransactions] = useState(false);
   const [showUserBids, setShowUserBids] = useState(false);
+  const [showReferrals, setShowReferrals] = useState(false);
 
-  // Profile Editing State
   const [editingUsername, setEditingUsername] = useState("");
-
-  // Transaction History
   const [depositHistory, setDepositHistory] = useState([]);
   const [withdrawHistory, setWithdrawHistory] = useState([]);
+  const [referralList, setReferralList] = useState([]);
+  const [userBidHistory, setUserBidHistory] = useState([]);
 
-  // Transaction State
   const [depositAmount, setDepositAmount] = useState('');
   const [selectedNetwork, setSelectedNetwork] = useState('BSC');
   const [withdrawAmount, setWithdrawAmount] = useState('');
@@ -127,7 +123,6 @@ export default function App() {
   const [adminWallet, setAdminWallet] = useState(null);
   const [muted, setMuted] = useState(false);
 
-  // --- INITIALIZATION ---
   useEffect(() => {
     if (!socket.connected) socket.connect();
 
@@ -138,7 +133,7 @@ export default function App() {
 
     socket.on('authSuccess', (userData) => {
       setUser(userData);
-      setEditingUsername(userData.username); // Init editing state
+      setEditingUsername(userData.username); 
       setView('lobby'); 
     });
 
@@ -146,12 +141,13 @@ export default function App() {
       setUser(prev => prev ? { ...prev, balance: bal } : null);
     });
 
-    socket.on('userData', (u) => {
-        setUser(prev => ({...prev, ...u}));
-    });
+    socket.on('userData', (u) => { setUser(prev => ({...prev, ...u})); });
 
+    // 🔥 HISTORY PERSISTENCE
     socket.on('depositHistory', (data) => setDepositHistory(data));
     socket.on('withdrawalHistory', (data) => setWithdrawHistory(data));
+    socket.on('referralData', (data) => setReferralList(data));
+    socket.on('userBids', (data) => setUserBidHistory(data));
 
     socket.on('depositSuccess', () => { setShowDeposit(false); alert("Deposit Confirmed!"); });
     socket.on('withdrawalSuccess', () => { setShowWithdraw(false); alert("Withdrawal Requested!"); });
@@ -175,12 +171,13 @@ export default function App() {
       socket.off('userData');
       socket.off('depositHistory');
       socket.off('withdrawalHistory');
+      socket.off('referralData');
+      socket.off('userBids');
       socket.off('depositSuccess');
       socket.off('withdrawalSuccess');
     };
   }, [ready, authenticated, privyUser]);
 
-  // --- ACTIONS ---
   const handleLogout = async () => {
     localStorage.removeItem('bidblaze_user');
     setUser(null);
@@ -253,7 +250,6 @@ export default function App() {
      });
   };
 
-  // --- RENDER ---
   return (
     <PrivyProvider
       appId={PRIVY_APP_ID}
@@ -301,7 +297,7 @@ export default function App() {
            />
         )}
 
-        {/* --- PROFESSIONAL MENU DRAWER (BC.GAME STYLE) --- */}
+        {/* --- PRO MENU DRAWER --- */}
         {showMenu && user && (
             <div className="modal-overlay" style={{justifyContent: 'flex-end', alignItems: 'stretch'}} onClick={(e) => { if(e.target.className.includes('modal-overlay')) setShowMenu(false); }}>
                 <div className="menu-drawer slide-in-right">
@@ -311,65 +307,52 @@ export default function App() {
                         <div className="avatar-large">{user.username.charAt(0).toUpperCase()}</div>
                         <div className="user-details">
                             <div className="menu-username">{user.username}</div>
-                            <div className="menu-uid">ID: {user.id ? user.id.slice(0,8) : '883920'} ❐</div>
+                            <div className="menu-uid">ID: {user.id || '883920'} ❐</div>
                         </div>
                         <div className="arrow-icon">›</div>
                     </div>
 
-                    {/* VIP BAR */}
+                    {/* VIP BAR (STARTS AT 0) */}
                     <div className="vip-section">
                         <div className="vip-header">
-                            <span className="vip-label">VIP 1</span>
+                            <span className="vip-label">VIP 0</span>
                             <span className="vip-club">VIP Club ›</span>
                         </div>
                         <div className="progress-track">
-                            <div className="progress-fill" style={{width: '20%'}}></div>
+                            <div className="progress-fill" style={{width: '0%'}}></div>
                         </div>
-                        <div className="xp-text">20 XP to VIP 2</div>
+                        <div className="xp-text">0 XP to VIP 1</div>
                     </div>
 
                     {/* BALANCE */}
                     <div className="menu-balance-area">
                         <div className="total-bal-label">Total Balance</div>
                         <div className="total-bal-value">${user.balance.toFixed(2)}</div>
-                        
-                        <div className="menu-actions">
-                            <button className="menu-act-btn deposit" onClick={() => { setShowMenu(false); setShowDeposit(true); }}>
-                                ⚡ Deposit
-                            </button>
-                            <button className="menu-act-btn withdraw" onClick={() => { setShowMenu(false); setShowWithdraw(true); }}>
-                                🏦 Withdraw
-                            </button>
-                        </div>
                     </div>
 
-                    {/* QUICK LINKS GRID */}
+                    {/* 4 QUICK ICONS */}
                     <div className="quick-grid">
                         <div className="q-item" onClick={() => { setShowMenu(false); setShowDeposit(true); }}>
                             <div className="q-icon">💰</div>
                             <span>Buy</span>
                         </div>
-                        <div className="q-item">
-                            <div className="q-icon">🔄</div>
-                            <span>Swap</span>
-                        </div>
                         <div className="q-item" onClick={() => { setShowMenu(false); setShowUserBids(true); }}>
                             <div className="q-icon">🔒</div>
                             <span>Vault</span>
                         </div>
-                        <div className="q-item" onClick={() => { setShowMenu(false); setShowDeposit(true); }}>
+                        <div className="q-item" onClick={() => { setShowMenu(false); setShowTransactions(true); }}>
                             <div className="q-icon">📋</div>
-                            <span>Transact</span>
+                            <span>Transaction</span>
+                        </div>
+                        <div className="q-item" onClick={() => { setShowMenu(false); setShowUserBids(true); }}>
+                            <div className="q-icon">🕒</div>
+                            <span>Bid History</span>
                         </div>
                     </div>
 
                     {/* LIST MENU */}
                     <div className="menu-list">
-                        <div className="list-item" onClick={() => { setShowMenu(false); setShowProfile(true); }}>
-                            <span>🔔 Notification</span>
-                            <span className="badge">2</span>
-                        </div>
-                        <div className="list-item" onClick={() => { setShowMenu(false); setShowProfile(true); }}>
+                        <div className="list-item" onClick={() => { setShowMenu(false); setShowReferrals(true); }}>
                             <span>👥 Refer and Earn</span>
                             <span className="arrow">›</span>
                         </div>
@@ -405,7 +388,7 @@ export default function App() {
 
                 </div>
                 <style>{`
-                    .menu-drawer { width: 85%; max-width: 320px; background: #18191d; height: 100%; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; box-shadow: -5px 0 30px rgba(0,0,0,0.8); }
+                    .menu-drawer { width: 85%; max-width: 320px; background: #18191d; height: 100%; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; box-shadow: -5px 0 30px rgba(0,0,0,0.8); z-index: 200; }
                     .slide-in-right { animation: slideIn 0.3s ease-out; }
                     @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
@@ -427,10 +410,6 @@ export default function App() {
                     .menu-balance-area { }
                     .total-bal-label { color: #676d7c; font-size: 12px; }
                     .total-bal-value { color: white; font-size: 20px; font-weight: 900; margin: 5px 0 15px 0; }
-                    .menu-actions { display: flex; gap: 10px; }
-                    .menu-act-btn { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 13px; color: white; }
-                    .deposit { background: #3bc117; }
-                    .withdraw { background: #24262b; color: #98a7b5; }
 
                     .quick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 15px 0; border-bottom: 1px solid #24262b; }
                     .q-item { display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; }
@@ -440,7 +419,6 @@ export default function App() {
                     .menu-list { display: flex; flex-direction: column; gap: 2px; }
                     .list-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #24262b; cursor: pointer; color: #98a7b5; font-size: 13px; font-weight: 600; }
                     .list-item:hover { color: white; }
-                    .badge { background: #3bc117; color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px; }
 
                     .menu-footer { margin-top: auto; }
                     .setting-row { display: flex; justify-content: space-between; padding: 15px 0; color: #98a7b5; font-size: 13px; font-weight: 600; cursor: pointer; }
@@ -451,55 +429,24 @@ export default function App() {
             </div>
         )}
 
-        {/* --- DEPOSIT MODAL --- */}
-        {showDeposit && (
-          <div className="modal-overlay">
-             <div className="glass-card modal-content fade-in">
-                <button className="close-btn" onClick={() => setShowDeposit(false)}>×</button>
-                <h2 style={{color: '#22c55e'}}>DEPOSIT</h2>
-                <select className="input-field" onChange={e => setSelectedNetwork(e.target.value)} value={selectedNetwork}>
-                   <option value="BSC">BNB Smart Chain</option>
-                   <option value="ETH">Ethereum</option>
-                   <option value="BASE">Base</option>
-                </select>
-                <input type="number" className="input-field" placeholder="Amount (e.g. 0.1)" value={depositAmount} onChange={e => setDepositAmount(e.target.value)} />
-                <button className="action-btn" onClick={handleDeposit} style={{background:'#22c55e'}}>PAY NOW</button>
-
-                <div style={{marginTop:'20px', borderTop:'1px solid #334155', paddingTop:'15px'}}>
-                    <p style={{fontSize:'12px', color:'#94a3b8', fontWeight:'bold', textAlign:'left'}}>RECENT DEPOSITS</p>
-                    <div style={{maxHeight:'120px', overflowY:'auto'}}>
-                        {depositHistory.length === 0 ? <p style={{fontSize:'11px', color:'#64748b'}}>No deposits yet.</p> : 
-                         depositHistory.map((d, i) => (
+        {/* --- TRANSACTIONS MODAL (Combined) --- */}
+        {showTransactions && (
+            <div className="modal-overlay">
+                <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
+                    <button className="close-btn" onClick={() => setShowTransactions(false)}>×</button>
+                    <h2 style={{color: '#3bc117', textAlign:'center', marginTop:0}}>TRANSACTIONS</h2>
+                    <div style={{maxHeight:'300px', overflowY:'auto'}}>
+                        {/* Deposits */}
+                        <h4 style={{color:'#64748b', fontSize:'12px', borderBottom:'1px solid #333', paddingBottom:'5px'}}>DEPOSITS</h4>
+                        {depositHistory.map((d, i) => (
                             <div key={i} style={{display:'flex', justifyContent:'space-between', fontSize:'11px', padding:'8px', borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
                                 <span style={{color:'white'}}>${Number(d.amount).toFixed(2)}</span>
                                 <span style={{color:'#22c55e'}}>{d.status}</span>
                             </div>
                         ))}
-                    </div>
-                </div>
-             </div>
-          </div>
-        )}
-
-        {/* --- WITHDRAW MODAL --- */}
-        {showWithdraw && (
-          <div className="modal-overlay">
-             <div className="glass-card modal-content fade-in">
-                <button className="close-btn" onClick={() => setShowWithdraw(false)}>×</button>
-                <h2 style={{color: '#ef4444'}}>WITHDRAW</h2>
-                <select className="input-field" onChange={e => setSelectedNetwork(e.target.value)} value={selectedNetwork}>
-                   <option value="BSC">BNB Smart Chain</option>
-                   <option value="ETH">Ethereum</option>
-                </select>
-                <input type="number" className="input-field" placeholder="Amount ($)" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
-                <input type="text" className="input-field" placeholder="Wallet Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
-                <button className="action-btn" onClick={handleWithdraw} style={{background:'#ef4444'}}>REQUEST PAYOUT</button>
-
-                <div style={{marginTop:'20px', borderTop:'1px solid #334155', paddingTop:'15px'}}>
-                    <p style={{fontSize:'12px', color:'#94a3b8', fontWeight:'bold', textAlign:'left'}}>RECENT WITHDRAWALS</p>
-                    <div style={{maxHeight:'120px', overflowY:'auto'}}>
-                        {withdrawHistory.length === 0 ? <p style={{fontSize:'11px', color:'#64748b'}}>No withdrawals yet.</p> : 
-                         withdrawHistory.map((w, i) => (
+                        {/* Withdrawals */}
+                        <h4 style={{color:'#64748b', fontSize:'12px', borderBottom:'1px solid #333', paddingBottom:'5px', marginTop:'15px'}}>WITHDRAWALS</h4>
+                        {withdrawHistory.map((w, i) => (
                             <div key={i} style={{display:'flex', justifyContent:'space-between', fontSize:'11px', padding:'8px', borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
                                 <span style={{color:'white'}}>${Number(w.amount).toFixed(2)}</span>
                                 <span style={{color: w.status === 'PENDING' ? 'orange' : '#22c55e'}}>{w.status}</span>
@@ -507,25 +454,39 @@ export default function App() {
                         ))}
                     </div>
                 </div>
-             </div>
-          </div>
+            </div>
         )}
 
-        {/* --- USER BIDS MODAL (Restored for Menu) --- */}
-        {showUserBids && user && (
+        {/* --- REFERRALS MODAL --- */}
+        {showReferrals && (
             <div className="modal-overlay">
                 <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
-                    <button className="close-btn" onClick={() => setShowUserBids(false)}>×</button>
-                    <h2 style={{color: '#3b82f6', textAlign:'center', marginTop:0}}>VAULT / BIDS</h2>
-                    <p style={{textAlign:'center', color:'#94a3b8', fontSize:'12px'}}>Your active vault status and bid history.</p>
-                    <div style={{textAlign:'center', padding:'20px', background:'rgba(255,255,255,0.05)', borderRadius:'10px', marginTop:'10px'}}>
-                        <h3>Coming Soon</h3>
-                        <p style={{fontSize:'10px'}}>The Vault Pro feature is currently under development.</p>
+                    <button className="close-btn" onClick={() => setShowReferrals(false)}>×</button>
+                    <h2 style={{color: '#fbbf24', textAlign:'center', marginTop:0}}>MY REFERRALS</h2>
+                    
+                    <div style={{background:'rgba(255,255,255,0.05)', padding:'15px', borderRadius:'12px', marginBottom:'20px'}}>
+                        <div style={{fontSize:'12px', color:'#fbbf24', fontWeight:'bold', marginBottom:'10px'}}>YOUR CODE</div>
+                        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', background:'rgba(0,0,0,0.3)', padding:'10px', borderRadius:'8px'}}>
+                            <span style={{fontFamily:'monospace', fontSize:'16px', letterSpacing:'1px'}}>{user.referralCode || '...'}</span>
+                            <button onClick={() => {navigator.clipboard.writeText(user.referralCode); alert("Code Copied!")}} style={{background:'none', border:'none', color:'#3b82f6', cursor:'pointer', fontWeight:'bold'}}>COPY</button>
+                        </div>
+                    </div>
+
+                    <h4 style={{color:'#64748b', fontSize:'12px', borderBottom:'1px solid #333', paddingBottom:'5px'}}>REFERRED USERS</h4>
+                    <div style={{maxHeight:'150px', overflowY:'auto'}}>
+                        {referralList.length === 0 ? <p style={{fontSize:'11px', color:'#64748b', textAlign:'center'}}>No referrals yet.</p> : 
+                         referralList.map((r, i) => (
+                            <div key={i} style={{display:'flex', justifyContent:'space-between', fontSize:'11px', padding:'8px', borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+                                <span style={{color:'white'}}>{r.username}</span>
+                                <span style={{color:'#22c55e'}}>Won: ${r.total_won?.toFixed(2)}</span>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>
         )}
 
+        {/* --- MODALS --- */}
         {showHelp && <HowToPlay onClose={() => setShowHelp(false)} />}
         {showFaq && <FaqModal onClose={() => setShowFaq(false)} />}
         {showTerms && <TermsModal onClose={() => setShowTerms(false)} />}
@@ -539,13 +500,6 @@ export default function App() {
                         <div style={{display:'flex', gap:'10px'}}>
                             <input type="text" value={editingUsername} onChange={(e) => setEditingUsername(e.target.value)} className="input-field" style={{marginBottom:0}} />
                             <button onClick={handleUpdateUsername} style={{background:'#22c55e', color:'white', border:'none', borderRadius:'12px', fontWeight:'bold', padding:'0 20px', cursor:'pointer'}}>SAVE</button>
-                        </div>
-                    </div>
-                    <div style={{background:'rgba(255,255,255,0.05)', padding:'15px', borderRadius:'12px', marginTop:'20px'}}>
-                        <div style={{fontSize:'12px', color:'#fbbf24', fontWeight:'bold', marginBottom:'10px'}}>INVITE FRIENDS & EARN 5%</div>
-                        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', background:'rgba(0,0,0,0.3)', padding:'10px', borderRadius:'8px'}}>
-                            <span style={{fontFamily:'monospace', fontSize:'16px', letterSpacing:'1px'}}>{user.referralCode || '...'}</span>
-                            <button onClick={() => {navigator.clipboard.writeText(user.referralCode); alert("Code Copied!")}} style={{background:'none', border:'none', color:'#3b82f6', cursor:'pointer', fontWeight:'bold'}}>COPY</button>
                         </div>
                     </div>
                 </div>
