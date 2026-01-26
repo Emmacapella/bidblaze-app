@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import io from 'socket.io-client';
 import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
 import { parseEther } from 'viem';
@@ -22,7 +22,7 @@ const BASE_CHAIN = { id: 8453, name: 'Base', network: 'base', nativeCurrency: { 
 const BSC_CHAIN = { id: 56, name: 'BNB Smart Chain', network: 'bsc', nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 }, rpcUrls: { default: { http: ['https://bsc-dataseed1.binance.org'] } } };
 const ETH_CHAIN = { id: 1, name: 'Ethereum', network: 'homestead', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: ['https://cloudflare-eth.com'] } } };
 
-// --- MODAL COMPONENTS ---
+// --- RESTORED MODALS ---
 const HowToPlay = ({ onClose }) => (
   <div className="modal-overlay">
     <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
@@ -103,6 +103,8 @@ export default function App() {
   const [showDeposit, setShowDeposit] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  
+  // Restored Modals
   const [showProfile, setShowProfile] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showFaq, setShowFaq] = useState(false);
@@ -111,7 +113,7 @@ export default function App() {
   // Profile Editing State
   const [editingUsername, setEditingUsername] = useState("");
 
-  // Transaction History State (Restored)
+  // Transaction History
   const [depositHistory, setDepositHistory] = useState([]);
   const [withdrawHistory, setWithdrawHistory] = useState([]);
 
@@ -146,7 +148,6 @@ export default function App() {
         setUser(prev => ({...prev, ...u}));
     });
 
-    // Listen for History Updates (Restored)
     socket.on('depositHistory', (data) => setDepositHistory(data));
     socket.on('withdrawalHistory', (data) => setWithdrawHistory(data));
 
@@ -282,6 +283,8 @@ export default function App() {
              onLogout={handleLogout}
              onOpenHelp={() => setShowHelp(true)}
              onOpenMenu={() => setShowMenu(true)}
+             onOpenProfile={() => setShowProfile(true)}
+             onOpenDeposit={() => setShowDeposit(true)}
            />
         )}
 
@@ -316,13 +319,10 @@ export default function App() {
                             background: 'rgba(255,255,255,0.05)', padding:'15px', borderRadius:'12px',
                             display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', border: '1px solid transparent'
                         }}
-                        onMouseOver={(e) => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'}
-                        onMouseOut={(e) => e.currentTarget.style.borderColor = 'transparent'}
                     >
                         <div>
                             <div style={{color:'#94a3b8', fontSize:'12px', fontWeight:'bold', marginBottom:'5px'}}>LOGGED IN AS</div>
                             <div style={{color:'white', fontSize:'16px', fontWeight:'bold'}}>{user.username}</div>
-                            <div style={{color:'#64748b', fontSize:'12px'}}>{user.email.length > 20 ? user.email.slice(0,20)+'...' : user.email}</div>
                         </div>
                         <div style={{color: '#94a3b8', fontSize: '24px'}}>➤</div>
                     </div>
@@ -337,9 +337,6 @@ export default function App() {
                     </div>
 
                     <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
-                        <button onClick={() => setMuted(!muted)} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
-                            {muted ? '🔊 Unmute Sound' : '🔇 Mute Sound'} <span>{muted ? 'OFF' : 'ON'}</span>
-                        </button>
                         <button onClick={() => { setShowMenu(false); setShowHelp(true); }} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
                             ❓ Help / Rules <span>➤</span>
                         </button>
@@ -349,9 +346,6 @@ export default function App() {
                         <button onClick={() => { setShowMenu(false); setShowTerms(true); }} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
                             📜 Terms & Conditions <span>➤</span>
                         </button>
-                        <a href="https://t.me/Bidblaze" target="_blank" rel="noopener noreferrer" style={{textDecoration:'none', textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                            💬 24/7 Support <span>➤</span>
-                        </a>
                     </div>
 
                     <button onClick={handleLogout} style={{width:'100%', padding:'15px', background:'#ef4444', color:'white', border:'none', borderRadius:'10px', fontWeight:'bold', cursor:'pointer', marginTop:'10px', fontSize:'16px'}}>
@@ -361,7 +355,7 @@ export default function App() {
             </div>
         )}
 
-        {/* --- PROFILE MODAL (RESTORED WITH REFERRAL) --- */}
+        {/* --- PROFILE MODAL --- */}
         {showProfile && user && (
             <div className="modal-overlay">
                 <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
@@ -387,7 +381,6 @@ export default function App() {
                         </div>
                     </div>
 
-                    {/* REFERRAL SECTION */}
                     <div style={{background:'rgba(255,255,255,0.05)', padding:'15px', borderRadius:'12px', marginTop:'20px'}}>
                         <div style={{fontSize:'12px', color:'#fbbf24', fontWeight:'bold', marginBottom:'10px'}}>INVITE FRIENDS & EARN 5%</div>
                         <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', background:'rgba(0,0,0,0.3)', padding:'10px', borderRadius:'8px'}}>
@@ -400,7 +393,7 @@ export default function App() {
             </div>
         )}
 
-        {/* --- DEPOSIT MODAL WITH HISTORY --- */}
+        {/* --- DEPOSIT MODAL --- */}
         {showDeposit && (
           <div className="modal-overlay">
              <div className="glass-card modal-content fade-in">
@@ -414,7 +407,6 @@ export default function App() {
                 <input type="number" className="input-field" placeholder="Amount (e.g. 0.1)" value={depositAmount} onChange={e => setDepositAmount(e.target.value)} />
                 <button className="action-btn" onClick={handleDeposit} style={{background:'#22c55e'}}>PAY NOW</button>
 
-                {/* RESTORED HISTORY TABLE */}
                 <div style={{marginTop:'20px', borderTop:'1px solid #334155', paddingTop:'15px'}}>
                     <p style={{fontSize:'12px', color:'#94a3b8', fontWeight:'bold', textAlign:'left'}}>RECENT DEPOSITS</p>
                     <div style={{maxHeight:'120px', overflowY:'auto'}}>
@@ -431,7 +423,7 @@ export default function App() {
           </div>
         )}
 
-        {/* --- WITHDRAW MODAL WITH HISTORY --- */}
+        {/* --- WITHDRAW MODAL --- */}
         {showWithdraw && (
           <div className="modal-overlay">
              <div className="glass-card modal-content fade-in">
@@ -445,7 +437,6 @@ export default function App() {
                 <input type="text" className="input-field" placeholder="Wallet Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
                 <button className="action-btn" onClick={handleWithdraw} style={{background:'#ef4444'}}>REQUEST PAYOUT</button>
 
-                {/* RESTORED HISTORY TABLE */}
                 <div style={{marginTop:'20px', borderTop:'1px solid #334155', paddingTop:'15px'}}>
                     <p style={{fontSize:'12px', color:'#94a3b8', fontWeight:'bold', textAlign:'left'}}>RECENT WITHDRAWALS</p>
                     <div style={{maxHeight:'120px', overflowY:'auto'}}>
@@ -462,7 +453,6 @@ export default function App() {
           </div>
         )}
 
-        {/* RESTORED MODALS */}
         {showHelp && <HowToPlay onClose={() => setShowHelp(false)} />}
         {showFaq && <FaqModal onClose={() => setShowFaq(false)} />}
         {showTerms && <TermsModal onClose={() => setShowTerms(false)} />}
@@ -473,7 +463,7 @@ export default function App() {
   );
 }
 
-// --- ORIGINAL PROFESSIONAL LANDING PAGE (UNCHANGED) ---
+// --- LANDING PAGE ---
 function LandingPage({ privyLogin, onAuthSuccess }) {
   const [authMode, setAuthMode] = useState('home'); 
   const [formData, setFormData] = useState({ username: '', email: '', password: '', referralCode: '' });
@@ -488,7 +478,6 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
     { icon: "💰", title: "High Yield", desc: "Small bids, massive jackpots. Winner takes all." }
   ];
 
-  // --- NEW: URL ROUTING FOR LANDING PAGE ---
   useEffect(() => {
       let path = "/";
       if(authMode === 'login') path = "/login";
@@ -501,7 +490,6 @@ function LandingPage({ privyLogin, onAuthSuccess }) {
   }, [authMode]);
 
   const handleAuthSubmit = async () => {
-    // 1. Client-Side Validation
     if(authMode !== 'reset' && (!formData.email || !formData.password)) return alert("Fill all fields");
 
     if(authMode === 'signup') {
