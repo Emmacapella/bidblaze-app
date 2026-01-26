@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
 import { parseEther } from 'viem';
@@ -22,7 +22,7 @@ const BASE_CHAIN = { id: 8453, name: 'Base', network: 'base', nativeCurrency: { 
 const BSC_CHAIN = { id: 56, name: 'BNB Smart Chain', network: 'bsc', nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 }, rpcUrls: { default: { http: ['https://bsc-dataseed1.binance.org'] } } };
 const ETH_CHAIN = { id: 1, name: 'Ethereum', network: 'homestead', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: ['https://cloudflare-eth.com'] } } };
 
-// --- RESTORED MODALS ---
+// --- MODAL COMPONENTS ---
 const HowToPlay = ({ onClose }) => (
   <div className="modal-overlay">
     <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
@@ -103,13 +103,15 @@ export default function App() {
   const [showDeposit, setShowDeposit] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  
-  // Restored Modals
   const [showProfile, setShowProfile] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showFaq, setShowFaq] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   
+  // New: Transaction/Bids Modals for Menu
+  const [showHistory, setShowHistory] = useState(false); 
+  const [showUserBids, setShowUserBids] = useState(false);
+
   // Profile Editing State
   const [editingUsername, setEditingUsername] = useState("");
 
@@ -299,97 +301,153 @@ export default function App() {
            />
         )}
 
-        {/* --- MENU MODAL --- */}
+        {/* --- PROFESSIONAL MENU DRAWER (BC.GAME STYLE) --- */}
         {showMenu && user && (
-            <div className="modal-overlay" onClick={(e) => { if(e.target.className === 'modal-overlay') setShowMenu(false); }}>
-                <div className="slide-menu" style={{
-                    position:'fixed', right:0, top:0, height:'100%', width:'80%', maxWidth:'300px',
-                    background:'#0f172a', borderLeft:'1px solid #334155', padding:'25px',
-                    boxShadow:'-10px 0 30px rgba(0,0,0,0.5)', zIndex:100,
-                    display:'flex', flexDirection:'column', gap:'20px', animation:'slideIn 0.3s',
-                    overflowY: 'auto'
-                }}>
-                    <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                          <h2 style={{margin:0, color:'#fbbf24'}}>MENU</h2>
-                          <button onClick={() => setShowMenu(false)} style={{background:'none', border:'none', color:'white', fontSize:'24px'}}>×</button>
-                    </div>
-
-                    <div onClick={() => { setShowMenu(false); setShowProfile(true); }}
-                        style={{
-                            background: 'rgba(255,255,255,0.05)', padding:'15px', borderRadius:'12px',
-                            display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', border: '1px solid transparent'
-                        }}
-                    >
-                        <div>
-                            <div style={{color:'#94a3b8', fontSize:'12px', fontWeight:'bold', marginBottom:'5px'}}>LOGGED IN AS</div>
-                            <div style={{color:'white', fontSize:'16px', fontWeight:'bold'}}>{user.username}</div>
+            <div className="modal-overlay" style={{justifyContent: 'flex-end', alignItems: 'stretch'}} onClick={(e) => { if(e.target.className.includes('modal-overlay')) setShowMenu(false); }}>
+                <div className="menu-drawer slide-in-right">
+                    
+                    {/* USER HEADER */}
+                    <div className="menu-user-card" onClick={() => { setShowMenu(false); setShowProfile(true); }}>
+                        <div className="avatar-large">{user.username.charAt(0).toUpperCase()}</div>
+                        <div className="user-details">
+                            <div className="menu-username">{user.username}</div>
+                            <div className="menu-uid">ID: {user.id ? user.id.slice(0,8) : '883920'} ❐</div>
                         </div>
-                        <div style={{color: '#94a3b8', fontSize: '24px'}}>➤</div>
+                        <div className="arrow-icon">›</div>
                     </div>
 
-                    <div style={{background: 'rgba(34, 197, 94, 0.1)', padding:'20px', borderRadius:'12px', border:'1px solid rgba(34, 197, 94, 0.2)'}}>
-                        <div style={{color:'#22c55e', fontSize:'12px', fontWeight:'bold', marginBottom:'5px', letterSpacing:'1px'}}>TOTAL BALANCE</div>
-                        <div style={{fontSize:'32px', fontWeight:'900', color:'white', marginBottom:'15px'}}>${user.balance.toFixed(2)}</div>
-                        <div style={{display:'flex', gap:'10px'}}>
-                            <button onClick={() => { setShowMenu(false); setShowDeposit(true); }} style={{flex:1, padding:'10px', background:'#22c55e', border:'none', borderRadius:'8px', color:'white', fontWeight:'bold', cursor:'pointer', fontSize:'12px'}}>+ DEPOSIT</button>
-                            <button onClick={() => { setShowMenu(false); setShowWithdraw(true); }} style={{flex:1, padding:'10px', background:'#ef4444', border:'none', borderRadius:'8px', color:'white', fontWeight:'bold', cursor:'pointer', fontSize:'12px'}}>- WITHDRAW</button>
+                    {/* VIP BAR */}
+                    <div className="vip-section">
+                        <div className="vip-header">
+                            <span className="vip-label">VIP 1</span>
+                            <span className="vip-club">VIP Club ›</span>
+                        </div>
+                        <div className="progress-track">
+                            <div className="progress-fill" style={{width: '20%'}}></div>
+                        </div>
+                        <div className="xp-text">20 XP to VIP 2</div>
+                    </div>
+
+                    {/* BALANCE */}
+                    <div className="menu-balance-area">
+                        <div className="total-bal-label">Total Balance</div>
+                        <div className="total-bal-value">${user.balance.toFixed(2)}</div>
+                        
+                        <div className="menu-actions">
+                            <button className="menu-act-btn deposit" onClick={() => { setShowMenu(false); setShowDeposit(true); }}>
+                                ⚡ Deposit
+                            </button>
+                            <button className="menu-act-btn withdraw" onClick={() => { setShowMenu(false); setShowWithdraw(true); }}>
+                                🏦 Withdraw
+                            </button>
                         </div>
                     </div>
 
-                    <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
-                        <button onClick={() => { setShowMenu(false); setShowHelp(true); }} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
-                            ❓ Help / Rules <span>➤</span>
-                        </button>
-                        <button onClick={() => { setShowMenu(false); setShowFaq(true); }} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
-                            📖 FAQ <span>➤</span>
-                        </button>
-                        <button onClick={() => { setShowMenu(false); setShowTerms(true); }} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
-                            📜 Terms & Conditions <span>➤</span>
-                        </button>
+                    {/* QUICK LINKS GRID */}
+                    <div className="quick-grid">
+                        <div className="q-item" onClick={() => { setShowMenu(false); setShowDeposit(true); }}>
+                            <div className="q-icon">💰</div>
+                            <span>Buy</span>
+                        </div>
+                        <div className="q-item">
+                            <div className="q-icon">🔄</div>
+                            <span>Swap</span>
+                        </div>
+                        <div className="q-item" onClick={() => { setShowMenu(false); setShowUserBids(true); }}>
+                            <div className="q-icon">🔒</div>
+                            <span>Vault</span>
+                        </div>
+                        <div className="q-item" onClick={() => { setShowMenu(false); setShowDeposit(true); }}>
+                            <div className="q-icon">📋</div>
+                            <span>Transact</span>
+                        </div>
                     </div>
 
-                    <button onClick={handleLogout} style={{width:'100%', padding:'15px', background:'#ef4444', color:'white', border:'none', borderRadius:'10px', fontWeight:'bold', cursor:'pointer', marginTop:'10px', fontSize:'16px'}}>
-                        LOGOUT
-                    </button>
+                    {/* LIST MENU */}
+                    <div className="menu-list">
+                        <div className="list-item" onClick={() => { setShowMenu(false); setShowProfile(true); }}>
+                            <span>🔔 Notification</span>
+                            <span className="badge">2</span>
+                        </div>
+                        <div className="list-item" onClick={() => { setShowMenu(false); setShowProfile(true); }}>
+                            <span>👥 Refer and Earn</span>
+                            <span className="arrow">›</span>
+                        </div>
+                        <div className="list-item" onClick={() => { setShowMenu(false); setShowHelp(true); }}>
+                            <span>❓ Help & Support</span>
+                            <span className="arrow">›</span>
+                        </div>
+                        <div className="list-item" onClick={() => { setShowMenu(false); setShowFaq(true); }}>
+                            <span>📖 FAQ</span>
+                            <span className="arrow">›</span>
+                        </div>
+                        <div className="list-item" onClick={() => { setShowMenu(false); setShowTerms(true); }}>
+                            <span>📜 Terms of Service</span>
+                            <span className="arrow">›</span>
+                        </div>
+                    </div>
+
+                    {/* SETTINGS FOOTER */}
+                    <div className="menu-footer">
+                        <div className="setting-row">
+                            <span>Global Setting</span>
+                            <span className="arrow">›</span>
+                        </div>
+                        <div className="footer-actions">
+                            <button className="theme-btn" onClick={() => setMuted(!muted)}>
+                                {muted ? '🔇' : '🔊'}
+                            </button>
+                            <button className="logout-btn-full" onClick={handleLogout}>
+                                LOGOUT
+                            </button>
+                        </div>
+                    </div>
+
                 </div>
-            </div>
-        )}
+                <style>{`
+                    .menu-drawer { width: 85%; max-width: 320px; background: #18191d; height: 100%; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; box-shadow: -5px 0 30px rgba(0,0,0,0.8); }
+                    .slide-in-right { animation: slideIn 0.3s ease-out; }
+                    @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
-        {/* --- PROFILE MODAL --- */}
-        {showProfile && user && (
-            <div className="modal-overlay">
-                <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
-                    <button className="close-btn" onClick={() => setShowProfile(false)}>×</button>
-                    <h2 style={{color: '#3b82f6', textAlign:'center', marginTop:0}}>MY PROFILE</h2>
+                    .menu-user-card { display: flex; align-items: center; gap: 12px; background: #24262b; padding: 12px; border-radius: 12px; cursor: pointer; }
+                    .avatar-large { width: 45px; height: 45px; background: #fbbf24; border-radius: 50%; display: flex; alignItems: center; justifyContent: center; font-weight: 900; color: black; font-size: 20px; }
+                    .user-details { flex: 1; }
+                    .menu-username { font-weight: 800; color: white; font-size: 16px; }
+                    .menu-uid { font-size: 11px; color: #676d7c; margin-top: 2px; }
+                    .arrow-icon { color: #676d7c; font-size: 20px; }
 
-                    <div style={{marginTop:'20px', marginBottom:'25px'}}>
-                        <p style={{color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Edit Username</p>
-                        <div style={{display:'flex', gap:'10px'}}>
-                            <input type="text" value={editingUsername} onChange={(e) => setEditingUsername(e.target.value)} className="input-field" style={{marginBottom:0}} />
-                            <button onClick={handleUpdateUsername} style={{background:'#22c55e', color:'white', border:'none', borderRadius:'12px', fontWeight:'bold', padding:'0 20px', cursor:'pointer'}}>SAVE</button>
-                        </div>
-                    </div>
+                    .vip-section { background: #24262b; padding: 12px; border-radius: 12px; }
+                    .vip-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12px; font-weight: 800; }
+                    .vip-label { color: white; }
+                    .vip-club { color: #3bc117; cursor: pointer; }
+                    .progress-track { height: 6px; background: #16181b; border-radius: 3px; overflow: hidden; }
+                    .progress-fill { height: 100%; background: #3bc117; }
+                    .xp-text { font-size: 10px; color: #676d7c; margin-top: 6px; text-align: right; }
 
-                    <div style={{display:'flex', gap:'15px', marginBottom:'20px'}}>
-                        <div style={{flex:1, background:'rgba(34, 197, 94, 0.1)', padding:'15px', borderRadius:'12px', textAlign:'center', border:'1px solid rgba(34, 197, 94, 0.2)'}}>
-                            <div style={{fontSize:'12px', color:'#94a3b8'}}>TOTAL WON</div>
-                            <div style={{fontSize:'20px', fontWeight:'bold', color:'#22c55e'}}>${(user.total_won || 0).toFixed(2)}</div>
-                        </div>
-                        <div style={{flex:1, background:'rgba(59, 130, 246, 0.1)', padding:'15px', borderRadius:'12px', textAlign:'center', border:'1px solid rgba(59, 130, 246, 0.2)'}}>
-                            <div style={{fontSize:'12px', color:'#94a3b8'}}>TOTAL BIDDED</div>
-                            <div style={{fontSize:'20px', fontWeight:'bold', color:'#3b82f6'}}>${(user.total_bidded || 0).toFixed(2)}</div>
-                        </div>
-                    </div>
+                    .menu-balance-area { }
+                    .total-bal-label { color: #676d7c; font-size: 12px; }
+                    .total-bal-value { color: white; font-size: 20px; font-weight: 900; margin: 5px 0 15px 0; }
+                    .menu-actions { display: flex; gap: 10px; }
+                    .menu-act-btn { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 13px; color: white; }
+                    .deposit { background: #3bc117; }
+                    .withdraw { background: #24262b; color: #98a7b5; }
 
-                    <div style={{background:'rgba(255,255,255,0.05)', padding:'15px', borderRadius:'12px', marginTop:'20px'}}>
-                        <div style={{fontSize:'12px', color:'#fbbf24', fontWeight:'bold', marginBottom:'10px'}}>INVITE FRIENDS & EARN 5%</div>
-                        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', background:'rgba(0,0,0,0.3)', padding:'10px', borderRadius:'8px'}}>
-                            <span style={{fontFamily:'monospace', fontSize:'16px', letterSpacing:'1px'}}>{user.referralCode || '...'}</span>
-                            <button onClick={() => {navigator.clipboard.writeText(user.referralCode); alert("Code Copied!")}} style={{background:'none', border:'none', color:'#3b82f6', cursor:'pointer', fontWeight:'bold'}}>COPY</button>
-                        </div>
-                        <div style={{fontSize:'10px', color:'#94a3b8', marginTop:'8px'}}>Share this code. Earn 5% of their winnings instantly.</div>
-                    </div>
-                </div>
+                    .quick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 15px 0; border-bottom: 1px solid #24262b; }
+                    .q-item { display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; }
+                    .q-icon { font-size: 20px; background: #24262b; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 10px; }
+                    .q-item span { font-size: 10px; color: #98a7b5; }
+
+                    .menu-list { display: flex; flex-direction: column; gap: 2px; }
+                    .list-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #24262b; cursor: pointer; color: #98a7b5; font-size: 13px; font-weight: 600; }
+                    .list-item:hover { color: white; }
+                    .badge { background: #3bc117; color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px; }
+
+                    .menu-footer { margin-top: auto; }
+                    .setting-row { display: flex; justify-content: space-between; padding: 15px 0; color: #98a7b5; font-size: 13px; font-weight: 600; cursor: pointer; }
+                    .footer-actions { display: flex; gap: 10px; margin-top: 10px; }
+                    .theme-btn { background: #24262b; border: none; width: 40px; height: 40px; border-radius: 8px; cursor: pointer; }
+                    .logout-btn-full { flex: 1; background: #24262b; border: none; border-radius: 8px; color: #ef4444; font-weight: 800; cursor: pointer; }
+                `}</style>
             </div>
         )}
 
@@ -453,9 +511,46 @@ export default function App() {
           </div>
         )}
 
+        {/* --- USER BIDS MODAL (Restored for Menu) --- */}
+        {showUserBids && user && (
+            <div className="modal-overlay">
+                <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
+                    <button className="close-btn" onClick={() => setShowUserBids(false)}>×</button>
+                    <h2 style={{color: '#3b82f6', textAlign:'center', marginTop:0}}>VAULT / BIDS</h2>
+                    <p style={{textAlign:'center', color:'#94a3b8', fontSize:'12px'}}>Your active vault status and bid history.</p>
+                    <div style={{textAlign:'center', padding:'20px', background:'rgba(255,255,255,0.05)', borderRadius:'10px', marginTop:'10px'}}>
+                        <h3>Coming Soon</h3>
+                        <p style={{fontSize:'10px'}}>The Vault Pro feature is currently under development.</p>
+                    </div>
+                </div>
+            </div>
+        )}
+
         {showHelp && <HowToPlay onClose={() => setShowHelp(false)} />}
         {showFaq && <FaqModal onClose={() => setShowFaq(false)} />}
         {showTerms && <TermsModal onClose={() => setShowTerms(false)} />}
+        {showProfile && user && (
+            <div className="modal-overlay">
+                <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
+                    <button className="close-btn" onClick={() => setShowProfile(false)}>×</button>
+                    <h2 style={{color: '#3b82f6', textAlign:'center', marginTop:0}}>MY PROFILE</h2>
+                    <div style={{marginTop:'20px', marginBottom:'25px'}}>
+                        <p style={{color:'#94a3b8', fontSize:'12px', marginBottom:'5px'}}>Edit Username</p>
+                        <div style={{display:'flex', gap:'10px'}}>
+                            <input type="text" value={editingUsername} onChange={(e) => setEditingUsername(e.target.value)} className="input-field" style={{marginBottom:0}} />
+                            <button onClick={handleUpdateUsername} style={{background:'#22c55e', color:'white', border:'none', borderRadius:'12px', fontWeight:'bold', padding:'0 20px', cursor:'pointer'}}>SAVE</button>
+                        </div>
+                    </div>
+                    <div style={{background:'rgba(255,255,255,0.05)', padding:'15px', borderRadius:'12px', marginTop:'20px'}}>
+                        <div style={{fontSize:'12px', color:'#fbbf24', fontWeight:'bold', marginBottom:'10px'}}>INVITE FRIENDS & EARN 5%</div>
+                        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', background:'rgba(0,0,0,0.3)', padding:'10px', borderRadius:'8px'}}>
+                            <span style={{fontFamily:'monospace', fontSize:'16px', letterSpacing:'1px'}}>{user.referralCode || '...'}</span>
+                            <button onClick={() => {navigator.clipboard.writeText(user.referralCode); alert("Code Copied!")}} style={{background:'none', border:'none', color:'#3b82f6', cursor:'pointer', fontWeight:'bold'}}>COPY</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
 
       </div>
       <GlobalStyle />

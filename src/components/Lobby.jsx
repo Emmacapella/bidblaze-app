@@ -14,142 +14,161 @@ const Lobby = ({
   return (
     <div className="lobby-container fade-in">
       
-      {/* NAVIGATION BAR */}
-      <nav className="glass-nav">
-        <div className="nav-left">
-          {/* Clicking Balance opens Deposit */}
-          <div className="balance-pill" onClick={onOpenDeposit} style={{cursor: 'pointer'}} title="Deposit">
-            <span className="coin-icon">⚡</span> ${user.balance.toFixed(2)} <span className="plus-tiny">+</span>
-          </div>
-          <div className="live-pill">● {connectedUsers || 1} LIVE</div>
-        </div>
-
-        <div className="nav-right">
-          {/* Buttons connected to App.jsx functions */}
-          <button className="nav-icon-btn" onClick={onOpenHelp} title="Help Rules">❓</button>
-          <button className="nav-icon-btn" onClick={onOpenMenu} title="Open Menu">☰</button>
-          <button className="logout-btn-minimal" onClick={onLogout} title="Logout">⏻</button>
-        </div>
-      </nav>
-
-      {/* HERO SECTION */}
-      <div className="lobby-hero">
-        <h2 className="lobby-title">CHOOSE YOUR TABLE</h2>
-        {/* Clicking Name opens Profile */}
-        <p className="user-greeting" onClick={onOpenProfile} style={{cursor: 'pointer'}} title="View Profile">
-           Welcome, <span style={{color:'#fbbf24', textDecoration:'underline'}}>{user.username}</span>
-        </p>
+      {/* 1. APP-LIKE HEADER */}
+      <div className="app-header">
+         <div className="user-pill" onClick={onOpenProfile}>
+            <div className="avatar-small">{user.username.charAt(0).toUpperCase()}</div>
+            <span className="username">{user.username}</span>
+         </div>
+         
+         <div className="wallet-btn" onClick={onOpenDeposit}>
+            <span className="wallet-icon">⚡</span>
+            <span className="balance">${user.balance.toFixed(2)}</span>
+            <div className="plus-btn">+</div>
+         </div>
       </div>
 
-      {/* GAME CARDS SECTION */}
-      <div className="category-section">
-        <h3 className="category-header">🔥 BIDBLAZE ORIGINALS</h3>
-        
-        <div className="room-grid">
-          
-          {/* NOVICE ROOM ($0.10) */}
-          {/* Visual: Shows +$0.095 to Jackpot (Reflecting 5% House Fee) */}
-          <div className="room-card novice-card" onClick={() => onJoin('low')}>
-            <div className="card-badge popular">POPULAR</div>
-            <div className="card-content">
-               <div className="icon-glow-silver">🛡️</div>
-               <h3 className="room-name">Novice</h3>
-               <div className="stat-row">
-                  <span className="stat-label">JACKPOT ADDS</span>
-                  <span className="stat-val green">+$0.095</span>
-               </div>
-               <div className="bid-cost-tiny">Bid Cost: $0.10</div>
-            </div>
-            <button className="action-btn-green">PLAY</button>
+      {/* 2. MAIN CONTENT AREA */}
+      <div className="lobby-scroll-area">
+          <div className="promo-banner">
+             <h3>WELCOME TO BIDBLAZE</h3>
+             <p>Select a table to start winning.</p>
           </div>
 
-          {/* HIGH ROLLER ($1.00) */}
-          {/* Visual: Shows +$0.95 to Jackpot (Reflecting 5% House Fee) */}
-          <div className="room-card pro-card" onClick={() => onJoin('high')}>
-            <div className="card-badge gold">LEGENDARY</div>
-            <div className="card-content">
-               <div className="icon-glow-gold">👑</div>
-               <h3 className="room-name">High Roller</h3>
-               <div className="stat-row">
-                  <span className="stat-label">JACKPOT ADDS</span>
-                  <span className="stat-val gold">+$0.95</span>
-               </div>
-               <div className="bid-cost-tiny">Bid Cost: $1.00</div>
-            </div>
-            <button className="action-btn-gold">PLAY</button>
+          <div className="section-title">
+             <span className="fire">🔥</span> POPULAR GAMES
           </div>
 
-        </div>
+          <div className="game-grid">
+             {/* NOVICE CARD (Green Gradient) */}
+             <div className="game-card novice" onClick={() => onJoin('low')}>
+                <div className="card-top">
+                   <span className="badge">HOT</span>
+                   <div className="icon">🛡️</div>
+                </div>
+                <div className="card-bottom">
+                   <h3>Novice</h3>
+                   <div className="details">
+                      <span>Entry: $0.10</span>
+                      <span style={{color:'#a7f3d0'}}>Jackpot +$0.095</span>
+                   </div>
+                </div>
+             </div>
+
+             {/* HIGH ROLLER CARD (Purple/Gold Gradient) */}
+             <div className="game-card pro" onClick={() => onJoin('high')}>
+                <div className="card-top">
+                   <span className="badge gold">VIP</span>
+                   <div className="icon">👑</div>
+                </div>
+                <div className="card-bottom">
+                   <h3>High Roller</h3>
+                   <div className="details">
+                      <span>Entry: $1.00</span>
+                      <span style={{color:'#fde68a'}}>Jackpot +$0.95</span>
+                   </div>
+                </div>
+             </div>
+          </div>
+
+          <div className="live-stats">
+             <div className="stat-pill">🟢 {connectedUsers} Players Online</div>
+             <div className="stat-pill">🔒 Provably Fair</div>
+          </div>
       </div>
 
-      <div className="lobby-footer">Verified Fair • House Fee 5% • Secure v2.4</div>
+      {/* 3. FIXED BOTTOM NAVIGATION BAR */}
+      <div className="bottom-nav">
+         <div className="nav-item active">
+            <span className="nav-icon">🏠</span>
+            <span className="nav-label">Lobby</span>
+         </div>
+         <div className="nav-item" onClick={onOpenDeposit}>
+            <span className="nav-icon">👛</span>
+            <span className="nav-label">Wallet</span>
+         </div>
+         <div className="nav-item big-play" onClick={() => onJoin('low')}>
+            <span className="play-icon">▶</span>
+         </div>
+         <div className="nav-item" onClick={onOpenHelp}>
+            <span className="nav-icon">❓</span>
+            <span className="nav-label">Help</span>
+         </div>
+         <div className="nav-item" onClick={onOpenMenu}>
+            <span className="nav-icon">☰</span>
+            <span className="nav-label">Menu</span>
+         </div>
+      </div>
 
-      {/* STYLES */}
       <style>{`
         /* LAYOUT */
-        .lobby-container { width: 100%; max-width: 500px; display: flex; flex-direction: column; align-items: center; padding: 15px; margin: 0 auto; box-sizing: border-box; }
+        .lobby-container { 
+            width: 100%; height: 100vh; background: #18191d; color: white; 
+            display: flex; flex-direction: column; overflow: hidden;
+        }
 
-        /* NAV BAR */
-        .glass-nav { width: 100%; display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); padding: 10px 15px; border-radius: 16px; margin-bottom: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
-        .nav-left { display: flex; align-items: center; gap: 8px; }
-        .nav-right { display: flex; align-items: center; gap: 5px; }
+        /* HEADER */
+        .app-header {
+            padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;
+            background: #24262b; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 10;
+        }
+        .user-pill { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .avatar-small { width: 32px; height: 32px; background: #3bc117; border-radius: 50%; display: flex; alignItems: center; justify-content: center; font-weight: bold; color: black; }
+        .username { font-size: 14px; font-weight: 700; }
+        
+        .wallet-btn { 
+            background: #2d3035; padding: 6px 12px; border-radius: 20px; display: flex; align-items: center; gap: 8px; cursor: pointer; border: 1px solid #3bc117; 
+        }
+        .balance { font-weight: 800; font-size: 14px; color: white; }
+        .plus-btn { background: #3bc117; width: 20px; height: 20px; border-radius: 50%; display: flex; alignItems: center; justify-content: center; font-size: 14px; color: black; font-weight: bold; }
 
-        .balance-pill { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 20px; font-weight: 800; font-size: 13px; display: flex; align-items: center; gap: 5px; transition: 0.2s; color: white; }
-        .balance-pill:active { transform: scale(0.95); background: rgba(255,255,255,0.15); }
-        .plus-tiny { font-size: 10px; background: #22c55e; width: 12px; height: 12px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-left: 2px; }
+        /* SCROLL AREA */
+        .lobby-scroll-area { flex: 1; overflow-y: auto; padding: 20px; padding-bottom: 90px; }
         
-        .live-pill { font-size: 9px; font-weight: 700; color: #4ade80; background: rgba(34, 197, 94, 0.15); padding: 4px 8px; border-radius: 8px; }
-        
-        .nav-icon-btn { background: transparent; border: none; font-size: 20px; cursor: pointer; opacity: 0.7; padding: 5px; transition: 0.2s; }
-        .nav-icon-btn:hover { opacity: 1; transform: scale(1.1); }
-        
-        .logout-btn-minimal { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.2); color: #ef4444; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; margin-left: 5px; }
+        .promo-banner {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6); padding: 20px; border-radius: 16px; margin-bottom: 25px; text-align: center; box-shadow: 0 5px 15px rgba(59, 130, 246, 0.3);
+        }
+        .promo-banner h3 { margin: 0; font-size: 18px; font-weight: 900; letter-spacing: 1px; }
+        .promo-banner p { margin: 5px 0 0 0; font-size: 12px; opacity: 0.8; }
 
-        /* HERO */
-        .lobby-hero { text-align: center; margin-bottom: 25px; }
-        .lobby-title { font-size: 24px; font-weight: 900; margin: 0; background: linear-gradient(to bottom, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.5px; }
-        .user-greeting { margin: 5px 0 0 0; font-size: 13px; color: #64748b; font-weight: 500; }
+        .section-title { font-size: 14px; font-weight: 800; color: #98a7b5; margin-bottom: 15px; letter-spacing: 1px; }
 
-        /* CATEGORY */
-        .category-section { width: 100%; margin-bottom: 20px; }
-        .category-header { font-size: 11px; color: #94a3b8; letter-spacing: 1.5px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; font-weight: 800; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px; }
+        /* GRID LAYOUT */
+        .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        
+        .game-card { 
+            border-radius: 16px; padding: 15px; cursor: pointer; height: 160px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; transition: transform 0.1s;
+        }
+        .game-card:active { transform: scale(0.96); }
+        
+        .novice { background: linear-gradient(135deg, #059669, #10b981); box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3); }
+        .pro { background: linear-gradient(135deg, #7c3aed, #d946ef); box-shadow: 0 5px 15px rgba(217, 70, 239, 0.3); }
 
-        /* GRID FIX FOR MOBILE - SIDE BY SIDE */
-        .room-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
-        
-        /* CARD DESIGN */
-        .room-card { position: relative; background: linear-gradient(160deg, #1e293b 0%, #0f172a 100%); border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; padding: 15px; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; height: 200px; transition: 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-        .room-card:active { transform: scale(0.98); }
-        
-        .card-badge { position: absolute; top: 10px; right: 10px; font-size: 7px; font-weight: 900; padding: 3px 6px; border-radius: 4px; text-transform: uppercase; }
-        .popular { background: rgba(255,255,255,0.1); color: #cbd5e1; }
-        .gold { background: linear-gradient(135deg, #fbbf24, #b45309); color: black; box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3); }
+        .card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+        .badge { font-size: 9px; font-weight: 900; background: rgba(0,0,0,0.3); padding: 3px 6px; border-radius: 4px; }
+        .badge.gold { background: #fbbf24; color: black; }
+        .icon { font-size: 32px; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3)); }
 
-        .card-content { text-align: center; margin-top: 15px; }
-        .icon-glow-silver { font-size: 32px; margin-bottom: 5px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.15)); }
-        .icon-glow-gold { font-size: 32px; margin-bottom: 5px; filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.3)); }
-        .room-name { margin: 0; font-size: 16px; font-weight: 800; color: white; letter-spacing: 0.5px; }
-        
-        .stat-row { margin-top: 10px; background: rgba(0,0,0,0.3); padding: 6px; border-radius: 8px; display: flex; flex-direction: column; gap: 2px; border: 1px solid rgba(255,255,255,0.03); }
-        .stat-label { font-size: 8px; font-weight: 700; color: #64748b; letter-spacing: 0.5px; }
-        .stat-val { font-size: 14px; font-weight: 800; }
-        .stat-val.green { color: #4ade80; text-shadow: 0 0 10px rgba(74, 222, 128, 0.2); }
-        .stat-val.gold { color: #fbbf24; text-shadow: 0 0 10px rgba(251, 191, 36, 0.2); }
-        
-        .bid-cost-tiny { font-size: 9px; color: #64748b; margin-top: 8px; font-weight: 600; }
+        .card-bottom h3 { margin: 0; font-size: 16px; font-weight: 800; }
+        .details { margin-top: 5px; font-size: 10px; display: flex; flex-direction: column; font-weight: 600; opacity: 0.9; }
 
-        /* BUTTONS */
-        .action-btn-green, .action-btn-gold { width: 100%; padding: 10px; border: none; border-radius: 10px; font-weight: 800; font-size: 12px; margin-top: 10px; cursor: pointer; transition: 0.2s; }
-        .action-btn-green { background: #22c55e; color: white; box-shadow: 0 3px 0 #15803d; }
-        .action-btn-green:active { transform: translateY(3px); box-shadow: none; }
+        .live-stats { display: flex; justify-content: center; gap: 10px; margin-top: 30px; }
+        .stat-pill { background: #24262b; padding: 6px 12px; border-radius: 20px; font-size: 10px; color: #676d7c; font-weight: bold; }
+
+        /* BOTTOM NAV */
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 70px; background: #24262b; border-top: 1px solid #2d3035; display: flex; justify-content: space-around; align-items: center; z-index: 20; padding-bottom: 10px; box-sizing: border-box;
+        }
+        .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 20%; cursor: pointer; color: #676d7c; transition: 0.2s; }
+        .nav-item.active { color: #3bc117; }
+        .nav-icon { font-size: 20px; margin-bottom: 4px; }
+        .nav-label { font-size: 10px; font-weight: 600; }
         
-        .action-btn-gold { background: #fbbf24; color: black; box-shadow: 0 3px 0 #b45309; }
-        .action-btn-gold:active { transform: translateY(3px); box-shadow: none; }
-        
-        .lobby-footer { margin-top: 30px; color: #475569; font-size: 10px; opacity: 0.5; text-align: center; font-weight: 500; letter-spacing: 0.5px; }
-        
+        .big-play { position: relative; top: -15px; }
+        .play-icon { width: 50px; height: 50px; background: #3bc117; border-radius: 50%; display: flex; alignItems: center; justify-content: center; font-size: 20px; color: black; box-shadow: 0 5px 15px rgba(59, 193, 23, 0.4); border: 4px solid #18191d; }
+
         .fade-in { animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
       `}</style>
     </div>
   );
