@@ -22,8 +22,7 @@ const BASE_CHAIN = { id: 8453, name: 'Base', network: 'base', nativeCurrency: { 
 const BSC_CHAIN = { id: 56, name: 'BNB Smart Chain', network: 'bsc', nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 }, rpcUrls: { default: { http: ['https://bsc-dataseed1.binance.org'] } } };
 const ETH_CHAIN = { id: 1, name: 'Ethereum', network: 'homestead', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: ['https://cloudflare-eth.com'] } } };
 
-// --- RESTORED MODALS (FAQ & Terms from Old Code) ---
-
+// --- MODAL COMPONENTS ---
 const HowToPlay = ({ onClose }) => (
   <div className="modal-overlay">
     <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
@@ -104,8 +103,6 @@ export default function App() {
   const [showDeposit, setShowDeposit] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  
-  // Restored Modals from Old Code
   const [showProfile, setShowProfile] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showFaq, setShowFaq] = useState(false);
@@ -113,6 +110,10 @@ export default function App() {
   
   // Profile Editing State
   const [editingUsername, setEditingUsername] = useState("");
+
+  // Transaction History State (Restored)
+  const [depositHistory, setDepositHistory] = useState([]);
+  const [withdrawHistory, setWithdrawHistory] = useState([]);
 
   // Transaction State
   const [depositAmount, setDepositAmount] = useState('');
@@ -145,6 +146,10 @@ export default function App() {
         setUser(prev => ({...prev, ...u}));
     });
 
+    // Listen for History Updates (Restored)
+    socket.on('depositHistory', (data) => setDepositHistory(data));
+    socket.on('withdrawalHistory', (data) => setWithdrawHistory(data));
+
     socket.on('depositSuccess', () => { setShowDeposit(false); alert("Deposit Confirmed!"); });
     socket.on('withdrawalSuccess', () => { setShowWithdraw(false); alert("Withdrawal Requested!"); });
 
@@ -165,6 +170,8 @@ export default function App() {
       socket.off('authSuccess');
       socket.off('balanceUpdate');
       socket.off('userData');
+      socket.off('depositHistory');
+      socket.off('withdrawalHistory');
       socket.off('depositSuccess');
       socket.off('withdrawalSuccess');
     };
@@ -289,7 +296,7 @@ export default function App() {
            />
         )}
 
-        {/* --- RESTORED SLIDE-OUT MENU --- */}
+        {/* --- MENU MODAL --- */}
         {showMenu && user && (
             <div className="modal-overlay" onClick={(e) => { if(e.target.className === 'modal-overlay') setShowMenu(false); }}>
                 <div className="slide-menu" style={{
@@ -304,7 +311,6 @@ export default function App() {
                           <button onClick={() => setShowMenu(false)} style={{background:'none', border:'none', color:'white', fontSize:'24px'}}>×</button>
                     </div>
 
-                    {/* USER PROFILE BUTTON */}
                     <div onClick={() => { setShowMenu(false); setShowProfile(true); }}
                         style={{
                             background: 'rgba(255,255,255,0.05)', padding:'15px', borderRadius:'12px',
@@ -321,7 +327,6 @@ export default function App() {
                         <div style={{color: '#94a3b8', fontSize: '24px'}}>➤</div>
                     </div>
 
-                    {/* BALANCE CARD */}
                     <div style={{background: 'rgba(34, 197, 94, 0.1)', padding:'20px', borderRadius:'12px', border:'1px solid rgba(34, 197, 94, 0.2)'}}>
                         <div style={{color:'#22c55e', fontSize:'12px', fontWeight:'bold', marginBottom:'5px', letterSpacing:'1px'}}>TOTAL BALANCE</div>
                         <div style={{fontSize:'32px', fontWeight:'900', color:'white', marginBottom:'15px'}}>${user.balance.toFixed(2)}</div>
@@ -331,7 +336,6 @@ export default function App() {
                         </div>
                     </div>
 
-                    {/* MENU LINKS */}
                     <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
                         <button onClick={() => setMuted(!muted)} style={{textAlign:'left', background:'transparent', border:'1px solid #334155', padding:'15px', borderRadius:'10px', color:'white', fontWeight:'bold', display:'flex', justifyContent:'space-between'}}>
                             {muted ? '🔊 Unmute Sound' : '🔇 Mute Sound'} <span>{muted ? 'OFF' : 'ON'}</span>
@@ -357,7 +361,7 @@ export default function App() {
             </div>
         )}
 
-        {/* --- PROFILE MODAL (RESTORED) --- */}
+        {/* --- PROFILE MODAL (RESTORED WITH REFERRAL) --- */}
         {showProfile && user && (
             <div className="modal-overlay">
                 <div className="glass-card modal-content fade-in" style={{textAlign:'left'}}>
@@ -383,6 +387,7 @@ export default function App() {
                         </div>
                     </div>
 
+                    {/* REFERRAL SECTION */}
                     <div style={{background:'rgba(255,255,255,0.05)', padding:'15px', borderRadius:'12px', marginTop:'20px'}}>
                         <div style={{fontSize:'12px', color:'#fbbf24', fontWeight:'bold', marginBottom:'10px'}}>INVITE FRIENDS & EARN 5%</div>
                         <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', background:'rgba(0,0,0,0.3)', padding:'10px', borderRadius:'8px'}}>
@@ -395,7 +400,7 @@ export default function App() {
             </div>
         )}
 
-        {/* --- GLOBAL MODALS --- */}
+        {/* --- DEPOSIT MODAL WITH HISTORY --- */}
         {showDeposit && (
           <div className="modal-overlay">
              <div className="glass-card modal-content fade-in">
@@ -408,9 +413,25 @@ export default function App() {
                 </select>
                 <input type="number" className="input-field" placeholder="Amount (e.g. 0.1)" value={depositAmount} onChange={e => setDepositAmount(e.target.value)} />
                 <button className="action-btn" onClick={handleDeposit} style={{background:'#22c55e'}}>PAY NOW</button>
+
+                {/* RESTORED HISTORY TABLE */}
+                <div style={{marginTop:'20px', borderTop:'1px solid #334155', paddingTop:'15px'}}>
+                    <p style={{fontSize:'12px', color:'#94a3b8', fontWeight:'bold', textAlign:'left'}}>RECENT DEPOSITS</p>
+                    <div style={{maxHeight:'120px', overflowY:'auto'}}>
+                        {depositHistory.length === 0 ? <p style={{fontSize:'11px', color:'#64748b'}}>No deposits yet.</p> : 
+                         depositHistory.map((d, i) => (
+                            <div key={i} style={{display:'flex', justifyContent:'space-between', fontSize:'11px', padding:'8px', borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+                                <span style={{color:'white'}}>${Number(d.amount).toFixed(2)}</span>
+                                <span style={{color:'#22c55e'}}>{d.status}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
              </div>
           </div>
         )}
+
+        {/* --- WITHDRAW MODAL WITH HISTORY --- */}
         {showWithdraw && (
           <div className="modal-overlay">
              <div className="glass-card modal-content fade-in">
@@ -423,6 +444,20 @@ export default function App() {
                 <input type="number" className="input-field" placeholder="Amount ($)" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
                 <input type="text" className="input-field" placeholder="Wallet Address" value={withdrawAddress} onChange={e => setWithdrawAddress(e.target.value)} />
                 <button className="action-btn" onClick={handleWithdraw} style={{background:'#ef4444'}}>REQUEST PAYOUT</button>
+
+                {/* RESTORED HISTORY TABLE */}
+                <div style={{marginTop:'20px', borderTop:'1px solid #334155', paddingTop:'15px'}}>
+                    <p style={{fontSize:'12px', color:'#94a3b8', fontWeight:'bold', textAlign:'left'}}>RECENT WITHDRAWALS</p>
+                    <div style={{maxHeight:'120px', overflowY:'auto'}}>
+                        {withdrawHistory.length === 0 ? <p style={{fontSize:'11px', color:'#64748b'}}>No withdrawals yet.</p> : 
+                         withdrawHistory.map((w, i) => (
+                            <div key={i} style={{display:'flex', justifyContent:'space-between', fontSize:'11px', padding:'8px', borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+                                <span style={{color:'white'}}>${Number(w.amount).toFixed(2)}</span>
+                                <span style={{color: w.status === 'PENDING' ? 'orange' : '#22c55e'}}>{w.status}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
              </div>
           </div>
         )}
@@ -438,7 +473,7 @@ export default function App() {
   );
 }
 
-// --- ORIGINAL PROFESSIONAL LANDING PAGE ---
+// --- ORIGINAL PROFESSIONAL LANDING PAGE (UNCHANGED) ---
 function LandingPage({ privyLogin, onAuthSuccess }) {
   const [authMode, setAuthMode] = useState('home'); 
   const [formData, setFormData] = useState({ username: '', email: '', password: '', referralCode: '' });
