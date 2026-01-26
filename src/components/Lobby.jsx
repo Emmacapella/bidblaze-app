@@ -1,15 +1,29 @@
 import React from 'react';
 
-const Lobby = ({ user, onJoin, onLogout, connectedUsers, onOpenHelp, onOpenMenu, onOpenProfile, onOpenDeposit }) => {
+const Lobby = ({ 
+  user, 
+  onJoin, 
+  onLogout, 
+  connectedUsers, 
+  onOpenHelp, 
+  onOpenMenu, 
+  onOpenProfile, 
+  onOpenDeposit 
+}) => {
+
   return (
     <div className="lobby-container fade-in">
       
-      {/* 1. HEADER (Aligned) */}
+      {/* 1. HEADER (Fixed Alignment) */}
       <div className="app-header">
          <div className="user-pill" onClick={onOpenProfile}>
-            <div className="avatar-small">{user.username.charAt(0).toUpperCase()}</div>
+            {/* Flex container ensures circle is perfectly round and centered */}
+            <div className="avatar-circle">
+               {user.username.charAt(0).toUpperCase()}
+            </div>
             <span className="username">{user.username}</span>
          </div>
+         
          <div className="wallet-btn" onClick={onOpenDeposit}>
             <span className="wallet-icon">⚡</span>
             <span className="balance">${user.balance.toFixed(2)}</span>
@@ -20,16 +34,11 @@ const Lobby = ({ user, onJoin, onLogout, connectedUsers, onOpenHelp, onOpenMenu,
       {/* 2. SCROLLABLE CONTENT */}
       <div className="lobby-scroll-area">
           
-          {/* BANNER */}
+          {/* BANNER (Logo Only) */}
           <div className="promo-banner">
-             <div className="promo-content">
-                 <div className="promo-tag">EXCLUSIVE</div>
-                 <h3>DEPOSIT BONUS</h3>
-                 <h1>240% BONUS</h1>
-                 <button className="promo-btn" onClick={onOpenDeposit}>DEPOSIT NOW</button>
-             </div>
-             <div className="promo-dots">
-                 <span className="dot active"></span><span className="dot"></span><span className="dot"></span>
+             <div className="promo-content-centered">
+                 <h1>BID<span style={{color:'#fbbf24'}}>BLAZE</span></h1>
+                 <p>The Ultimate Crypto Auction</p>
              </div>
           </div>
 
@@ -58,15 +67,17 @@ const Lobby = ({ user, onJoin, onLogout, connectedUsers, onOpenHelp, onOpenMenu,
           <div className="wins-ticker">
              <div className="win-item">
                  <div className="win-img">🦄</div>
-                 <div className="win-info"><span className="win-u">User88</span><span className="win-a text-green">+$450.00</span></div>
+                 <div className="win-info">
+                     <span className="win-u">User88</span>
+                     <span className="win-a text-green">+$450.00</span>
+                 </div>
              </div>
              <div className="win-item">
                  <div className="win-img">🦁</div>
-                 <div className="win-info"><span className="win-u">CryptoKing</span><span className="win-a text-gold">+$1,200.00</span></div>
-             </div>
-             <div className="win-item">
-                 <div className="win-img">🦊</div>
-                 <div className="win-info"><span className="win-u">Alex_99</span><span className="win-a text-green">+$320.00</span></div>
+                 <div className="win-info">
+                     <span className="win-u">CryptoKing</span>
+                     <span className="win-a text-gold">+$1,200.00</span>
+                 </div>
              </div>
           </div>
 
@@ -99,7 +110,7 @@ const Lobby = ({ user, onJoin, onLogout, connectedUsers, onOpenHelp, onOpenMenu,
 
       </div>
 
-      {/* 3. BOTTOM NAV (Fixed) */}
+      {/* 3. BOTTOM NAV (Fixed Alignment) */}
       <div className="bottom-nav">
          <div className="nav-item active">
             <span className="nav-icon">🏠</span>
@@ -109,9 +120,14 @@ const Lobby = ({ user, onJoin, onLogout, connectedUsers, onOpenHelp, onOpenMenu,
             <span className="nav-icon">👛</span>
             <span className="nav-label">Wallet</span>
          </div>
-         <div className="nav-item big-play" onClick={() => onJoin('low')}>
-            <div className="play-circle">▶</div>
+         
+         {/* Big Play Button - Centered */}
+         <div className="nav-item-center" onClick={() => onJoin('low')}>
+            <div className="play-circle-outer">
+               <div className="play-triangle">▶</div>
+            </div>
          </div>
+
          <div className="nav-item">
             <span className="nav-icon">💬</span>
             <span className="nav-label">Chat</span>
@@ -125,25 +141,68 @@ const Lobby = ({ user, onJoin, onLogout, connectedUsers, onOpenHelp, onOpenMenu,
       <style>{`
         .lobby-container { width: 100%; height: 100vh; background: #17181b; color: white; display: flex; flex-direction: column; overflow: hidden; font-family: 'Outfit', sans-serif; }
         
-        .app-header { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; background: #1e2024; z-index: 10; height: 60px; box-sizing: border-box; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        .user-pill { display: flex; align-items: center; gap: 8px; cursor: pointer; }
-        .avatar-small { width: 32px; height: 32px; background: #3bc117; border-radius: 50%; display: flex; alignItems: center; justify-content: center; font-weight: bold; color: black; }
-        .username { font-size: 14px; font-weight: 700; }
-        .wallet-btn { background: #2d3035; padding: 6px 12px; border-radius: 20px; display: flex; align-items: center; gap: 8px; cursor: pointer; border: 1px solid #3bc117; }
+        /* HEADER ALIGNMENT FIX */
+        .app-header { 
+           padding: 10px 20px; 
+           display: flex; 
+           justify-content: space-between; 
+           align-items: center; 
+           background: #1e2024; 
+           z-index: 10; 
+           height: 60px; 
+           box-sizing: border-box; 
+           box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
+        }
+        
+        .user-pill { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        
+        /* Fixed Avatar Circle */
+        .avatar-circle { 
+           width: 32px; 
+           height: 32px; 
+           background: #3bc117; 
+           border-radius: 50%; 
+           display: flex; 
+           align-items: center; 
+           justify-content: center; 
+           font-weight: 900; 
+           color: black; 
+           font-size: 16px;
+           flex-shrink: 0; /* Prevents squishing */
+        }
+        
+        .username { font-size: 14px; font-weight: 700; white-space: nowrap; }
+        
+        .wallet-btn { 
+           background: #2d3035; 
+           padding: 6px 12px; 
+           border-radius: 20px; 
+           display: flex; 
+           align-items: center; 
+           gap: 8px; 
+           cursor: pointer; 
+           border: 1px solid #3bc117; 
+        }
         .balance { font-weight: 800; font-size: 13px; color: white; }
         .plus-btn { background: #3bc117; width: 18px; height: 18px; border-radius: 50%; display: flex; alignItems: center; justify-content: center; font-size: 12px; color: black; font-weight: bold; }
 
-        .lobby-scroll-area { flex: 1; overflow-y: auto; padding: 20px; padding-bottom: 90px; }
+        .lobby-scroll-area { flex: 1; overflow-y: auto; padding: 20px; padding-bottom: 100px; }
         
-        .promo-banner { background: linear-gradient(135deg, #1e2024, #17181b); border: 1px solid #333; padding: 20px; border-radius: 12px; margin-bottom: 25px; position: relative; overflow: hidden; height: 140px; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; }
-        .promo-content { position: relative; z-index: 2; }
-        .promo-tag { background: white; color: black; font-size: 9px; font-weight: 900; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 8px; }
-        .promo-banner h3 { margin: 0; font-size: 12px; color: #98a7b5; font-weight: 700; letter-spacing: 1px; }
-        .promo-banner h1 { margin: 5px 0 15px 0; font-size: 24px; font-weight: 900; color: white; line-height: 1; }
-        .promo-btn { background: #3bc117; color: black; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 800; font-size: 11px; cursor: pointer; }
-        .promo-dots { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; }
-        .dot { width: 6px; height: 6px; background: #333; border-radius: 50%; }
-        .dot.active { background: #3bc117; width: 12px; border-radius: 6px; }
+        /* UPDATED BANNER (Clean Logo) */
+        .promo-banner { 
+            background: linear-gradient(135deg, #1e2024, #0f1012); 
+            border: 1px solid #333; 
+            padding: 20px; 
+            border-radius: 12px; 
+            margin-bottom: 25px; 
+            height: 120px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+        }
+        .promo-content-centered { text-align: center; }
+        .promo-content-centered h1 { margin: 0; font-size: 32px; font-weight: 900; letter-spacing: -1px; }
+        .promo-content-centered p { margin: 5px 0 0 0; color: #98a7b5; font-size: 12px; letter-spacing: 1px; }
 
         .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 13px; font-weight: 700; color: white; }
         .see-all { font-size: 11px; color: #98a7b5; background: #24262b; padding: 4px 10px; border-radius: 8px; }
@@ -173,13 +232,38 @@ const Lobby = ({ user, onJoin, onLogout, connectedUsers, onOpenHelp, onOpenMenu,
         .poster-sub { font-size: 10px; opacity: 0.8; margin-top: 2px; font-weight: 600; }
         .poster-players { font-size: 9px; color: rgba(255,255,255,0.5); text-align: right; }
 
-        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 70px; background: #1e2024; display: flex; justify-content: space-around; align-items: center; z-index: 20; padding-bottom: 10px; border-top: 1px solid #2d3035; box-sizing: border-box; }
-        .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 20%; cursor: pointer; color: #676d7c; transition: 0.2s; }
+        /* BOTTOM NAV - FIXED ALIGNMENT */
+        .bottom-nav { 
+           position: fixed; bottom: 0; left: 0; width: 100%; height: 70px; 
+           background: #1e2024; display: flex; justify-content: space-around; 
+           align-items: flex-end; /* Align items to bottom to let play button pop up */
+           z-index: 20; padding-bottom: 10px; border-top: 1px solid #2d3035; box-sizing: border-box; 
+        }
+        
+        .nav-item { 
+           display: flex; flex-direction: column; align-items: center; justify-content: center; 
+           width: 20%; cursor: pointer; color: #676d7c; transition: 0.2s; 
+           padding-bottom: 5px;
+        }
         .nav-item.active { color: white; }
         .nav-icon { font-size: 18px; margin-bottom: 4px; }
         .nav-label { font-size: 9px; font-weight: 600; }
-        .big-play { position: relative; top: -20px; }
-        .play-circle { width: 55px; height: 55px; background: #3bc117; border-radius: 50%; display: flex; alignItems: center; justify-content: center; font-size: 20px; color: black; box-shadow: 0 10px 25px rgba(59, 193, 23, 0.4); border: 5px solid #17181b; }
+        
+        /* CENTER PLAY BUTTON FIX */
+        .nav-item-center { 
+           width: 20%; display: flex; justify-content: center; align-items: center; position: relative; 
+        }
+        .play-circle-outer { 
+           width: 55px; height: 55px; 
+           background: #3bc117; 
+           border-radius: 50%; 
+           display: flex; align-items: center; justify-content: center; 
+           position: absolute; bottom: 15px; /* Pushes it up */
+           box-shadow: 0 5px 20px rgba(59, 193, 23, 0.4); 
+           border: 5px solid #17181b; 
+           cursor: pointer;
+        }
+        .play-triangle { font-size: 20px; color: black; margin-left: 3px; }
 
         .fade-in { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
