@@ -1,23 +1,12 @@
 import React from 'react';
 
-const Lobby = ({ 
-  user, 
-  onJoin, 
-  onLogout, 
-  connectedUsers, 
-  onOpenHelp, 
-  onOpenMenu, 
-  onOpenProfile, 
-  onOpenDeposit 
-}) => {
-
+const Lobby = ({ user, onJoin, onLogout, connectedUsers, onOpenHelp, onOpenMenu, onOpenProfile, onOpenDeposit, onOpenChat }) => {
   return (
     <div className="lobby-container fade-in">
       
       {/* 1. HEADER (Fixed Alignment) */}
       <div className="app-header">
          <div className="user-pill" onClick={onOpenProfile}>
-            {/* Flex container ensures circle is perfectly round and centered */}
             <div className="avatar-circle">
                {user.username.charAt(0).toUpperCase()}
             </div>
@@ -62,7 +51,7 @@ const Lobby = ({
 
           {/* RECENT BIG WINS (Ticker) */}
           <div className="section-header">
-             <span style={{color:'#3bc117'}}>● Recent Big Wins</span>
+             <span style={{color:'#22c55e'}}>● Recent Big Wins</span>
           </div>
           <div className="wins-ticker">
              <div className="win-item">
@@ -121,14 +110,13 @@ const Lobby = ({
             <span className="nav-label">Wallet</span>
          </div>
          
-         {/* Big Play Button - Centered */}
          <div className="nav-item-center" onClick={() => onJoin('low')}>
             <div className="play-circle-outer">
                <div className="play-triangle">▶</div>
             </div>
          </div>
 
-         <div className="nav-item">
+         <div className="nav-item" onClick={onOpenChat}>
             <span className="nav-icon">💬</span>
             <span className="nav-label">Chat</span>
          </div>
@@ -139,131 +127,89 @@ const Lobby = ({
       </div>
 
       <style>{`
-        .lobby-container { width: 100%; height: 100vh; background: #17181b; color: white; display: flex; flex-direction: column; overflow: hidden; font-family: 'Outfit', sans-serif; }
+        .lobby-container { width: 100%; height: 100vh; background: #0f172a; color: white; display: flex; flex-direction: column; overflow: hidden; font-family: 'Outfit', sans-serif; }
         
-        /* HEADER ALIGNMENT FIX */
         .app-header { 
            padding: 10px 20px; 
-           display: flex; 
-           justify-content: space-between; 
-           align-items: center; 
-           background: #1e2024; 
-           z-index: 10; 
-           height: 60px; 
-           box-sizing: border-box; 
-           box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
+           display: flex; justify-content: space-between; align-items: center; 
+           background: #1e293b; z-index: 10; height: 60px; 
+           box-sizing: border-box; box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
         }
         
         .user-pill { display: flex; align-items: center; gap: 10px; cursor: pointer; }
-        
-        /* Fixed Avatar Circle */
         .avatar-circle { 
-           width: 32px; 
-           height: 32px; 
-           background: #3bc117; 
-           border-radius: 50%; 
-           display: flex; 
-           align-items: center; 
-           justify-content: center; 
-           font-weight: 900; 
-           color: black; 
-           font-size: 16px;
-           flex-shrink: 0; /* Prevents squishing */
+           width: 32px; height: 32px; background: #fbbf24; border-radius: 50%; 
+           display: flex; align-items: center; justify-content: center; 
+           font-weight: 900; color: black; font-size: 16px; flex-shrink: 0; line-height: 0; 
         }
-        
         .username { font-size: 14px; font-weight: 700; white-space: nowrap; }
         
         .wallet-btn { 
-           background: #2d3035; 
-           padding: 6px 12px; 
-           border-radius: 20px; 
-           display: flex; 
-           align-items: center; 
-           gap: 8px; 
-           cursor: pointer; 
-           border: 1px solid #3bc117; 
+           background: #334155; padding: 6px 12px; border-radius: 20px; 
+           display: flex; align-items: center; gap: 8px; cursor: pointer; border: 1px solid #fbbf24; 
         }
         .balance { font-weight: 800; font-size: 13px; color: white; }
-        .plus-btn { background: #3bc117; width: 18px; height: 18px; border-radius: 50%; display: flex; alignItems: center; justify-content: center; font-size: 12px; color: black; font-weight: bold; }
+        .plus-btn { background: #fbbf24; width: 18px; height: 18px; border-radius: 50%; display: flex; alignItems: center; justify-content: center; font-size: 12px; color: black; font-weight: bold; }
 
         .lobby-scroll-area { flex: 1; overflow-y: auto; padding: 20px; padding-bottom: 100px; }
         
-        /* UPDATED BANNER (Clean Logo) */
         .promo-banner { 
-            background: linear-gradient(135deg, #1e2024, #0f1012); 
-            border: 1px solid #333; 
-            padding: 20px; 
-            border-radius: 12px; 
-            margin-bottom: 25px; 
-            height: 120px; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
+            background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid #334155; 
+            padding: 20px; border-radius: 12px; margin-bottom: 25px; height: 120px; 
+            display: flex; justify-content: center; align-items: center; 
         }
         .promo-content-centered { text-align: center; }
         .promo-content-centered h1 { margin: 0; font-size: 32px; font-weight: 900; letter-spacing: -1px; }
-        .promo-content-centered p { margin: 5px 0 0 0; color: #98a7b5; font-size: 12px; letter-spacing: 1px; }
+        .promo-content-centered p { margin: 5px 0 0 0; color: #94a3b8; font-size: 12px; letter-spacing: 1px; }
 
         .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 13px; font-weight: 700; color: white; }
-        .see-all { font-size: 11px; color: #98a7b5; background: #24262b; padding: 4px 10px; border-radius: 8px; }
+        .see-all { font-size: 11px; color: #94a3b8; background: #1e293b; padding: 4px 10px; border-radius: 8px; }
 
         .horizontal-scroll { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 25px; scrollbar-width: none; }
-        .game-icon-card { min-width: 100px; background: #24262b; padding: 12px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+        .game-icon-card { min-width: 100px; background: #1e293b; padding: 12px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; cursor: pointer; }
         .icon-img { width: 50px; height: 50px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 8px; }
         .green-grad { background: linear-gradient(135deg, #059669, #10b981); }
         .purple-grad { background: linear-gradient(135deg, #7c3aed, #d946ef); }
         .icon-name { font-size: 11px; font-weight: 700; }
-        .icon-players { font-size: 9px; color: #676d7c; margin-top: 2px; }
+        .icon-players { font-size: 9px; color: #64748b; margin-top: 2px; }
 
         .wins-ticker { display: flex; gap: 10px; overflow-x: auto; margin-bottom: 25px; padding-bottom: 5px; scrollbar-width: none; }
-        .win-item { min-width: 130px; background: #1e2024; padding: 8px; border-radius: 8px; display: flex; align-items: center; gap: 8px; border: 1px solid #2d3035; }
-        .win-img { width: 30px; height: 30px; background: #2d3035; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+        .win-item { min-width: 130px; background: #1e293b; padding: 8px; border-radius: 8px; display: flex; align-items: center; gap: 8px; border: 1px solid #334155; }
+        .win-img { width: 30px; height: 30px; background: #334155; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; }
         .win-info { display: flex; flex-direction: column; }
-        .win-u { font-size: 9px; color: #98a7b5; }
+        .win-u { font-size: 9px; color: #94a3b8; }
         .win-a { font-size: 11px; font-weight: 800; }
-        .text-green { color: #3bc117; } .text-gold { color: #fbbf24; }
+        .text-green { color: #22c55e; } .text-gold { color: #fbbf24; }
 
         .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .poster-card { height: 160px; border-radius: 12px; padding: 15px; position: relative; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; overflow: hidden; }
-        .novice-bg { background: linear-gradient(180deg, #059669 0%, #000 100%); border-top: 2px solid #10b981; }
-        .pro-bg { background: linear-gradient(180deg, #7c3aed 0%, #000 100%); border-top: 2px solid #d946ef; }
+        .novice-bg { background: linear-gradient(180deg, #059669 0%, #0f172a 100%); border-top: 2px solid #10b981; }
+        .pro-bg { background: linear-gradient(180deg, #7c3aed 0%, #0f172a 100%); border-top: 2px solid #d946ef; }
         .poster-icon { font-size: 32px; margin-bottom: 10px; filter: drop-shadow(0 5px 15px rgba(0,0,0,0.3)); }
         .poster-title { font-size: 14px; font-weight: 900; letter-spacing: 1px; }
         .poster-sub { font-size: 10px; opacity: 0.8; margin-top: 2px; font-weight: 600; }
         .poster-players { font-size: 9px; color: rgba(255,255,255,0.5); text-align: right; }
 
-        /* BOTTOM NAV - FIXED ALIGNMENT */
         .bottom-nav { 
            position: fixed; bottom: 0; left: 0; width: 100%; height: 70px; 
-           background: #1e2024; display: flex; justify-content: space-around; 
-           align-items: flex-end; /* Align items to bottom to let play button pop up */
-           z-index: 20; padding-bottom: 10px; border-top: 1px solid #2d3035; box-sizing: border-box; 
+           background: #1e293b; display: flex; justify-content: space-around; 
+           align-items: flex-end; z-index: 20; padding-bottom: 10px; 
+           border-top: 1px solid #334155; box-sizing: border-box; 
         }
-        
-        .nav-item { 
-           display: flex; flex-direction: column; align-items: center; justify-content: center; 
-           width: 20%; cursor: pointer; color: #676d7c; transition: 0.2s; 
-           padding-bottom: 5px;
-        }
-        .nav-item.active { color: white; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 20%; cursor: pointer; color: #94a3b8; transition: 0.2s; padding-bottom: 5px; }
+        .nav-item.active { color: #fbbf24; }
         .nav-icon { font-size: 18px; margin-bottom: 4px; }
         .nav-label { font-size: 9px; font-weight: 600; }
         
-        /* CENTER PLAY BUTTON FIX */
-        .nav-item-center { 
-           width: 20%; display: flex; justify-content: center; align-items: center; position: relative; 
-        }
+        .nav-item-center { width: 20%; display: flex; justify-content: center; align-items: center; position: relative; }
         .play-circle-outer { 
-           width: 55px; height: 55px; 
-           background: #3bc117; 
-           border-radius: 50%; 
+           width: 55px; height: 55px; background: #fbbf24; border-radius: 50%; 
            display: flex; align-items: center; justify-content: center; 
-           position: absolute; bottom: 15px; /* Pushes it up */
-           box-shadow: 0 5px 20px rgba(59, 193, 23, 0.4); 
-           border: 5px solid #17181b; 
-           cursor: pointer;
+           position: absolute; bottom: 15px; 
+           box-shadow: 0 5px 20px rgba(251, 191, 36, 0.4); 
+           border: 5px solid #0f172a; cursor: pointer;
         }
-        .play-triangle { font-size: 20px; color: black; margin-left: 3px; }
+        .play-triangle { font-size: 20px; color: black; margin-left: 4px; }
 
         .fade-in { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
